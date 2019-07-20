@@ -1,0 +1,16 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+graphviz = "*"
+
+[packages]
+sly = "*"
+
+[requires]
+python_version = "3.7"
+
+[scripts]
+test = "python -m analyze.tester"
