@@ -3,7 +3,7 @@ import typing
 
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class Symbol:
     name: str
 
