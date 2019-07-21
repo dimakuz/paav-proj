@@ -1,12 +1,28 @@
 import dataclasses
 import typing
 
+from pysmt import shortcuts
+
 from analyze import lang
+
 
 @dataclasses.dataclass
 class Edge:
     statement: lang.Statement
+    predecessor: 'Node'
     successor: 'Node'
+
+    def valid(self):
+        if not isinstance(self.statement, lang.Assert):
+            return True
+
+        return shortcuts.is_sat(
+            shortcuts.And(
+                self.statement.formula(),
+                self.predecessor.state.formula(),
+            ),
+        )
+
 
 @dataclasses.dataclass
 class Node:
@@ -24,6 +40,7 @@ class ControlFlowGraph:
             dest_node = self._get_node(line.destination)
             edge = Edge(
                 line.statement,
+                source_node,
                 dest_node,
             )
             source_node.out_edges.append(edge)

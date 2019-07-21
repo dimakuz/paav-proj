@@ -1,12 +1,15 @@
 import logging
 import sys
 
+from pysmt import shortcuts
+
 from analyze import chaotic
 from analyze import cfg
 from analyze import lang
 from analyze import parser
 from analyze import parity
 from analyze import viz
+
 
 
 def main():

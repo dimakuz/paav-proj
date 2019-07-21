@@ -8,6 +8,8 @@ graphviz = "*"
 
 [packages]
 sly = "*"
+z3-solver = "*"
+pysmt = "*"
 
 [requires]
 python_version = "3.7"

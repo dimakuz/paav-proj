@@ -1,6 +1,7 @@
 import dataclasses
 import typing
 
+from pysmt import shortcuts
 
 
 @dataclasses.dataclass(frozen=True)
@@ -137,6 +138,9 @@ class Odd(Predicate):
     def __str__(self):
         return f'ODD {self.sym}'
 
+    def formula(self):
+        return shortcuts.Symbol(f'ODD-{self.sym}')
+
 
 @dataclasses.dataclass
 class Even(Predicate):
@@ -144,6 +148,9 @@ class Even(Predicate):
 
     def __str__(self):
         return f'EVEN {self.sym}'
+
+    def formula(self):
+        return shortcuts.Symbol(f'EVEN-{self.sym}')
 
 
 @dataclasses.dataclass
@@ -154,6 +161,13 @@ class Assert(Statement):
         clauses = [' '.join(str(p) for p in c) for c in self.dnf]
         dnf = ' '.join(f'({c})' for c in clauses)
         return f'assert {dnf}'
+
+    def formula(self):
+        clauses = []
+        for e in self.dnf:
+            preds = [x.formula() for x in e]
+            clauses.append(shortcuts.And(*preds))
+        return shortcuts.Or(*clauses)
 
 
 @dataclasses.dataclass
