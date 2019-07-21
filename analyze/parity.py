@@ -1,8 +1,11 @@
 import dataclasses
 import enum
+import logging
 import typing
 
 from analyze import lang
+
+LOG = logging.getLogger(__name__)
 
 
 class Parity(enum.Enum):
@@ -61,9 +64,23 @@ class ParityState:
 
     def transform(self, statement):
         res = self.copy()
-        transformer = self.TRANSFORMERS[type(statement)]
+        try:
+            transformer = self.TRANSFORMERS[type(statement)]
+        except KeyError:
+            LOG.warning(f'No transformer for {statement}')
+            # FIXME
+            return res
         transformer(res, statement)
         return res
+
+    @classmethod
+    def initial(cls, symbols):
+        return cls(
+            symbols={
+                symbol: Parity.BOTTOM
+                for symbol in symbols
+            }
+        )
 
 
 @transforms(lang.VarAssignment)
@@ -87,23 +104,15 @@ def qmark_assignment(state, statement):
 
 @transforms(lang.VarIncAssignment)
 @transforms(lang.VarDecAssignment)
-def qmark_assignment(state, statement):
-    p = state.symbol[statement.rval]
+def incdec_assignment(state, statement):
+    p = state.symbols[statement.rval]
     if p is Parity.ODD:
         p = Parity.EVEN
     elif p is Parity.EVEN:
-        p = parity.ODD
+        p = Parity.ODD
     state.symbols[statement.lval] = p
 
 
-class ParityAbstractDomain:
-    def __init__(self, symbols):
-        self._symbols = symbols
-
-    def initial_state(self):
-        return ParityState(
-            symbols={
-                symbol: Parity.BOTTOM
-                for symbol in self._symbols
-            }
-        )
+@transforms(lang.Skip)
+def skip(state, statement):
+    pass

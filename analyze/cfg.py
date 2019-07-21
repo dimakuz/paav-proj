@@ -13,6 +13,7 @@ class Node:
     name: str
     out_edges: typing.List[Edge] = dataclasses.field(default_factory=list)
     in_edges: typing.List[Edge] = dataclasses.field(default_factory=list)
+    state: object = None
 
 
 class ControlFlowGraph:
