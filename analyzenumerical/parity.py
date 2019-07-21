@@ -6,7 +6,8 @@ import typing
 
 from pysmt import shortcuts
 
-from analyze import lang
+from analyzenumerical import lang as lang_num
+from framework import lang
 
 LOG = logging.getLogger(__name__)
 
@@ -117,17 +118,17 @@ class ParityState:
         for symbol in self.modulo:
             clauses.append(
                 shortcuts.Iff(
-                    lang.Odd(symbol).formula(),
-                    shortcuts.Not(lang.Even(symbol).formula()),
+                    lang_num.Odd(symbol).formula(),
+                    shortcuts.Not(lang_num.Even(symbol).formula()),
                 ),
             )
 
         # Encode discovered modulo state:
         for symbol, value in self.modulo.items():
             if value == EVEN:
-                formula = lang.Even(symbol).formula()
+                formula = lang_num.Even(symbol).formula()
             elif value == ODD:
-                formula = lang.Odd(symbol).formula()
+                formula = lang_num.Odd(symbol).formula()
             else:
                 continue
             clauses.append(formula)
@@ -137,8 +138,8 @@ class ParityState:
             for other in value:
                 clauses.append(
                     shortcuts.Iff(
-                        lang.Even(symbol).formula(),
-                        lang.Even(other).formula(),
+                        lang_num.Even(symbol).formula(),
+                        lang_num.Even(other).formula(),
                     ),
                 )
 
@@ -147,14 +148,14 @@ class ParityState:
             for other in value:
                 clauses.append(
                     shortcuts.Iff(
-                        lang.Even(symbol).formula(),
-                        shortcuts.Not(lang.Even(other).formula()),
+                        lang_num.Even(symbol).formula(),
+                        shortcuts.Not(lang_num.Even(other).formula()),
                     ),
                 )
 
         return shortcuts.And(*clauses)
 
-@transforms(lang.VarAssignment)
+@transforms(lang_num.VarAssignment)
 def var_assignment(state, statement):
     state.modulo[statement.lval] = state.modulo[statement.rval]
 
@@ -166,7 +167,7 @@ def var_assignment(state, statement):
     state.antipar[statement.lval].clear()
 
 
-@transforms(lang.ValAssignment)
+@transforms(lang_num.ValAssignment)
 def val_assignment(state, statement):
     if statement.rval % 2 == 1:
         p = ODD
@@ -182,7 +183,7 @@ def val_assignment(state, statement):
     state.antipar[statement.lval].clear()
 
 
-@transforms(lang.QMarkAssignment)
+@transforms(lang_num.QMarkAssignment)
 def qmark_assignment(state, statement):
     state.modulo[statement.lval] = TOP
 
@@ -194,8 +195,8 @@ def qmark_assignment(state, statement):
     state.antipar[statement.lval].clear()
 
 
-@transforms(lang.VarIncAssignment)
-@transforms(lang.VarDecAssignment)
+@transforms(lang_num.VarIncAssignment)
+@transforms(lang_num.VarDecAssignment)
 def incdec_assignment(state, statement):
     rval_modulo = state.modulo[statement.rval]
     if rval_modulo == BOTTOM:
@@ -230,19 +231,19 @@ def assume(state, statement):
         state.reset()
     elif isinstance(expr, lang.Truth):
         pass
-    elif isinstance(expr, lang.EqualsVal):
+    elif isinstance(expr, lang_num.EqualsVal):
         if state.modulo[expr.lval] == ODD and (expr.rval % 2 == 0):
             state.reset()
         elif state.modulo[expr.lval] == EVEN and (expr.rval % 2 == 1):
             state.reset()
-    elif isinstance(expr, lang.EqualsVar):
+    elif isinstance(expr, lang_num.EqualsVar):
         res = state.modulo[expr.lval].intersection(state.modulo[expr.rval])
         state.modulo[expr.lval] = res
         state.modulo[expr.rval] = res
 
         state.samepar[expr.lval].add(expr.rval)
         state.samepar[expr.rval].add(expr.lval)
-    elif isinstance(expr, (lang.NotEqualsVar, lang.NotEqualsVal)):
+    elif isinstance(expr, (lang_num.NotEqualsVar, lang_num.NotEqualsVal)):
         # No new info unless we implement equality tracking
         pass
     else:

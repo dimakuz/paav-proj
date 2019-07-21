@@ -3,12 +3,12 @@ import sys
 
 from pysmt import shortcuts
 
-from analyze import chaotic
-from analyze import cfg
-from analyze import lang
-from analyze import parser
-from analyze import parity
-from analyze import viz
+from framework import chaotic
+from framework import cfg
+from analyzenumerical import lang
+from analyzenumerical import parser
+from analyzenumerical import parity
+from framework import viz
 
 
 

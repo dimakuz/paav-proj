@@ -1,11 +1,12 @@
 import sly
 
-from analyze import lang
+from analyzeshape import lang as lang_shape
+from framework import lang
 
 class Lexer(sly.Lexer):
-    tokens = {NAME, NUMBER, LABEL, PLUS, MINUS, ASSIGN, EQUAL, NOTEQUAL,
-              ASSUME, SKIP, ASSERT, QMARK, LPAREN, RPAREN, TRUE, FALSE, ODD,
-              EVEN}
+    tokens = {NAME, LABEL, ASSIGN, EQUAL, NOTEQUAL, NULL, NEXT,
+              ASSUME, SKIP, ASSERT, LPAREN, RPAREN, TRUE, FALSE, 
+              ODD, EVEN, LEN, LS}
     ignore = '\t '
 
     ASSUME = r'assume'
@@ -15,14 +16,16 @@ class Lexer(sly.Lexer):
     FALSE = 'FALSE'
     ODD = 'ODD'
     EVEN = 'EVEN'
+    LEN = 'LEN'
+    LS = 'LS'
+    NULL = 'NULL'
+    NEW = 'new'
     LABEL = r'L\d+'
     NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
-    PLUS = r'\+'
-    MINUS = r'-'
+    NEXT = r'[a-zA-Z_][a-zA-Z0-9_]*\.n'
     ASSIGN = r':='
     EQUAL = r'='
     NOTEQUAL = r'!='
-    QMARK = r'\?'
     LPAREN = r'\('
     RPAREN = r'\)'
 
@@ -33,11 +36,6 @@ class Lexer(sly.Lexer):
     def error(self, t):
         print(f'Illegal character "{t}"')
         self.index += 1
-
-    @_(r'\d+')
-    def NUMBER(self, t):
-        t.value = int(t.value)
-        return t
 
 
 class Parser(sly.Parser):
@@ -84,25 +82,29 @@ class Parser(sly.Parser):
     def sym(self, p):
         return lang.Symbol(p.NAME)
 
+    @_('NEXT')
+    def sym(self, p):
+        return lang_shape.SymbolNext(p.NAME)
+
     @_('sym ASSIGN sym')
     def stmt(self, p):
-        return lang.VarAssignment(p.sym0, p.sym1)
+        return lang_shape.VarAssignment(p.sym0, p.sym1)
 
-    @_('sym ASSIGN NUMBER')
+    @_('sym ASSIGN next')
     def stmt(self, p):
-        return lang.ValAssignment(p.sym, p.NUMBER)
+        return lang_shape.VarAssignment(p.sym, p.next)
 
-    @_('sym ASSIGN QMARK')
+    @_('next ASSIGN sym')
     def stmt(self, p):
-        return lang.QMarkAssignment(p.sym)
+        return lang_shape.VarAssignment(p.next, p.sym)
 
-    @_('sym ASSIGN sym PLUS NUMBER')
+    @_('sym ASSIGN NEW')
     def stmt(self, p):
-        return lang.VarIncAssignment(p.sym0, p.sym1)
+        return lang_shape.NewAssignment(p.sym)
 
-    @_('sym ASSIGN sym MINUS NUMBER')
+    @_('sym ASSIGN NULL')
     def stmt(self, p):
-        return lang.VarDecAssignment(p.sym0, p.sym1)
+        return lang_shape.NullAssignment(p.sym)
 
     @_('ASSUME LPAREN expr RPAREN')
     def stmt(self, p):
@@ -110,19 +112,19 @@ class Parser(sly.Parser):
 
     @_('sym EQUAL sym')
     def expr(self, p):
-        return lang.EqualsVar(p.sym0, p.sym1)
+        return lang_shape.EqualsVarVar(p.sym0, p.sym1)
+
+    @_('sym EQUAL next')
+    def expr(self, p):
+        return lang_shape.EqualsVarNext(p.sym0, p.sym1next)
 
     @_('sym NOTEQUAL sym')
     def expr(self, p):
-        return lang.NotEqualsVar(p.sym0, p.sym1)
+        return lang_shape.NotEqualsVarVar(p.sym0, p.sym1)
 
-    @_('sym EQUAL NUMBER')
+    @_('sym NOTEQUAL sym')
     def expr(self, p):
-        return lang.EqualsVal(p.sym, p.NUMBER)
-
-    @_('sym NOTEQUAL NUMBER')
-    def expr(self, p):
-        return lang.NotEqualsVal(p.sym, p.NUMBER)
+        return lang_shape.NotEqualsVarNext(p.sym0, p.sym1next)
 
     @_('TRUE')
     def expr(self, p):
@@ -152,10 +154,18 @@ class Parser(sly.Parser):
     def andc(self, p):
         return [p.pred] + p.andc
 
-    @_('EVEN sym')
-    def pred(self, p):
-        return lang.Even(p.sym)
+    @_('LS sym sym')
+    def ls(self, p):
+        return lang.Ls(p.sym0, p.sym1)
 
-    @_('ODD sym')
-    def pred(self, p):
-        return lang.Odd(p.sym)
+    @_('LEN sym sym EQUAL LEN sym sym')
+    def len(self, p):
+        return lang.Len(p.sym0, p.sym1, p.sym2, p.sym3)
+
+    @_('EVEN sym sym')
+    def even(self, p):
+        return lang_shape.Even(p.sym0, p.sym1)
+
+    @_('ODD sym sym')
+    def odd(self, p):
+        return lang_shape.Odd(p.sym0, p.sym1)
