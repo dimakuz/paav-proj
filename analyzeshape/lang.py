@@ -15,58 +15,6 @@ class SymbolNext:
 
 
 @dataclasses.dataclass
-class EqualsVarVar(lang.Expression):
-    lval: lang.Symbol
-    rval: lang.Symbol
-
-    def __str__(self):
-        return f'{self.lval} = {self.rval}'
-
-
-@dataclasses.dataclass
-class NotEqualsVarVar(lang.Expression):
-    lval: lang.Symbol
-    rval: lang.Symbol
-
-    def __str__(self):
-        return f'{self.lval} != {self.rval}'
-
-
-@dataclasses.dataclass
-class EqualsVarNext(lang.Expression):
-    lval: lang.Symbol
-    rval: lang.SymbolNext
-
-    def __str__(self):
-        return f'{self.lval} = {self.rval}'
-
-
-@dataclasses.dataclass
-class NotEqualsVarNext(lang.Expression):
-    lval: lang.Symbol
-    rval: lang.SymbolNext
-
-    def __str__(self):
-        return f'{self.lval} != {self.rval}'
-
-
-@dataclasses.dataclass
-class EqualsVarNull(lang.Expression):
-    lval: lang.Symbol
-
-    def __str__(self):
-        return f'{self.lval} = NULL'
-
-
-@dataclasses.dataclass
-class NotEqualsVarNull(lang.Expression):
-    lval: lang.Symbol
-
-    def __str__(self):
-        return f'{self.lval} != NULL'
-
-
-@dataclasses.dataclass
 class VarAssignment(lang.Statement):
     lval: str
     rval: str
@@ -89,6 +37,76 @@ class NullAssignment(lang.Statement):
 
     def __str__(self):
         return f'{self.lval} := NULL'
+
+
+@dataclasses.dataclass
+class EqualsVarVar(lang.Predicate):
+    lval: lang.Symbol
+    rval: lang.Symbol
+
+    def __str__(self):
+        return f'{self.lval} = {self.rval}'
+
+    def formula(self):
+        return 'TODO'
+        
+
+@dataclasses.dataclass
+class NotEqualsVarVar(lang.Predicate):
+    lval: lang.Symbol
+    rval: lang.Symbol
+
+    def __str__(self):
+        return f'{self.lval} != {self.rval}'
+
+    def formula(self):
+        return 'TODO'
+
+
+@dataclasses.dataclass
+class EqualsVarNext(lang.Predicate):
+    lval: lang.Symbol
+    rval: lang.SymbolNext
+
+    def __str__(self):
+        return f'{self.lval} = {self.rval}'
+
+    def formula(self):
+        return 'TODO'
+
+
+@dataclasses.dataclass
+class NotEqualsVarNext(lang.Predicate):
+    lval: lang.Symbol
+    rval: lang.SymbolNext
+
+    def __str__(self):
+        return f'{self.lval} != {self.rval}'
+
+    def formula(self):
+        return 'TODO'
+
+
+@dataclasses.dataclass
+class EqualsVarNull(lang.Predicate):
+    lval: lang.Symbol
+
+    def __str__(self):
+        return f'{self.lval} = NULL'
+
+    def formula(self):
+        return 'TODO'
+
+
+@dataclasses.dataclass
+class NotEqualsVarNull(lang.Predicate):
+    lval: lang.Symbol
+
+    def __str__(self):
+        return f'{self.lval} != NULL'
+
+    def formula(self):
+        return 'TODO'
 
 
 @dataclasses.dataclass
