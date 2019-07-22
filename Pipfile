@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 graphviz = "*"
+pytest = "*"
 
 [packages]
 sly = "*"
@@ -15,4 +16,5 @@ pysmt = "*"
 python_version = "3.7"
 
 [scripts]
-test = "python -m analyze.tester"
+analyze = "python -m analyze.tester"
+test = 'py.test -v .'

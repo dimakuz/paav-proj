@@ -1,13 +1,14 @@
 import copy
 import dataclasses
-import enum
 import logging
 import typing
 
 from pysmt import shortcuts
 
 from analyzenumerical import lang as lang_num
+from analyzenumerical import abstract
 from framework import lang
+
 
 LOG = logging.getLogger(__name__)
 
@@ -44,13 +45,10 @@ def transforms(stmt_type):
 
 
 @dataclasses.dataclass
-class ParityState:
+class ParityState(abstract.AbstractState):
     modulo: typing.Mapping[lang.Symbol, typing.Set[object]]
     samepar: typing.Mapping[lang.Symbol, typing.Set[lang.Symbol]]
     antipar: typing.Mapping[lang.Symbol, typing.Set[lang.Symbol]]
-
-
-    TRANSFORMERS = {}
 
     def join(self, other):
         modulo = {}
@@ -78,24 +76,6 @@ class ParityState:
             )
         return '\n'.join(lines)
 
-    def copy(self):
-        return ParityState(
-            copy.deepcopy(self.modulo.copy()),
-            copy.deepcopy(self.samepar.copy()),
-            copy.deepcopy(self.antipar.copy()),
-        )
-
-    def transform(self, statement):
-        res = self.copy()
-        try:
-            transformer = self.TRANSFORMERS[type(statement)]
-        except KeyError:
-            LOG.warning(f'No transformer for {statement}')
-            # FIXME
-            return res
-        transformer(res, statement)
-        return res
-
     @classmethod
     def initial(cls, symbols):
         return cls(
@@ -109,15 +89,6 @@ class ParityState:
             self.modulo[key] = BOTTOM
             self.samepar[key].clear()
             self.antipar[key].clear()
-
-    def diff(self, other):
-        # Debugging only
-        res = {}
-        for key in self.modulo:
-            if self.modulo[key] == other.modulo[key]:
-                continue
-            res[str(key)] = (str(other.modulo[key]), str(self.modulo[key]))
-        return res
 
     def formula(self):
         clauses = []
@@ -187,7 +158,8 @@ class ParityState:
 
         return shortcuts.And(*clauses)
 
-@transforms(lang_num.VarAssignment)
+
+@ParityState.transforms(lang_num.VarAssignment)
 def var_assignment(state, statement):
     state.modulo[statement.lval] = state.modulo[statement.rval]
 
@@ -199,7 +171,7 @@ def var_assignment(state, statement):
     state.antipar[statement.lval].clear()
 
 
-@transforms(lang_num.ValAssignment)
+@ParityState.transforms(lang_num.ValAssignment)
 def val_assignment(state, statement):
     state.modulo[statement.lval] = _get_val_parity(statement.rval)
 
@@ -211,7 +183,7 @@ def val_assignment(state, statement):
     state.antipar[statement.lval].clear()
 
 
-@transforms(lang_num.QMarkAssignment)
+@ParityState.transforms(lang_num.QMarkAssignment)
 def qmark_assignment(state, statement):
     state.modulo[statement.lval] = TOP
 
@@ -223,8 +195,8 @@ def qmark_assignment(state, statement):
     state.antipar[statement.lval].clear()
 
 
-@transforms(lang_num.VarIncAssignment)
-@transforms(lang_num.VarDecAssignment)
+@ParityState.transforms(lang_num.VarIncAssignment)
+@ParityState.transforms(lang_num.VarDecAssignment)
 def incdec_assignment(state, statement):
     rval_modulo = state.modulo[statement.rval]
     if rval_modulo == BOTTOM:
@@ -248,11 +220,12 @@ def incdec_assignment(state, statement):
         state.antipar[statement.lval] = tmp
 
 
-@transforms(lang.Skip)
-def skip(state, statement):
+@ParityState.transforms(lang.Skip)
+@ParityState.transforms(lang.Assert)
+def noop(state, statement):
     pass
 
-@transforms(lang.Assume)
+@ParityState.transforms(lang.Assume)
 def assume(state, statement):
     expr = statement.expr
     if isinstance(expr, lang.Falsehood):

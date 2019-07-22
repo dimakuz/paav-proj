@@ -115,7 +115,7 @@ class SumEquals(lang.Predicate):
     def __str__(self):
         lval = ' '.join(str(s) for s in self.lval)
         rval = ' '.join(str(s) for s in self.rval)
-        return 'SUM {lval} = SUM {rval}'
+        return f'SUM {lval} = SUM {rval}'
 
     def formula(self):
         lval = set(self.lval)

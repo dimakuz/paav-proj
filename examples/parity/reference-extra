@@ -4,7 +4,8 @@ L1 i := 0 L2
 L2 j := 0 L3
 L3 assume(i = n) L6
 L3 assume(i != n) L4
-L4 i := j + 1 L51
-L51 assert (ODD i EVEN j) (EVEN i ODD j) L5
+L4 i := j + 1 L5
 L5 j := i L3
 L6 assert (ODD i ODD j) (EVEN i EVEN j) L7
+L7 assert (ODD i EVEN j) (EVEN i ODD j) L8
+L8 assert (ODD i ODD j ODD n) (EVEN i EVEN j EVEN n) L9
