@@ -1,7 +1,7 @@
 import sly
 
 from analyzenumerical import lang as lang_num
-from framework import lang
+from analyzeframework import lang
 
 class Lexer(sly.Lexer):
     tokens = {NAME, NUMBER, LABEL, PLUS, MINUS, ASSIGN, EQUAL, NOTEQUAL,

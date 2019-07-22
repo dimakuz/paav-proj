@@ -7,7 +7,7 @@ from pysmt import shortcuts
 
 from analyzenumerical import lang as lang_num
 from analyzenumerical import abstract
-from framework import lang
+from analyzeframework import lang
 
 
 LOG = logging.getLogger(__name__)

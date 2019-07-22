@@ -2,7 +2,7 @@ import dataclasses
 import typing
 
 from pysmt import shortcuts
-from framework import lang
+from analyzeframework import lang
 
 
 @dataclasses.dataclass

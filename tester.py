@@ -4,13 +4,13 @@ import sys
 
 from pysmt import shortcuts
 
-from framework import chaotic
-from framework import cfg
+from analyzeframework import chaotic
+from analyzeframework import cfg
 from analyzenumerical import lang
 from analyzenumerical import sum
 from analyzenumerical import parser
 from analyzenumerical import parity
-from framework import viz
+from analyzeframework import viz
 
 
 def parse_args():

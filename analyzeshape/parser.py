@@ -1,7 +1,7 @@
 import sly
 
 from analyzeshape import lang as lang_shape
-from framework import lang
+from analyzeframework import lang
 
 class Lexer(sly.Lexer):
     tokens = {NAME, LABEL, ASSIGN, EQUAL, NOTEQUAL, NULL, NEXT,
