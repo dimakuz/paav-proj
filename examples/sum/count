@@ -1,0 +1,6 @@
+n i
+L0 n := 0 L1
+L1 n := n + 1 L2
+L2 n := n + 1 L3
+L3 i := n + 1 L4
+L4 assert (SUM n = SUM i) L5

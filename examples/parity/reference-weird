@@ -1,0 +1,10 @@
+n i j
+L0 n := ? L1
+L1 j := ? L11
+L11 i := 0 L2
+L2 assume(n = 1) L3
+L2 assume(j = 0) L5
+L3 i := n + 1 L31
+L31 i := n L6
+L5 i := j L6
+L6 assert (ODD n ODD j) (EVEN n EVEN j) L7
