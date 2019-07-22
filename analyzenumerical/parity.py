@@ -126,17 +126,17 @@ class ParityState:
         for symbol in self.modulo:
             clauses.append(
                 shortcuts.Iff(
-                    lang.Odd(symbol).formula(),
-                    shortcuts.Not(lang.Even(symbol).formula()),
+                    lang_num.Odd(symbol).formula(),
+                    shortcuts.Not(lang_num.Even(symbol).formula()),
                 ),
             )
 
         # Encode discovered modulo state:
         for symbol, value in self.modulo.items():
             if value == EVEN:
-                formula = lang.Even(symbol).formula()
+                formula = lang_num.Even(symbol).formula()
             elif value == ODD:
-                formula = lang.Odd(symbol).formula()
+                formula = lang_num.Odd(symbol).formula()
             else:
                 continue
             clauses.append(formula)
@@ -149,17 +149,17 @@ class ParityState:
             clauses.append(
                 shortcuts.Implies(
                     shortcuts.And(
-                        *(lang.Even(o).formula() for o in value),
+                        *(lang_num.Even(o).formula() for o in value),
                     ),
-                    lang.Even(symbol).formula(),
+                    lang_num.Even(symbol).formula(),
                 ),
             )
             clauses.append(
                 shortcuts.Implies(
                     shortcuts.And(
-                        *(lang.Odd(o).formula() for o in value),
+                        *(lang_num.Odd(o).formula() for o in value),
                     ),
-                    lang.Odd(symbol).formula(),
+                    lang_num.Odd(symbol).formula(),
                 ),
             )
 
@@ -171,17 +171,17 @@ class ParityState:
             clauses.append(
                 shortcuts.Implies(
                     shortcuts.And(
-                        *(lang.Even(o).formula() for o in value),
+                        *(lang_num.Even(o).formula() for o in value),
                     ),
-                    lang.Odd(symbol).formula(),
+                    lang_num.Odd(symbol).formula(),
                 ),
             )
             clauses.append(
                 shortcuts.Implies(
                     shortcuts.And(
-                        *(lang.Odd(o).formula() for o in value),
+                        *(lang_num.Odd(o).formula() for o in value),
                     ),
-                    lang.Even(symbol).formula(),
+                    lang_num.Even(symbol).formula(),
                 ),
             )
 

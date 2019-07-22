@@ -108,16 +108,16 @@ class Even(lang.Predicate):
 
 
 @dataclasses.dataclass
-class SumEquals(Predicate):
-    lval: typing.List[Symbol]
-    rval: typing.List[Symbol]
+class SumEquals(lang.Predicate):
+    lval: typing.List[lang.Symbol]
+    rval: typing.List[lang.Symbol]
 
-     def __str__(self):
+    def __str__(self):
         lval = ' '.join(str(s) for s in self.lval)
         rval = ' '.join(str(s) for s in self.rval)
         return 'SUM {lval} = SUM {rval}'
 
-     def formula(self):
+    def formula(self):
         lval = set(self.lval)
         rval = set(self.rval)
         lval, rval = lval - rval, rval - lval
