@@ -16,12 +16,14 @@ class Edge:
         if not isinstance(self.statement, lang.Assert):
             return True
 
-        return shortcuts.is_sat(
-            shortcuts.And(
+        formula = shortcuts.And(
+            self.predecessor.state.formula(),
+            shortcuts.Not(
                 self.statement.formula(),
-                self.predecessor.state.formula(),
             ),
         )
+        cex = shortcuts.get_model(formula)
+        return cex is None
 
 
 @dataclasses.dataclass
