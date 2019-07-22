@@ -19,6 +19,14 @@ EVEN = frozenset((EVEN_atom,))
 TOP = ODD.union(EVEN)
 BOTTOM = frozenset()
 
+
+def _get_val_parity(val):
+    if val % 2 == 1:
+        return ODD
+    else:
+        return EVEN
+
+
 def _parity_name(val):
     return {
         ODD: 'O',
@@ -118,40 +126,64 @@ class ParityState:
         for symbol in self.modulo:
             clauses.append(
                 shortcuts.Iff(
-                    lang_num.Odd(symbol).formula(),
-                    shortcuts.Not(lang_num.Even(symbol).formula()),
+                    lang.Odd(symbol).formula(),
+                    shortcuts.Not(lang.Even(symbol).formula()),
                 ),
             )
 
         # Encode discovered modulo state:
         for symbol, value in self.modulo.items():
             if value == EVEN:
-                formula = lang_num.Even(symbol).formula()
+                formula = lang.Even(symbol).formula()
             elif value == ODD:
-                formula = lang_num.Odd(symbol).formula()
+                formula = lang.Odd(symbol).formula()
             else:
                 continue
             clauses.append(formula)
 
         # Encode similar parity:
         for symbol, value in self.samepar.items():
-            for other in value:
-                clauses.append(
-                    shortcuts.Iff(
-                        lang_num.Even(symbol).formula(),
-                        lang_num.Even(other).formula(),
+            if not value:
+                continue
+
+            clauses.append(
+                shortcuts.Implies(
+                    shortcuts.And(
+                        *(lang.Even(o).formula() for o in value),
                     ),
-                )
+                    lang.Even(symbol).formula(),
+                ),
+            )
+            clauses.append(
+                shortcuts.Implies(
+                    shortcuts.And(
+                        *(lang.Odd(o).formula() for o in value),
+                    ),
+                    lang.Odd(symbol).formula(),
+                ),
+            )
 
         # Encode anti parity:
         for symbol, value in self.antipar.items():
-            for other in value:
-                clauses.append(
-                    shortcuts.Iff(
-                        lang_num.Even(symbol).formula(),
-                        shortcuts.Not(lang_num.Even(other).formula()),
+            if not value:
+                continue
+
+            clauses.append(
+                shortcuts.Implies(
+                    shortcuts.And(
+                        *(lang.Even(o).formula() for o in value),
                     ),
-                )
+                    lang.Odd(symbol).formula(),
+                ),
+            )
+            clauses.append(
+                shortcuts.Implies(
+                    shortcuts.And(
+                        *(lang.Odd(o).formula() for o in value),
+                    ),
+                    lang.Even(symbol).formula(),
+                ),
+            )
 
         return shortcuts.And(*clauses)
 
@@ -169,11 +201,7 @@ def var_assignment(state, statement):
 
 @transforms(lang_num.ValAssignment)
 def val_assignment(state, statement):
-    if statement.rval % 2 == 1:
-        p = ODD
-    else:
-        p = EVEN
-    state.modulo[statement.lval] = p
+    state.modulo[statement.lval] = _get_val_parity(statement.rval)
 
     for key in state.samepar:
         state.samepar[key].discard(statement.lval)
@@ -236,6 +264,7 @@ def assume(state, statement):
             state.reset()
         elif state.modulo[expr.lval] == EVEN and (expr.rval % 2 == 1):
             state.reset()
+        state.modulo[expr.lval] = _get_val_parity(expr.rval)
     elif isinstance(expr, lang_num.EqualsVar):
         res = state.modulo[expr.lval].intersection(state.modulo[expr.rval])
         state.modulo[expr.lval] = res
