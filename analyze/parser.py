@@ -5,7 +5,7 @@ from analyze import lang
 class Lexer(sly.Lexer):
     tokens = {NAME, NUMBER, LABEL, PLUS, MINUS, ASSIGN, EQUAL, NOTEQUAL,
               ASSUME, SKIP, ASSERT, QMARK, LPAREN, RPAREN, TRUE, FALSE, ODD,
-              EVEN}
+              EVEN, SUM}
     ignore = '\t '
 
     ASSUME = r'assume'
@@ -15,6 +15,7 @@ class Lexer(sly.Lexer):
     FALSE = 'FALSE'
     ODD = 'ODD'
     EVEN = 'EVEN'
+    SUM = 'SUM'
     LABEL = r'L\d+'
     NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
     PLUS = r'\+'
@@ -159,3 +160,7 @@ class Parser(sly.Parser):
     @_('ODD sym')
     def pred(self, p):
         return lang.Odd(p.sym)
+
+    @_('SUM vars EQUAL SUM vars')
+    def pred(self, p):
+        return lang.SumEquals(p.vars0, p.vars1)

@@ -171,6 +171,30 @@ class Assert(Statement):
 
 
 @dataclasses.dataclass
+class SumEquals(Predicate):
+    lval: typing.List[Symbol]
+    rval: typing.List[Symbol]
+
+    def __str__(self):
+        lval = ' '.join(str(s) for s in self.lval)
+        rval = ' '.join(str(s) for s in self.rval)
+        return 'SUM {lval} = SUM {rval}'
+
+    def formula(self):
+        lval = set(self.lval)
+        rval = set(self.rval)
+        lval, rval = lval - rval, rval - lval
+        return shortcuts.Equals(
+            shortcuts.Plus(
+                *(shortcuts.Symbol(v.name, shortcuts.INT) for v in lval),
+            ),
+            shortcuts.Plus(
+                *(shortcuts.Symbol(v.name, shortcuts.INT) for v in rval),
+            ),
+        )
+
+
+@dataclasses.dataclass
 class ProgramLine:
     source: str
     statement: Statement
