@@ -3,12 +3,12 @@ import pytest
 import sys
 print(sys.path)
 
-from analyze import chaotic
-from analyze import cfg
-from analyze import lang
-from analyze import parser
-from analyze import parity
-from analyze import sum
+from analyzeframework import chaotic
+from analyzeframework import cfg
+from analyzenumerical import lang
+from analyzenumerical import parser
+from analyzenumerical import parity
+from analyzenumerical import sum
 
 
 @pytest.mark.parametrize(

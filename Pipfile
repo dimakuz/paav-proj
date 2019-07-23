@@ -16,5 +16,5 @@ pysmt = "*"
 python_version = "3.7"
 
 [scripts]
-analyze = "python -m analyze.tester"
+analyze = "python analyze.py"
 test = 'py.test -v .'

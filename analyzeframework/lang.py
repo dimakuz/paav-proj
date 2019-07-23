@@ -4,7 +4,7 @@ import typing
 from pysmt import shortcuts
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, order=True)
 class Symbol:
     name: str
 

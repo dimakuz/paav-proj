@@ -164,4 +164,4 @@ class Parser(sly.Parser):
 
     @_('SUM vars EQUAL SUM vars')
     def pred(self, p):
-        return lang.SumEquals(p.vars0, p.vars1)
+        return lang_num.SumEquals(p.vars0, p.vars1)
