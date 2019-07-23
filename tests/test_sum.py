@@ -4,30 +4,27 @@ from analyzeframework import chaotic
 from analyzeframework import cfg
 from analyzenumerical import lang
 from analyzenumerical import parser
-from analyzenumerical import parity
+from analyzenumerical import sum
 
 
 @pytest.mark.parametrize(
     ('input_path, asserts'),
     (
         ('examples/reference', ()),
-        ('examples/parity/reference', (('L6', 'L7', True),)),
+        ('examples/sum/reference', (('L6', 'L7', True),)),
         ('examples/parity/reference-extra',
          (
-            ('L6', 'L7', True),
-            ('L7', 'L8', False),
-            ('L8', 'L9', True),
          ),
         ),
     ),
 )
-def test_parity_analysis(input_path, asserts):
+def test_sum_analysis(input_path, asserts):
     lex = parser.Lexer()
     par = parser.Parser()
     with open(input_path) as f:
         par.parse(lex.tokenize(f.read()))
     control = cfg.ControlFlowGraph(par.lines)
-    state = parity.ParityState
+    state = sum.SumState
 
     for node in control.nodes.values():
         node.state = state.initial(par.vars)

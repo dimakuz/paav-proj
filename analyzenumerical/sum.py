@@ -69,29 +69,42 @@ class DiffMatrix:
         return self.val[key]
 
     def join(self, other):
-        for key in self.val:
-            return DiffMatrix(
-                val={
-                    key: _const_join(
-                        self.val[key],
-                        other.val[key],
-                    ),
-                },
-            )
+        return DiffMatrix(
+            val={
+                key: _const_join(
+                    self.val[key],
+                    other.val[key],
+                )
+                for key in self.val
+            },
+        )
 
     def reset(self):
         for key in self.val:
             self.val[key] = _C.BOTTOM
 
     def formula(self):
-        return shortcuts.TRUE()
+        clauses = []
+        for key, value in self.val.items():
+            if value in (_C.TOP, _C.BOTTOM):
+                continue
+            clauses.append(
+                shortcuts.Equals(
+                    shortcuts.Int(value),
+                    shortcuts.Minus(
+                        shortcuts.Symbol(key[0].name, shortcuts.INT),
+                        shortcuts.Symbol(key[1].name, shortcuts.INT),
+                    ),
+                ),
+            )
+        return shortcuts.And(clauses)
 
     def __str__(self):
         factoids = []
         for key, value in self.val.items():
-            if value in (_C.TOP, _C.BOTTOM):
-                continue
-            factoids.append(f'{key[0].name} - {key[1].name} = {value}')
+            factoids.append(
+                f'{key[0].name} - {key[1].name} = {_const_name(value)}',
+            )
         return '\n'.join(factoids)
 
 
@@ -153,6 +166,13 @@ class SumState(abstract.AbstractState):
         lines.append(str(self.diff))
         return '\n'.join(lines)
 
+    def augment(self):
+        # Augment diff state with const propogation info
+        for sym1, val1 in self.const.items():
+            for sym2, val2 in self.const.items():
+                if isinstance(val1, int) and isinstance(val2, int):
+                    self.diff[sym1, sym2] = val1 - val2
+
 
 @SumState.transforms(lang_num.VarAssignment)
 def var_assignment(state, statement):
@@ -199,8 +219,7 @@ def inc_assignment(state, statement):
             if sym == statement.rval:
                 state.diff[statement.lval, sym] = 1
             else:
-                state.diff[statement.lval, sym] = _C.BOTTOM
-
+                state.diff[statement.lval, sym] = _C.TOP
 
 
 @SumState.transforms(lang_num.VarDecAssignment)
@@ -221,7 +240,7 @@ def dec_assignment(state, statement):
             if sym == statement.rval:
                 state.diff[statement.lval, sym] = -1
             else:
-                state.diff[statement.lval, sym] = _C.BOTTOM
+                state.diff[statement.lval, sym] = _C.TOP
 
 
 @SumState.transforms(lang.Skip)
@@ -241,11 +260,14 @@ def assume(state, statement):
         state.const[expr.lval] = expr.rval
     elif isinstance(expr, lang_num.EqualsVar):
         state.const[expr.lval] = state.const[expr.rval]
+        state.diff[expr.lval, expr.rval] = 0
     elif isinstance(expr, lang_num.NotEqualsVar):
         if (
             state.const[expr.lval] == state.const[expr.rval]
             and
             state.const[expr.lval] is not _C.TOP
+        ) or (
+            state.diff[expr.lval, expr.rval] == 0
         ):
             state.reset()
     elif isinstance(expr, lang_num.NotEqualsVal):

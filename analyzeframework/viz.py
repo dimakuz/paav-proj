@@ -4,7 +4,7 @@ import graphviz
 
 
 def _node_label(node):
-    return f'{node.name}\n{node.state}'
+    return f'{node.name} ({node.visits})\n{node.state}'
 
 
 def _edge_color(edge):

@@ -19,11 +19,18 @@ class AbstractState:
         return copy.deepcopy(self)
 
     def transform(self, statement):
+        LOG.debug('Processing statement %s', statement)
         res = self.copy()
+        LOG.debug('Initial state is: %s\n', res)
         try:
             transformer = self.TRANSFORMERS[type(self)][type(statement)]
         except KeyError:
             LOG.warning(f'No transformer for {statement}')
             return res
         transformer(res, statement)
+        res.augment()
+        LOG.debug('Transformed state is: %s\n', res)
         return res
+
+    def augment(self):
+        pass

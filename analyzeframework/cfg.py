@@ -32,6 +32,7 @@ class Node:
     out_edges: typing.List[Edge] = dataclasses.field(default_factory=list)
     in_edges: typing.List[Edge] = dataclasses.field(default_factory=list)
     state: object = None
+    visits: int = 0
 
 
 class ControlFlowGraph:

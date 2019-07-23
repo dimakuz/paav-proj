@@ -7,7 +7,9 @@ def chaotic_iteration(cfg):
     wl = [cfg.head]
     while wl:
         node = wl.pop(0)
-        LOG.debug('pop node %r', node.name)
+        node.visits += 1
+
+        LOG.debug('pop node %r (visits: %d)', node.name, node.visits)
         for edge in node.out_edges:
             next_node = edge.successor
             transformed_state = node.state.transform(edge.statement)
