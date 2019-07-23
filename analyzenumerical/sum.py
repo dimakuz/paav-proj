@@ -18,6 +18,8 @@ class _C(enum.Enum):
     TOP = enum.auto()
     BOTTOM = enum.auto()
 
+_SPECIAL = (_C.TOP, _C.BOTTOM)
+
 
 def _const_name(val):
     if val is _C.TOP:
@@ -57,7 +59,7 @@ class DiffMatrix:
             return
         if key[0] >= key[1]:
             key = (key[1], key[0])
-            if value not in (_C.TOP, _C.BOTTOM):
+            if value not in _SPECIAL:
                 value = -value
         self.val[key] = value
 
@@ -86,7 +88,7 @@ class DiffMatrix:
     def formula(self):
         clauses = []
         for key, value in self.val.items():
-            if value in (_C.TOP, _C.BOTTOM):
+            if value in _SPECIAL:
                 continue
             clauses.append(
                 shortcuts.Equals(
@@ -170,7 +172,7 @@ class SumState(abstract.AbstractState):
         # Augment diff state with const propogation info
         for sym1, val1 in self.const.items():
             for sym2, val2 in self.const.items():
-                if isinstance(val1, int) and isinstance(val2, int):
+                if val1 not in _SPECIAL and val2 not in _SPECIAL:
                     self.diff[sym1, sym2] = val1 - val2
 
 
@@ -212,7 +214,7 @@ def inc_assignment(state, statement):
 
     if statement.lval == statement.rval:
         for sym in state.const:
-            if state.diff[statement.lval, sym] not in (_C.TOP, _C.BOTTOM):
+            if state.diff[statement.lval, sym] not in _SPECIAL:
                 state.diff[statement.lval, sym] -= 1
     else:
         for sym in state.const:
@@ -233,7 +235,7 @@ def dec_assignment(state, statement):
 
     if statement.lval == statement.rval:
         for sym in state.const:
-            if state.diff[statement.lval, sym] not in (_C.TOP, _C.BOTTOM):
+            if state.diff[statement.lval, sym] not in _SPECIAL:
                 state.diff[statement.lval, sym] += 1
     else:
         for sym in state.const:
