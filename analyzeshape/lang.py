@@ -11,11 +11,11 @@ class SymbolNext:
     name: str
 
     def __str__(self):
-        return f'{self.name}.n'
+        return f'{self.name}'
 
 
 @dataclasses.dataclass
-class VarAssignment(lang.Statement):
+class VarVarAssignment(lang.Statement):
     lval: str
     rval: str
 
@@ -24,7 +24,7 @@ class VarAssignment(lang.Statement):
 
 
 @dataclasses.dataclass
-class NewAssignment(lang.Statement):
+class VarNewAssignment(lang.Statement):
     lval: str
 
     def __str__(self):
@@ -32,7 +32,15 @@ class NewAssignment(lang.Statement):
 
 
 @dataclasses.dataclass
-class NullAssignment(lang.Statement):
+class VarNullAssignment(lang.Statement):
+    lval: str
+
+    def __str__(self):
+        return f'{self.lval} := NULL'
+
+
+@dataclasses.dataclass
+class NextNullAssignment(lang.Statement):
     lval: str
 
     def __str__(self):
@@ -49,7 +57,7 @@ class EqualsVarVar(lang.Predicate):
 
     def formula(self):
         return 'TODO'
-        
+
 
 @dataclasses.dataclass
 class NotEqualsVarVar(lang.Predicate):
@@ -156,4 +164,7 @@ class Len(lang.Predicate):
         return f'LEN {self.sym0} {self.sym1} = LEN {self.sym2} {self.sym3}'
 
     def formula(self):
-        return shortcuts.Symbol(f'LEN-{self.sym0}-{self.sym1}-{self.sym2}-{self.sym3}')
+        return shortcuts.Equals(
+                shortcuts.Symbol(f'LEN-{self.sym0}-{self.sym1}'),
+                shortcuts.Symbol(f'LEN-{self.sym2}-{self.sym3}')
+        )

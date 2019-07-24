@@ -84,19 +84,19 @@ class Parser(sly.Parser):
 
     @_('NEXT')
     def sym(self, p):
-        return lang_shape.SymbolNext(p.NAME)
+        return lang_shape.SymbolNext(p.NEXT)
 
     @_('sym ASSIGN sym')
     def stmt(self, p):
-        return lang_shape.VarAssignment(p.sym0, p.sym1)
+        return lang_shape.VarVarAssignment(p.sym0, p.sym1)
 
     @_('sym ASSIGN next')
     def stmt(self, p):
-        return lang_shape.VarAssignment(p.sym, p.next)
+        return lang_shape.VarNextAssignment(p.sym, p.next)
 
     @_('next ASSIGN sym')
     def stmt(self, p):
-        return lang_shape.VarAssignment(p.next, p.sym)
+        return lang_shape.NextVarAssignment(p.next, p.sym)
 
     @_('sym ASSIGN NEW')
     def stmt(self, p):
@@ -104,7 +104,11 @@ class Parser(sly.Parser):
 
     @_('sym ASSIGN NULL')
     def stmt(self, p):
-        return lang_shape.NullAssignment(p.sym)
+        return lang_shape.VarNullAssignment(p.sym)
+
+    @_('next ASSIGN NULL')
+    def stmt(self, p):
+        return lang_shape.NextNullAssignment(p.next)
 
     @_('ASSUME LPAREN expr RPAREN')
     def stmt(self, p):

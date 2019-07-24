@@ -6,7 +6,7 @@ import typing
 
 from pysmt import shortcuts
 
-from analyzenumerical import abstract
+from analyzeframework import abstract
 from analyzenumerical import lang as lang_num
 from analyzeframework import lang
 
