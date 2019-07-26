@@ -34,20 +34,10 @@ class ThreeValuedBool:
         return ThreeValuedBool(1 - val)
 
     def _and(self, other):
-        if self.val == 0 or other.val == 0:
-            return FALSE
-        elif self.val == 1 and other.val == 1:
-            return TRUE
-        else:
-            return MAYBE
+        return ThreeValuedBool(min(self.val, other.val))
 
     def _or(self, other):
-        if self.val == 1 or other.val == 1:
-            return TRUE
-        elif self.val == 0 and other.val == 0:
-            return FALSE
-        else:
-            return MAYBE
+        return ThreeValuedBool(max(self.val, other.val))
 
 
 TRUE = ThreeValuedBool(1)
@@ -87,6 +77,12 @@ class ShapeState(abstract.AbstractState):
     shared: typing.Mapping[int, ThreeValuedBool]
     sm: typing.Mapping[int, ThreeValuedBool]
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
+
+    def _exists(self, vals):
+        return ThreeValuedBool(max(map(ThreeValuedBool.val, vals)))
+
+    def _forall(self, vals):
+        return ThreeValuedBool(min(map(ThreeValuedBool.val, vals)))
 
     def get_var_indiv(self, sym):
 
@@ -161,8 +157,11 @@ def var_new_assignment(state, statement):
         state.n[(v,u)] = FALSE
 
     for var in state.var:
-        state.var[key][v] = TRUE if var==lval else FALSE
-        state.reach[key][v] = TRUE if var==lval else FALSE
+        state.var[var][v] = FALSE
+        state.reach[var][v] = FALSE
+
+    state.var[lval][v] = TRUE
+    state.reach[lval][v] = TRUE
 
     state.cycle[v] = FALSE
     state.shared[v] = FALSE
@@ -176,7 +175,7 @@ def var_next_assignment(state, statement):
     
     lval = statement.lval
     rval = statement.rval
-    u = state.get_var_indiv(lval)
+    u = state.get_var_indiv(rval)
 
     for v in state.indiv:
         state.var[lval][v] = state.n[(u, v)]
