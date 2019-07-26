@@ -10,7 +10,8 @@ from analyzeframework import viz
 from analyzenumerical import sum
 from analyzenumerical import parser as num_parser
 from analyzenumerical import parity
-# from analyzeshape import parser as shape_parser
+from analyzeshape import shape
+from analyzeshape import parser as shape_parser
 
 
 def parse_args():
@@ -38,10 +39,9 @@ def main():
         lex = num_parser.Lexer()
         par = num_parser.Parser()
     elif opts.type == 'shape':
-        raise NotImplementedError('FIXME')
-    #     state = None
-    #     lex = shape_parser.Lexer()
-    #     par = shape_parser.Parser()
+        state = shape.ShapeState
+        lex = shape_parser.Lexer()
+        par = shape_parser.Parser()
 
     with open(opts.path) as f:
         par.parse(lex.tokenize(f.read()))

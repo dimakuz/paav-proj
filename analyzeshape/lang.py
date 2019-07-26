@@ -92,7 +92,7 @@ class NotEqualsVarVar(lang.Predicate):
 @dataclasses.dataclass
 class EqualsVarNext(lang.Predicate):
     lval: lang.Symbol
-    rval: lang.SymbolNext
+    rval: lang.Symbol
 
     def __str__(self):
         return f'{self.lval} = {self.rval}'
@@ -104,7 +104,7 @@ class EqualsVarNext(lang.Predicate):
 @dataclasses.dataclass
 class NotEqualsVarNext(lang.Predicate):
     lval: lang.Symbol
-    rval: lang.SymbolNext
+    rval: lang.Symbol
 
     def __str__(self):
         return f'{self.lval} != {self.rval}'

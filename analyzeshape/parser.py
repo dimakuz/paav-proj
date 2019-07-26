@@ -6,7 +6,7 @@ from analyzeframework import lang
 class Lexer(sly.Lexer):
     tokens = {NAME, LABEL, ASSIGN, EQUAL, NOTEQUAL, NULL, NEXT,
               ASSUME, SKIP, ASSERT, LPAREN, RPAREN, TRUE, FALSE, 
-              ODD, EVEN, LEN, LS}
+              NEW, ODD, EVEN, LEN, LS}
     ignore = '\t '
 
     ASSUME = r'assume'
@@ -83,8 +83,8 @@ class Parser(sly.Parser):
         return lang.Symbol(p.NAME)
 
     @_('NEXT')
-    def sym(self, p):
-        return lang_shape.SymbolNext(p.NEXT)
+    def next(self, p):
+        return lang.Symbol(p.NEXT[:-2])
 
     @_('sym ASSIGN sym')
     def stmt(self, p):
@@ -92,11 +92,11 @@ class Parser(sly.Parser):
 
     @_('sym ASSIGN next')
     def stmt(self, p):
-        return lang_shape.VarNextAssignment(p.sym, p.next[:-2])
+        return lang_shape.VarNextAssignment(p.sym, p.next)
 
     @_('next ASSIGN sym')
     def stmt(self, p):
-        return lang_shape.NextVarAssignment(p.next[:-2], p.sym)
+        return lang_shape.NextVarAssignment(p.NEXT, p.sym)
 
     @_('sym ASSIGN NEW')
     def stmt(self, p):
@@ -108,27 +108,39 @@ class Parser(sly.Parser):
 
     @_('next ASSIGN NULL')
     def stmt(self, p):
-        return lang_shape.NextNullAssignment(p.next[:-2])
+        return lang_shape.NextNullAssignment(p.next)
 
     @_('ASSUME LPAREN expr RPAREN')
     def stmt(self, p):
         return lang.Assume(p.expr)
 
+    @_('ASSUME LPAREN pred_expr RPAREN')
+    def stmt(self, p):
+        return lang.Assume(p.pred_expr)
+
     @_('sym EQUAL sym')
-    def expr(self, p):
+    def pred_expr(self, p):
         return lang_shape.EqualsVarVar(p.sym0, p.sym1)
 
+    @_('sym EQUAL NULL')
+    def pred_expr(self, p):
+        return lang_shape.EqualsVarNull(p.sym)
+
     @_('sym EQUAL next')
-    def expr(self, p):
-        return lang_shape.EqualsVarNext(p.sym, p.next[:-2])
+    def pred_expr(self, p):
+        return lang_shape.EqualsVarNext(p.sym, p.next)
 
     @_('sym NOTEQUAL sym')
-    def expr(self, p):
+    def pred_expr(self, p):
         return lang_shape.NotEqualsVarVar(p.sym0, p.sym1)
 
+    @_('sym NOTEQUAL NULL')
+    def pred_expr(self, p):
+        return lang_shape.NotEqualsVarVar(p.sym)
+
     @_('sym NOTEQUAL next')
-    def expr(self, p):
-        return lang_shape.NotEqualsVarNext(p.sym, p.next[:-2])
+    def pred_expr(self, p):
+        return lang_shape.NotEqualsVarNext(p.sym, p.next)
 
     @_('TRUE')
     def expr(self, p):
@@ -154,22 +166,30 @@ class Parser(sly.Parser):
     def andc(self, p):
         return [p.pred]
 
+    @_('pred_expr')
+    def andc(self, p):
+        return [p.pred_expr]
+
     @_('pred andc')
     def andc(self, p):
         return [p.pred] + p.andc
 
+    @_('pred_expr andc')
+    def andc(self, p):
+        return [p.pred_expr] + p.andc
+
     @_('LS sym sym')
-    def ls(self, p):
-        return lang.Ls(p.sym0, p.sym1)
+    def pred(self, p):
+        return lang_shape.Ls(p.sym0, p.sym1)
 
     @_('LEN sym sym EQUAL LEN sym sym')
-    def len(self, p):
-        return lang.Len(p.sym0, p.sym1, p.sym2, p.sym3)
+    def pred(self, p):
+        return lang_shape.Len(p.sym0, p.sym1, p.sym2, p.sym3)
 
     @_('EVEN sym sym')
-    def even(self, p):
+    def pred(self, p):
         return lang_shape.Even(p.sym0, p.sym1)
 
     @_('ODD sym sym')
-    def odd(self, p):
+    def pred(self, p):
         return lang_shape.Odd(p.sym0, p.sym1)

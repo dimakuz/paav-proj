@@ -20,6 +20,36 @@ EVEN = frozenset((EVEN_atom,))
 TOP = ODD.union(EVEN)
 BOTTOM = frozenset()
 
+
+class ThreeValuedBool:
+    val: float
+
+    def __init__(self, val):
+        self.val = val
+
+    def __eq__(self, other):
+        return self.val == other.val
+
+    def _not(self):
+        return ThreeValuedBool(1 - val)
+
+    def _and(self, other):
+        if self.val == 0 or other.val == 0:
+            return FALSE
+        elif self.val == 1 and other.val == 1:
+            return TRUE
+        else:
+            return MAYBE
+
+    def _or(self, other):
+        if self.val == 1 or other.val == 1:
+            return TRUE
+        elif self.val == 0 and other.val == 0:
+            return FALSE
+        else:
+            return MAYBE
+
+
 TRUE = ThreeValuedBool(1)
 FALSE = ThreeValuedBool(0)
 MAYBE = ThreeValuedBool(0.5)
@@ -45,36 +75,7 @@ def transforms(stmt_type):
     def decorator(func):
         ShapeState.TRANSFORMERS[stmt_type] = func
         return func
-    return decorator
-
-
-class ThreeValuedBool:
-    val: float
-
-    def __init__(self, val):
-        self.val = val
-
-    def __eq__(self, other):
-        return self.val == other.val
-
-    def not(self):
-        return ThreeValuedBool(1 - val)
-
-    def and(self, other):
-        if self.val == 0 or other.val == 0:
-            return FALSE
-        elif self.val == 1 and other.val == 1:
-            return TRUE
-        else
-            return MAYBE
-
-    def or(self, other):
-        if self.val == 1 or other.val == 1:
-            return TRUE
-        elif self.val == 0 and other.val == 0:
-            return FALSE
-        else
-            return MAYBE        
+    return decorator     
 
 
 @dataclasses.dataclass
@@ -85,7 +86,7 @@ class ShapeState(abstract.AbstractState):
     cycle: typing.Mapping[int, ThreeValuedBool]
     shared: typing.Mapping[int, ThreeValuedBool]
     sm: typing.Mapping[int, ThreeValuedBool]
-    n: typing.Mapping[(int, int), ThreeValuedBool]
+    n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
     def get_var_indiv(self, sym):
 
@@ -135,8 +136,7 @@ class ShapeState(abstract.AbstractState):
             self.reach[key].clear()
 
     def formula(self):
-
-        # TODO
+        return ''
 
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
@@ -180,7 +180,7 @@ def var_next_assignment(state, statement):
 
     for v in state.indiv:
         state.var[lval][v] = state.n[(u, v)]
-        state.reach[lval][v] = state.reach[rval][v].and(state.cycle[v].or(state.var[rval][v].not()))
+        state.reach[lval][v] = state.reach[rval][v]._and(state.cycle[v]._or(state.var[rval][v]._not()))
 
 
 @ShapeState.transforms(lang_shape.VarNullAssignment)
@@ -195,7 +195,7 @@ def var_null_assignment(state, statement):
 
 @ShapeState.transforms(lang_shape.NextVarAssignment)
 def next_var_assignment(state, statement):
-     #TODO
+    return ''
 
 
 @ShapeState.transforms(lang_shape.NextNullAssignment)
@@ -204,8 +204,8 @@ def next_null_assignment(state, statement):
     lval = statement.lval
     u = state.get_var_indiv(lval)
 
-    for v in state.indiv:
-        if state.n[(u,v)] == TRUE
+    # for v in state.indiv:
+        # if state.n[(u,v)] == TRUE
 
 
 @ShapeState.transforms(lang.Skip)
@@ -222,8 +222,11 @@ def assume(state, statement):
         pass
     elif isinstance(expr, lang_shape.EqualsVarVar):
 
+        # TODO
+        pass
     elif isinstance(expr, lang_shape.NotEqualsVarVar):
-
+        # TODO
+        pass
     elif isinstance(expr, lang_shape.EqualsVarNext):
         pass
     elif isinstance(expr, lang_shape.NotEqualsVarNext):
