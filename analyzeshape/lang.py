@@ -24,6 +24,24 @@ class VarVarAssignment(lang.Statement):
 
 
 @dataclasses.dataclass
+class VarNextAssignment(lang.Statement):
+    lval: str
+    rval: str
+
+    def __str__(self):
+        return f'{self.lval} := {self.rval}'
+
+
+@dataclasses.dataclass
+class NextVarAssignment(lang.Statement):
+    lval: str
+    rval: str
+
+    def __str__(self):
+        return f'{self.lval} := {self.rval}'
+
+
+@dataclasses.dataclass
 class VarNewAssignment(lang.Statement):
     lval: str
 

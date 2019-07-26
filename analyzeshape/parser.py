@@ -92,15 +92,15 @@ class Parser(sly.Parser):
 
     @_('sym ASSIGN next')
     def stmt(self, p):
-        return lang_shape.VarNextAssignment(p.sym, p.next)
+        return lang_shape.VarNextAssignment(p.sym, p.next[:-2])
 
     @_('next ASSIGN sym')
     def stmt(self, p):
-        return lang_shape.NextVarAssignment(p.next, p.sym)
+        return lang_shape.NextVarAssignment(p.next[:-2], p.sym)
 
     @_('sym ASSIGN NEW')
     def stmt(self, p):
-        return lang_shape.NewAssignment(p.sym)
+        return lang_shape.VarNewAssignment(p.sym)
 
     @_('sym ASSIGN NULL')
     def stmt(self, p):
@@ -108,7 +108,7 @@ class Parser(sly.Parser):
 
     @_('next ASSIGN NULL')
     def stmt(self, p):
-        return lang_shape.NextNullAssignment(p.next)
+        return lang_shape.NextNullAssignment(p.next[:-2])
 
     @_('ASSUME LPAREN expr RPAREN')
     def stmt(self, p):
@@ -120,15 +120,15 @@ class Parser(sly.Parser):
 
     @_('sym EQUAL next')
     def expr(self, p):
-        return lang_shape.EqualsVarNext(p.sym0, p.sym1next)
+        return lang_shape.EqualsVarNext(p.sym, p.next[:-2])
 
     @_('sym NOTEQUAL sym')
     def expr(self, p):
         return lang_shape.NotEqualsVarVar(p.sym0, p.sym1)
 
-    @_('sym NOTEQUAL sym')
+    @_('sym NOTEQUAL next')
     def expr(self, p):
-        return lang_shape.NotEqualsVarNext(p.sym0, p.sym1next)
+        return lang_shape.NotEqualsVarNext(p.sym, p.next[:-2])
 
     @_('TRUE')
     def expr(self, p):
