@@ -65,7 +65,7 @@ def transforms(stmt_type):
     def decorator(func):
         ShapeState.TRANSFORMERS[stmt_type] = func
         return func
-    return decorator     
+    return decorator
 
 
 @dataclasses.dataclass
@@ -78,24 +78,28 @@ class ShapeState(abstract.AbstractState):
     sm: typing.Mapping[int, ThreeValuedBool]
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
-    def _exists(self, vals):
-        return ThreeValuedBool(max(map(ThreeValuedBool.val, vals)))
+    def _indiv_eq(self, u, v):
+        if (u != v):
+            return FALSE
+        else:
+            return self.sm(u)
 
-    def _forall(self, vals):
-        return ThreeValuedBool(min(map(ThreeValuedBool.val, vals)))
+    def _is_shared(self, v):
+        self._exists(lambda u1 : \
+            self._exists(lambda u2 : \
+                self.n[(u1,v)]._and(self.n[(u2,v)])._and(self._indiv_eq(u1,u2)._not())
+                )
+            )
 
-    def get_var_indiv(self, sym):
+    def _is_reachable(self, var, v):
+        # self.var[var][v]._or(self._exists(lambda v1 : self.var[var][v1]._and())
+        return None
 
-        u = None
-        for v in self.indiv:
-            if self.var[sym][v] == TRUE:
-                u = v
-                break
+    def _exists(self, pred):
+        return ThreeValuedBool(max(pred(v) for v in self.indiv))
 
-        if u is None:
-            raise RuntimeError('Possible null pointer reference detected')
-
-        return u
+    def _forall(self, pred):
+        return ThreeValuedBool(min(pred(v) for v in self.indiv))
 
     def join(self, other):
 
@@ -156,9 +160,9 @@ def var_new_assignment(state, statement):
         state.n[(u,v)] = FALSE
         state.n[(v,u)] = FALSE
 
-    for var in state.var:
-        state.var[var][v] = FALSE
-        state.reach[var][v] = FALSE
+    for key in state.var:
+        state.var[key][v] = FALSE
+        state.reach[key][v] = FALSE
 
     state.var[lval][v] = TRUE
     state.reach[lval][v] = TRUE
@@ -175,10 +179,11 @@ def var_next_assignment(state, statement):
     
     lval = statement.lval
     rval = statement.rval
-    u = state.get_var_indiv(rval)
+    if state._exists(lambda u : state.var[rval][u]) != TRUE:
+        raise RuntimeError('Possible null pointer reference detected')
 
     for v in state.indiv:
-        state.var[lval][v] = state.n[(u, v)]
+        state.var[lval][v] = state._exists(lambda u : state.var[rval][u]._and(state.n[(u, v)]))
         state.reach[lval][v] = state.reach[rval][v]._and(state.cycle[v]._or(state.var[rval][v]._not()))
 
 
@@ -201,11 +206,23 @@ def next_var_assignment(state, statement):
 def next_null_assignment(state, statement):
     
     lval = statement.lval
-    u = state.get_var_indiv(lval)
+    if state._exists(lambda u : state.var[lval][u]) != TRUE:
+        raise RuntimeError('Possible null pointer reference detected')
 
-    # for v in state.indiv:
-        # if state.n[(u,v)] == TRUE
+    cstate = state.copy()
 
+    for v in state.indiv:
+
+        for key in state.var:
+            if cstate.cycle[v]._and(cstate.reach[lval][v]):
+                state.reach[key][v] = cstate._is_reachable(key, v)
+            else:
+                
+
+        if cstate._exists(lambda u : cstate.var[lval][u]._and(cstate.n[(u, v)])) != FALSE:
+            state.shared[v] = cstate.shared[v]._and(self._is_shared(v))
+
+    state.reach[lval] = cstate.var[lval]
 
 @ShapeState.transforms(lang.Skip)
 @ShapeState.transforms(lang.Assert)
