@@ -47,7 +47,7 @@ def transforms(stmt_type):
 
 @dataclasses.dataclass
 class ShapeState(abstract.AbstractState):
-    structures: typing.Set[Structure]
+    structures: typing.Set[structure.Structure]
 
     def join(self, other):
 
@@ -80,7 +80,8 @@ class ShapeState(abstract.AbstractState):
             st.reset()
 
     def formula(self):
-        return return shortcuts.And(*clauses)
+        formulas = [st.formula() for st in self.structures]
+        return shortcuts.And(*formulas)
 
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
