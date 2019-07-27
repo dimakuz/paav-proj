@@ -78,12 +78,45 @@ class ShapeState(abstract.AbstractState):
     sm: typing.Mapping[int, ThreeValuedBool]
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
+    def _summarizable(self, u, v):
+        return all(self.var[key][u] == self.var[key][v] and \
+                    self.reach[key][u] == self.reach[key][v] for key in self.var) and \
+                    self.cycle[u] == self.cycle[v] and \
+                    self.shared[u] == self.shared[v]
+
+    def _summarize(self, u, v):
+        if sm[u] == FALSE:
+            self._merge_left_into_right(u, v)
+        else:
+            self._merge_left_into_right(v, u)
+
+    def _merge_left_into_right(self, u, v):
+        for w in self.indiv:
+            if self.n[(w,v)] != self.n[(w,u)]:
+                self.n[(w,v)] = MAYBE
+            if self.n[(v,w)] != self.n[(u,w)]:
+                self.n[(v,w)] = MAYBE
+        self.indiv.remove(u)
+        for key in self.var:
+            self.var[key].pop(u)
+            self.reach[key].pop(u)
+        self.cycle.pop(u)
+        self.shared.pop(u)
+        self.sm.pop(u)
+        for w in self.indiv:
+            self.n.pop((u,w))
+            self.n.pop((w,u))
+        self.n.pop((u,u))
+        self.sm[v] = MAYBE
+
+    # Equality taking summary nodes into account
     def _indiv_eq(self, u, v):
         if (u != v):
             return FALSE
         else:
             return self.sm(u)._not()
 
+    # Is the individual heap shared
     def _is_shared(self, v):
         return self._exists(lambda u1 : \
             self._exists(lambda u2 : \
@@ -91,9 +124,11 @@ class ShapeState(abstract.AbstractState):
                 )
             )
 
+    # Is the individual reachable from variable
     def _is_reachable(self, var, v):
         return self.var[var][v]._or(self._exists(lambda v1 : self.var[var][v1]._and(self.n_plus[(v1,v)])))
 
+    # Transitive closure of n
     def _n_plus(self):
         n_plus = self.n.copy()
         for u in indiv:
@@ -109,9 +144,14 @@ class ShapeState(abstract.AbstractState):
 
     def join(self, other):
 
-        # TODO
+        # Discard self state when dealing with 3-valued logic structures
+        new_state = other.deepcopy()
+        for u,v in self.indiv:
+            if new_state._summarizable(u,v):
+                new_state._summarize(u,v)
 
-        return ShapeState()
+
+        return new_state
 
     def __str__(self):
         
@@ -186,7 +226,7 @@ def var_next_assignment(state, statement):
     
     lval = statement.lval
     rval = statement.rval
-    cstate = state.copy()
+    cstate = state.deepcopy()
     var = cstate.var
     reach = cstate.reach
     n = cstate.n
@@ -216,7 +256,7 @@ def next_var_assignment(state, statement):
     
     lval = statement.lval
     rval = statement.rval
-    cstate = state.copy()
+    cstate = state.deepcopy()
     var = cstate.var
     reach = cstate.reach
     n = cstate.n
@@ -247,7 +287,7 @@ def next_var_assignment(state, statement):
 def next_null_assignment(state, statement):
     
     lval = statement.lval
-    cstate = state.copy()
+    cstate = state.deepcopy()
     var = cstate.var
     reach = cstate.reach
     n = cstate.n
@@ -262,7 +302,7 @@ def next_null_assignment(state, statement):
     for v in state.indiv:
 
         for key in state.var:
-            if cycle[v]._and(reach[lval][v]):
+            if cycle[v]._and(reach[lval][v]) != FALSE:
                 state.reach[key][v] = is_reachable(key, v)
             else:
                 state.reach[key][v] = reach[key][v]._and(exists(lambda u : reach[key][u]._and(var[lval][u]))\
