@@ -10,6 +10,14 @@ from analyzeframework import lang
 class ThreeValuedBool:
     val: float
 
+    def __str__(self):
+        if self.val == 0:
+            return 'FALSE'
+        elif self.val == 1:
+            return 'TRUE'
+        else:
+            return 'MAYBE'
+
     def __init__(self, val):
         self.val = val
 
@@ -40,6 +48,16 @@ class Structure:
     shared: typing.Mapping[int, ThreeValuedBool]
     sm: typing.Mapping[int, ThreeValuedBool]
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
+
+    def __str__(self):
+        lines = []
+        for symbol in self.var:
+            var = ','.join(f'indiv{v} = {self.var[symbol][v]}' for v in self.indiv)
+            reach = ','.join(f'indiv{v} = {self.reach[symbol][v]}' for v in self.indiv)
+        cycle = ','.join(f'indiv{v} = {self.cycle[v]}' for v in self.indiv)
+        shared = ','.join(f'indiv{v} = {self.shared[v]}' for v in self.indiv)
+        sm = ','.join(f'indiv{v} = {self.sm[v]}' for v in self.indiv)
+        return '\n'.join(lines)
 
     def _summarizable(self, u, v):
         return all(self.var[key][u] == self.var[key][v] and \

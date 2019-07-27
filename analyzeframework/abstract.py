@@ -28,9 +28,10 @@ class AbstractState:
             LOG.warning(f'No transformer for {statement}')
             return res
         transformer(res, statement)
-        res.augment()
+        res.post_transform()
         LOG.debug('Transformed state is: %s\n', res)
         return res
 
-    def augment(self):
+    # Augment / Coerce
+    def post_transform(self):
         pass

@@ -168,7 +168,7 @@ class SumState(abstract.AbstractState):
         lines.append(str(self.diff))
         return '\n'.join(lines)
 
-    def augment(self):
+    def post_transform(self):
         # Augment diff state with const propogation info
         for sym1, val1 in self.const.items():
             for sym2, val2 in self.const.items():

@@ -83,6 +83,9 @@ class ShapeState(abstract.AbstractState):
         formulas = [st.formula() for st in self.structures]
         return shortcuts.And(*formulas)
 
+    def post_transform(self):
+        pass # TODO
+
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
 def var_var_assignment(state, statement):
