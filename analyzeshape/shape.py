@@ -82,18 +82,24 @@ class ShapeState(abstract.AbstractState):
         if (u != v):
             return FALSE
         else:
-            return self.sm(u)
+            return self.sm(u)._not()
 
     def _is_shared(self, v):
-        self._exists(lambda u1 : \
+        return self._exists(lambda u1 : \
             self._exists(lambda u2 : \
                 self.n[(u1,v)]._and(self.n[(u2,v)])._and(self._indiv_eq(u1,u2)._not())
                 )
             )
 
     def _is_reachable(self, var, v):
-        # self.var[var][v]._or(self._exists(lambda v1 : self.var[var][v1]._and())
-        return None
+        return self.var[var][v]._or(self._exists(lambda v1 : self.var[var][v1]._and(self.n_plus[(v1,v)])))
+
+    def _n_plus(self):
+        n_plus = self.n.copy()
+        for u in indiv:
+            for v,w in indiv:
+                n_plus[(v,w)] = n_plus[(v,w)]._or(n_plus[(v,u)]._and(n_plus[(u,w)]))
+        return n_plus
 
     def _exists(self, pred):
         return ThreeValuedBool(max(pred(v) for v in self.indiv))
@@ -166,6 +172,7 @@ def var_new_assignment(state, statement):
 
     state.var[lval][v] = TRUE
     state.reach[lval][v] = TRUE
+    state.n[(v,v)] = FALSE
 
     state.cycle[v] = FALSE
     state.shared[v] = FALSE
@@ -179,12 +186,19 @@ def var_next_assignment(state, statement):
     
     lval = statement.lval
     rval = statement.rval
-    if state._exists(lambda u : state.var[rval][u]) != TRUE:
+    cstate = state.copy()
+    var = cstate.var
+    reach = cstate.reach
+    n = cstate.n
+    cycle = cstate.cycle
+    exists = cstate._exists
+
+    if exists(lambda u : var[rval][u]) != TRUE:
         raise RuntimeError('Possible null pointer reference detected')
 
     for v in state.indiv:
-        state.var[lval][v] = state._exists(lambda u : state.var[rval][u]._and(state.n[(u, v)]))
-        state.reach[lval][v] = state.reach[rval][v]._and(state.cycle[v]._or(state.var[rval][v]._not()))
+        state.var[lval][v] = exists(lambda u : var[rval][u]._and(n[(u, v)]))
+        state.reach[lval][v] = reach[rval][v]._and(cycle[v]._or(var[rval][v]._not()))
 
 
 @ShapeState.transforms(lang_shape.VarNullAssignment)
@@ -199,30 +213,71 @@ def var_null_assignment(state, statement):
 
 @ShapeState.transforms(lang_shape.NextVarAssignment)
 def next_var_assignment(state, statement):
-    return ''
+    
+    lval = statement.lval
+    rval = statement.rval
+    cstate = state.copy()
+    var = cstate.var
+    reach = cstate.reach
+    n = cstate.n
+    cycle = cstate.cycle
+    exists = cstate._exists
+    is_reachable = cstate._is_reachable
+    is_shared = cstate._is_shared
+
+    if exists(lambda u : var[lval][u]) != TRUE:
+        raise RuntimeError('Possible null pointer reference detected')
+
+    for v in state.indiv:
+
+        for key in state.var:
+            state.reach[key][v] = reach[key][v]._or(
+                exists(lambda u : reach[key][u]._and(var[lval][u]))._and(reach[rval][v]))
+
+        state.cycle[v] = cycle[v]._or(exists(lambda u : var[lval][u]._and(reach[rval][u]))._and(reach[rval][v]))
+
+        if var[rval][v]._and(exists(lambda u : n[(u, v)])) != FALSE:
+            state.shared[v] = shared[v]._or(is_shared(v))
+
+        for w in state.indiv:
+            state.n[(v,w)] = (var[lval][v]._not()._and(n[(v,w)]))._or(var[lval][v]._and(var[rval][w]))
 
 
 @ShapeState.transforms(lang_shape.NextNullAssignment)
 def next_null_assignment(state, statement):
     
     lval = statement.lval
-    if state._exists(lambda u : state.var[lval][u]) != TRUE:
-        raise RuntimeError('Possible null pointer reference detected')
-
     cstate = state.copy()
+    var = cstate.var
+    reach = cstate.reach
+    n = cstate.n
+    cycle = cstate.cycle
+    exists = cstate._exists
+    is_reachable = cstate._is_reachable
+    is_shared = cstate._is_shared
+
+    if exists(lambda u : var[lval][u]) != TRUE:
+        raise RuntimeError('Possible null pointer reference detected')
 
     for v in state.indiv:
 
         for key in state.var:
-            if cstate.cycle[v]._and(cstate.reach[lval][v]):
-                state.reach[key][v] = cstate._is_reachable(key, v)
+            if cycle[v]._and(reach[lval][v]):
+                state.reach[key][v] = is_reachable(key, v)
             else:
-                
+                state.reach[key][v] = reach[key][v]._and(exists(lambda u : reach[key][u]._and(var[lval][u]))\
+                    ._and(reach[lval][v]._and(var[lval][v]._not()))._not())
 
-        if cstate._exists(lambda u : cstate.var[lval][u]._and(cstate.n[(u, v)])) != FALSE:
-            state.shared[v] = cstate.shared[v]._and(self._is_shared(v))
+        state.cycle[v] = cycle[v]._and(reach[lval][v]._and(exists(lambda u : var[lval][u]._and(cycle[u]))._not()))
 
-    state.reach[lval] = cstate.var[lval]
+        if exists(lambda u : var[lval][u]._and(n[(u, v)])) != FALSE:
+            state.shared[v] = shared[v]._and(is_shared(v))
+
+        for w in state.indiv:
+            state.n[(v,w)] = (var[lval][v]._not()._and(n[(v,w)]))._or(FALSE)
+
+    state.reach[lval] = var[lval]
+
 
 @ShapeState.transforms(lang.Skip)
 @ShapeState.transforms(lang.Assert)

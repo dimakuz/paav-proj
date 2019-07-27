@@ -74,7 +74,7 @@ class EqualsVarVar(lang.Predicate):
         return f'{self.lval} = {self.rval}'
 
     def formula(self):
-        return 'TODO'
+        return shortcuts.Symbol(f'EQ-{self.lval}-{self.rval}')
 
 
 @dataclasses.dataclass
@@ -86,7 +86,7 @@ class NotEqualsVarVar(lang.Predicate):
         return f'{self.lval} != {self.rval}'
 
     def formula(self):
-        return 'TODO'
+        return shortcuts.Not(shortcuts.Symbol(f'EQ-{self.lval}-{self.rval}'))
 
 
 @dataclasses.dataclass
@@ -98,7 +98,7 @@ class EqualsVarNext(lang.Predicate):
         return f'{self.lval} = {self.rval}'
 
     def formula(self):
-        return 'TODO'
+        return shortcuts.Symbol(f'EQNEXT-{self.lval}-{self.rval}')
 
 
 @dataclasses.dataclass
@@ -110,7 +110,7 @@ class NotEqualsVarNext(lang.Predicate):
         return f'{self.lval} != {self.rval}'
 
     def formula(self):
-        return 'TODO'
+        return shortcuts.Not(shortcuts.Symbol(f'EQNEXT-{self.lval}-{self.rval}'))
 
 
 @dataclasses.dataclass
@@ -121,7 +121,7 @@ class EqualsVarNull(lang.Predicate):
         return f'{self.lval} = NULL'
 
     def formula(self):
-        return 'TODO'
+        return shortcuts.Symbol(f'NULL-{self.lval}')
 
 
 @dataclasses.dataclass
@@ -132,7 +132,7 @@ class NotEqualsVarNull(lang.Predicate):
         return f'{self.lval} != NULL'
 
     def formula(self):
-        return 'TODO'
+        return shortcuts.Not(shortcuts.Symbol(f'NULL-{self.lval}'))
 
 
 @dataclasses.dataclass
