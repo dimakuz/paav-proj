@@ -64,10 +64,8 @@ class ShapeState(abstract.AbstractState):
         return ShapeState(new_structures)
 
     def __str__(self):
-        
-        # TODO
-
-        return ''
+        st_str = ','.join(str(st) for st in self.structures)
+        return f'[{st_str}]'
 
     @classmethod
     def initial(cls, symbols):
@@ -93,9 +91,13 @@ def var_var_assignment(state, statement):
     for st in state.structures:
         lval = statement.lval
         rval = statement.rval
+        cstate = state.deepcopy()
+        var = cstate.var
+        reach = cstate.reach
 
-        state.var[lval] = state.var[rval]
-        state.reach[lval] = state.reach[rval]
+        for v in state.indiv:
+            state.var[lval][v] = var[rval][v]
+            state.reach[lval][v] = reach[rval][v]
 
 
 @ShapeState.transforms(lang_shape.VarNewAssignment)
@@ -169,8 +171,8 @@ def next_var_assignment(state, statement):
         n = cstate.n
         cycle = cstate.cycle
         exists = cstate._exists
-        is_reachable = cstate._is_reachable
-        is_shared = cstate._is_shared
+        is_reachable = cstate._phi_reach
+        is_shared = cstate._phi_shared
 
         if exists(lambda u : var[lval][u]) != TRUE:
             raise RuntimeError('Possible null pointer reference detected')
@@ -201,8 +203,8 @@ def next_null_assignment(state, statement):
         n = cstate.n
         cycle = cstate.cycle
         exists = cstate._exists
-        is_reachable = cstate._is_reachable
-        is_shared = cstate._is_shared
+        is_reachable = cstate._phi_reach
+        is_shared = cstate._phi_shared
 
         if exists(lambda u : var[lval][u]) != TRUE:
             raise RuntimeError('Possible null pointer reference detected')
@@ -241,11 +243,24 @@ def assume(state, statement):
         pass
     elif isinstance(expr, lang_shape.EqualsVarVar):
 
-        # TODO
-        pass
+        lval = statement.lval
+        rval = statement.rval
+        passed = [st for st in state.structures if (st._var_eq(lval, rval) == TRUE)]
+        if passed:
+            state.structures = passed
+        else:
+            state.reset()
+        
     elif isinstance(expr, lang_shape.NotEqualsVarVar):
-        # TODO
-        pass
+
+        lval = statement.lval
+        rval = statement.rval
+        passed = [st for st in state.structures if (st._var_eq(lval, rval) == FALSE)]
+        if passed:
+            state.structures = passed
+        else:
+            state.reset()
+
     elif isinstance(expr, lang_shape.EqualsVarNext):
         pass
     elif isinstance(expr, lang_shape.NotEqualsVarNext):

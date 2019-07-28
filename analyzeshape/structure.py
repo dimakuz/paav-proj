@@ -5,38 +5,23 @@ import typing
 from pysmt import shortcuts
 from analyzeshape import lang as lang_shape
 from analyzeframework import lang
+from enum import Enum
 
 
-class ThreeValuedBool:
-    val: float
-
-    def __str__(self):
-        if self.val == 0:
-            return 'FALSE'
-        elif self.val == 1:
-            return 'TRUE'
-        else:
-            return 'MAYBE'
-
-    def __init__(self, val):
-        self.val = val
-
-    def __eq__(self, other):
-        return self.val == other.val
+class ThreeValuedBool(Enum):
+    TRUE = 1
+    MAYBE = 0.5
+    FALSE = 0
 
     def _not(self):
-        return ThreeValuedBool(1 - val)
+        return ThreeValuedBool(1 - self)
 
     def _and(self, other):
-        return ThreeValuedBool(min(self.val, other.val))
+        return ThreeValuedBool(min(self, other))
 
     def _or(self, other):
-        return ThreeValuedBool(max(self.val, other.val))
+        return ThreeValuedBool(max(self, other))
 
-
-TRUE = ThreeValuedBool(1)
-FALSE = ThreeValuedBool(0)
-MAYBE = ThreeValuedBool(0.5)
 
 
 @dataclasses.dataclass
@@ -52,11 +37,21 @@ class Structure:
     def __str__(self):
         lines = []
         for symbol in self.var:
-            var = ','.join(f'indiv{v} = {self.var[symbol][v]}' for v in self.indiv)
-            reach = ','.join(f'indiv{v} = {self.reach[symbol][v]}' for v in self.indiv)
-        cycle = ','.join(f'indiv{v} = {self.cycle[v]}' for v in self.indiv)
-        shared = ','.join(f'indiv{v} = {self.shared[v]}' for v in self.indiv)
-        sm = ','.join(f'indiv{v} = {self.sm[v]}' for v in self.indiv)
+            var = ','.join(f'indiv-{v} = {self.var[symbol][v]}' for v in self.indiv)
+            lines.append(f'var_{symbol.name}: [{var}]')
+
+            reach = ','.join(f'indiv-{v} = {self.reach[symbol][v]}' for v in self.indiv)
+            lines.append(f'reach_{symbol.name}: [{reach}]')
+
+        cycle = ','.join(f'indiv-{v} = {self.cycle[v]}' for v in self.indiv)
+        lines.append(f'cycle: [{cycle}]')
+
+        shared = ','.join(f'indiv-{v} = {self.shared[v]}' for v in self.indiv)
+        lines.append(f'cycle: [{shared}]')
+
+        sm = ','.join(f'indiv-{v} = {self.sm[v]}' for v in self.indiv)
+        lines.append(f'cycle: [{sm}]')
+
         return '\n'.join(lines)
 
     def _summarizable(self, u, v):
@@ -98,7 +93,7 @@ class Structure:
             return self.sm(u)._not()
 
     # Is the individual heap shared
-    def _is_shared(self, v):
+    def _phi_shared(self, v):
         return self._exists(lambda u1 : \
             self._exists(lambda u2 : \
                 self.n[(u1,v)]._and(self.n[(u2,v)])._and(self._indiv_eq(u1,u2)._not())
@@ -106,8 +101,26 @@ class Structure:
             )
 
     # Is the individual reachable from variable
-    def _is_reachable(self, var, v):
-        return self.var[var][v]._or(self._exists(lambda v1 : self.var[var][v1]._and(self.n_plus[(v1,v)])))
+    def _phi_reach(self, var, v):
+        return self.var[var][v]._or(self._exists(lambda v1 : self.var[var][v1]._and(self._n_plus()[(v1,v)])))
+
+    def _var_not_null(self, var1):
+        return self._exists(lambda u : self.var[var1][u])
+
+    def _var_eq(self, var1, var2):
+        return self._exists(lambda u1 : \
+            self._exists(lambda u2 : \
+                self.var[var1][u1]._and(self.var[var1][u2])._and(self._indiv_eq(u1, u2))))
+
+    def _var_next_eq(self, var1, var2):
+        return self._exists(lambda u1 : \
+            self._exists(lambda u2: \
+                self.var[var1][u1]._and(self.var[var2][u2])._and(self.n[(u1,u2)])
+                )
+            )
+
+    def _var_reach(self, var1, var2):
+        return self._exists(lambda u : self.var[var2][u]._and(self.reach[var1][u]))
 
     # Transitive closure of n
     def _n_plus(self):
@@ -122,12 +135,6 @@ class Structure:
 
     def _forall(self, pred):
         return ThreeValuedBool(min(pred(v).val for v in self.indiv))
-
-    def __str__(self):
-        
-        # TODO
-
-        return ''
 
     def initial(cls, symbols):
         return cls(
@@ -154,42 +161,29 @@ class Structure:
         clauses = []
 
         for var1 in self.var:
-
-            is_null = any(self.var[var1][v] != FALSE for v in self.indiv)
             clauses.append(
                 shortcuts.Iff(
                     lang_shape.EqualsVarNull(var1).formula(),
-                    shortcuts.Bool(is_null)
+                    shortcuts.Bool(self._var_not_null(var1) == FALSE)
                 ),
             )
-
             for var2 in self.var:
-
-                is_eq = all(self.var[var1][v] == self.var[var2][v] for v in self.indiv)
                 clauses.append(
                     shortcuts.Iff(
                         lang_shape.EqualsVarVar(var1, var2).formula(),
-                        shortcuts.Bool(is_eq)
+                        shortcuts.Bool(self._var_eq(var1, var2) == TRUE)
                     ),
                 )
-
-                is_eq_next = self._exists(lambda v1 : \
-                    self._exists(lambda v2: \
-                        self.var[var1][v1]._and(self.var[var2][v2])._and(self.n[(v1,v2)])
-                        )
-                    )
                 clauses.append(
                     shortcuts.Iff(
                         lang_shape.EqualsVarNext(var1, var2).formula(),
-                        shortcuts.Bool(is_eq_next)
+                        shortcuts.Bool(self._var_next_eq(var1, var2) == TRUE)
                     ),
                 )
-
-                is_reachable = self._exists(lambda v2 : self.var[var2][v2]._and(self.reach[var1][v2]))
                 clauses.append(
                     shortcuts.Iff(
                         lang_shape.Ls(var1, var2).formula(),
-                        shortcuts.Bool(is_reachable)
+                        shortcuts.Bool(self._var_reach(var1, var2) == TRUE)
                     ),
                 )
 
