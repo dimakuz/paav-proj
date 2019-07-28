@@ -139,8 +139,9 @@ def var_next_assignment(state, statement):
         n = cstate.n
         cycle = cstate.cycle
         exists = cstate._exists
+        not_null = cstate._var_not_null
 
-        if exists(lambda u : var[rval][u]) != TRUE:
+        if not_null(lval) == FALSE:
             raise RuntimeError('Possible null pointer reference detected')
 
         for v in state.indiv:
@@ -173,8 +174,9 @@ def next_var_assignment(state, statement):
         exists = cstate._exists
         is_reachable = cstate._phi_reach
         is_shared = cstate._phi_shared
+        not_null = cstate._var_not_null
 
-        if exists(lambda u : var[lval][u]) != TRUE:
+        if not_null(lval) == FALSE:
             raise RuntimeError('Possible null pointer reference detected')
 
         for v in state.indiv:
@@ -205,8 +207,9 @@ def next_null_assignment(state, statement):
         exists = cstate._exists
         is_reachable = cstate._phi_reach
         is_shared = cstate._phi_shared
+        not_null = cstate._var_not_null
 
-        if exists(lambda u : var[lval][u]) != TRUE:
+        if not_null(lval) == FALSE:
             raise RuntimeError('Possible null pointer reference detected')
 
         for v in state.indiv:
@@ -262,12 +265,42 @@ def assume(state, statement):
             state.reset()
 
     elif isinstance(expr, lang_shape.EqualsVarNext):
-        pass
+
+        lval = statement.lval
+        rval = statement.rval
+        passed = [st for st in state.structures if (st._var_next_eq(lval, rval) == TRUE)]
+        if passed:
+            state.structures = passed
+        else:
+            state.reset()
+
     elif isinstance(expr, lang_shape.NotEqualsVarNext):
-        pass
+        
+        lval = statement.lval
+        rval = statement.rval
+        passed = [st for st in state.structures if (st._var_next_eq(lval, rval) == FALSE)]
+        if passed:
+            state.structures = passed
+        else:
+            state.reset()
+
     elif isinstance(expr, lang_shape.EqualsVarNull):
-        pass
+        
+        lval = statement.lval
+        passed = [st for st in state.structures if (st._var_not_null(lval, rval) == FALSE)]
+        if passed:
+            state.structures = passed
+        else:
+            state.reset()
+
     elif isinstance(expr, lang_shape.NotEqualsVarNull):
-        pass
+        
+        lval = statement.lval
+        passed = [st for st in state.structures if (st._var_not_null(lval, rval) == TRUE)]
+        if passed:
+            state.structures = passed
+        else:
+            state.reset()
+
     else:
         LOG.warning(f'Missing handling for {expr}')
