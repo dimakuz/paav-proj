@@ -61,29 +61,23 @@ class Structure:
                     self.shared[u] == self.shared[v]
 
     def _summarize(self, u, v):
-        if sm[u] == MAYBE:
-            self._merge_left_into_right(v, u)
-        else:
-            self._merge_left_into_right(u, v)
-
-    def _merge_left_into_right(self, u, v):
+        self.indiv.pop(v)
         for w in self.indiv:
-            if self.n[(w,v)] != self.n[(w,u)]:
-                self.n[(w,v)] = MAYBE
-            if self.n[(v,w)] != self.n[(u,w)]:
-                self.n[(v,w)] = MAYBE
-        self.indiv.remove(u)
+            if self.n[(w,u)] != self.n[(w,v)]:
+                self.n[(w,u)] = MAYBE
+            if self.n[(u,w)] != self.n[(v,w)]:
+                self.n[(u,w)] = MAYBE
         for key in self.var:
-            self.var[key].pop(u)
-            self.reach[key].pop(u)
-        self.cycle.pop(u)
-        self.shared.pop(u)
-        self.sm.pop(u)
+            self.var[key].pop(v)
+            self.reach[key].pop(v)
+        self.cycle.pop(v)
+        self.shared.pop(v)
+        self.sm.pop(v)
+        self.n.pop((v,v))
         for w in self.indiv:
-            self.n.pop((u,w))
-            self.n.pop((w,u))
-        self.n.pop((u,u))
-        self.sm[v] = MAYBE
+            self.n.pop((v,w))
+            self.n.pop((w,v))
+        self.sm[u] = MAYBE
 
     # Equality taking summary nodes into account
     def _indiv_eq(self, u, v):

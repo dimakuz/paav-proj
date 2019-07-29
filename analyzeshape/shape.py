@@ -51,17 +51,13 @@ class ShapeState(abstract.AbstractState):
 
     def join(self, other):
 
-        new_structures = []
         # Discard self state when dealing with 3-valued logic structures
         for st in other.structures:
-            new_st = st.deepcopy()
-            for u,v in st.indiv:
-                if u in new_st.indiv and v in new_st.indiv:
-                    if new_st._summarizable(u,v):
-                        new_st._summarize(u,v)
-            new_structures.add(new_st)
-
-        return ShapeState(new_structures)
+            indiv_copy = st.indiv.copy()
+            for u,v in indiv_copy:
+                if u in st.indiv and v in st.indiv and u < v and st._summarizable(u, v):
+                    st._summarize(u, v)
+        return other
 
     def __str__(self):
         st_str = ','.join(str(st) for st in self.structures)
