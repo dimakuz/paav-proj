@@ -44,6 +44,53 @@ def transforms(stmt_type):
         return func
     return decorator
 
+def focus(structure, var):
+    workset = [structure]
+    answerset = []
+    while workset:
+        st = workset.pop(0)
+        maybe_indivs = [u for u in st.indiv if st.var[u] == MAYBE]
+        if not maybe_indivs:
+            answerset.append(st)
+        else:
+            for u in maybe_indivs:
+                st0 = st.deepcopy()
+                st0.var[u] = TRUE
+                workset.append(st0)
+                st1 = st.deepcopy()
+                st1.var[u] = FALSE
+                workset.append(st1)
+                if (st.sm[u] == MAYBE):
+                    st2 = st.deepcopy()
+                    v = st2.copy(u)
+                    st2.var[u] = TRUE
+                    st2.var[v] = FALSE
+                    workset.append(s2)
+    return answerset
+
+def focus_var_deref(structure, var):
+    workset = [structure]
+    answerset = []
+    while workset:
+        st = workset.pop(0)
+        maybe_indivs = [(u,u1) for u,u1 in st.indiv if st.var[u1] == TRUE and st.n[(u1,u)] == MAYBE]
+        if not maybe_indivs:
+            answerset.append(st)
+        else:
+            for (u,u1) in maybe_indivs:
+                st0 = st.deepcopy()
+                st0.n[(u1,u)] = TRUE
+                workset.append(st0)
+                st1 = st.deepcopy()
+                st0.n[(u1,u)] = FALSE
+                workset.append(st1)
+                if (st.sm[u] == MAYBE):
+                    st2 = st.deepcopy()
+                    v = st2.copy(u)
+                    st0.n[(u1,u)] = TRUE
+                    st0.n[(u1,v)] = FALSE
+                    workset.append(s2)
+    return answerset
 
 @dataclasses.dataclass
 class ShapeState(abstract.AbstractState):
@@ -84,9 +131,12 @@ class ShapeState(abstract.AbstractState):
 @ShapeState.transforms(lang_shape.VarVarAssignment)
 def var_var_assignment(state, statement):
 
+    lval = statement.lval
+    rval = statement.rval
+    state.structures = focus(state.structures, rval)
+
     for st in state.structures:
-        lval = statement.lval
-        rval = statement.rval
+
         cstate = state.deepcopy()
         var = cstate.var
         reach = cstate.reach
@@ -99,37 +149,39 @@ def var_var_assignment(state, statement):
 @ShapeState.transforms(lang_shape.VarNewAssignment)
 def var_new_assignment(state, statement):
 
+    lval = statement.lval
+
     for st in state.structures:
-        lval = statement.lval
+        v = max(st.indiv) + 1
+        for u in st.indiv:
+            st.var[lval][u] = FALSE
+            st.n[(u,v)] = FALSE
+            st.n[(v,u)] = FALSE
 
-        v = max(indiv) + 1
-        for u in state.indiv:
-            state.var[lval][u] = FALSE
-            state.n[(u,v)] = FALSE
-            state.n[(v,u)] = FALSE
+        for key in st.var:
+            st.var[key][v] = FALSE
+            st.reach[key][v] = FALSE
 
-        for key in state.var:
-            state.var[key][v] = FALSE
-            state.reach[key][v] = FALSE
+        st.var[lval][v] = TRUE
+        st.reach[lval][v] = TRUE
+        st.n[(v,v)] = FALSE
 
-        state.var[lval][v] = TRUE
-        state.reach[lval][v] = TRUE
-        state.n[(v,v)] = FALSE
+        st.cycle[v] = FALSE
+        st.shared[v] = FALSE
+        st.sm[v] = FALSE
 
-        state.cycle[v] = FALSE
-        state.shared[v] = FALSE
-        state.sm[v] = FALSE
-
-        indiv.add(v)
+        st.indiv.add(v)
 
 
 @ShapeState.transforms(lang_shape.VarNextAssignment)
 def var_next_assignment(state, statement):
     
+    lval = statement.lval
+    rval = statement.rval
+    state.structures = focus_var_deref(state.structures, rval)
+
     for st in state.structures:
-        lval = statement.lval
-        rval = statement.rval
-        cstate = state.deepcopy()
+        cstate = st.deepcopy()
         var = cstate.var
         reach = cstate.reach
         n = cstate.n
@@ -140,29 +192,33 @@ def var_next_assignment(state, statement):
         if not_null(lval) == FALSE:
             raise RuntimeError('Possible null pointer reference detected')
 
-        for v in state.indiv:
-            state.var[lval][v] = exists(lambda u : var[rval][u]._and(n[(u, v)]))
-            state.reach[lval][v] = reach[rval][v]._and(cycle[v]._or(var[rval][v]._not()))
+        for v in st.indiv:
+            st.var[lval][v] = exists(lambda u : var[rval][u]._and(n[(u, v)]))
+            st.reach[lval][v] = reach[rval][v]._and(cycle[v]._or(var[rval][v]._not()))
 
 
 @ShapeState.transforms(lang_shape.VarNullAssignment)
 def var_null_assignment(state, statement):
 
-    for st in state.structures:
-        lval = statement.lval
+    lval = statement.lval
 
-        for u in state.indiv:
-            state.var[lval][u] = FALSE
-            state.reach[lval][u] = FALSE
+    for st in state.structures:
+        for u in st.indiv:
+            st.var[lval][u] = FALSE
+            st.reach[lval][u] = FALSE
 
 
 @ShapeState.transforms(lang_shape.NextVarAssignment)
 def next_var_assignment(state, statement):
     
+    lval = statement.lval
+    rval = statement.rval
+    state.structures = focus(state.structures, rval)
+    state.structures = focus(state.structures, lval)
+
     for st in state.structures:
-        lval = statement.lval
-        rval = statement.rval
-        cstate = state.deepcopy()
+
+        cstate = st.deepcopy()
         var = cstate.var
         reach = cstate.reach
         n = cstate.n
@@ -175,27 +231,29 @@ def next_var_assignment(state, statement):
         if not_null(lval) == FALSE:
             raise RuntimeError('Possible null pointer reference detected')
 
-        for v in state.indiv:
+        for v in st.indiv:
 
-            for key in state.var:
-                state.reach[key][v] = reach[key][v]._or(
+            for key in st.var:
+                st.reach[key][v] = reach[key][v]._or(
                     exists(lambda u : reach[key][u]._and(var[lval][u]))._and(reach[rval][v]))
 
-            state.cycle[v] = cycle[v]._or(exists(lambda u : var[lval][u]._and(reach[rval][u]))._and(reach[rval][v]))
+            st.cycle[v] = cycle[v]._or(exists(lambda u : var[lval][u]._and(reach[rval][u]))._and(reach[rval][v]))
 
             if var[rval][v]._and(exists(lambda u : n[(u, v)])) != FALSE:
-                state.shared[v] = shared[v]._or(is_shared(v))
+                st.shared[v] = shared[v]._or(is_shared(v))
 
-            for w in state.indiv:
-                state.n[(v,w)] = (var[lval][v]._not()._and(n[(v,w)]))._or(var[lval][v]._and(var[rval][w]))
+            for w in st.indiv:
+                st.n[(v,w)] = (var[lval][v]._not()._and(n[(v,w)]))._or(var[lval][v]._and(var[rval][w]))
 
 
 @ShapeState.transforms(lang_shape.NextNullAssignment)
 def next_null_assignment(state, statement):
     
+    lval = statement.lval
+    state.structures = focus(state.structures, lval)
+
     for st in state.structures:
-        lval = statement.lval
-        cstate = state.deepcopy()
+        cstate = st.deepcopy()
         var = cstate.var
         reach = cstate.reach
         n = cstate.n
@@ -208,24 +266,24 @@ def next_null_assignment(state, statement):
         if not_null(lval) == FALSE:
             raise RuntimeError('Possible null pointer reference detected')
 
-        for v in state.indiv:
+        for v in st.indiv:
 
-            for key in state.var:
+            for key in st.var:
                 if cycle[v]._and(reach[lval][v]) != FALSE:
-                    state.reach[key][v] = is_reachable(key, v)
+                    st.reach[key][v] = is_reachable(key, v)
                 else:
-                    state.reach[key][v] = reach[key][v]._and(exists(lambda u : reach[key][u]._and(var[lval][u]))\
+                    st.reach[key][v] = reach[key][v]._and(exists(lambda u : reach[key][u]._and(var[lval][u]))\
                         ._and(reach[lval][v]._and(var[lval][v]._not()))._not())
 
-            state.cycle[v] = cycle[v]._and(reach[lval][v]._and(exists(lambda u : var[lval][u]._and(cycle[u]))._not()))
+            st.cycle[v] = cycle[v]._and(reach[lval][v]._and(exists(lambda u : var[lval][u]._and(cycle[u]))._not()))
 
             if exists(lambda u : var[lval][u]._and(n[(u, v)])) != FALSE:
-                state.shared[v] = shared[v]._and(is_shared(v))
+                st.shared[v] = shared[v]._and(is_shared(v))
 
-            for w in state.indiv:
-                state.n[(v,w)] = (var[lval][v]._not()._and(n[(v,w)]))._or(FALSE)
+            for w in st.indiv:
+                st.n[(v,w)] = (var[lval][v]._not()._and(n[(v,w)]))._or(FALSE)
 
-        state.reach[lval] = var[lval]
+        st.reach[lval] = var[lval]
 
 
 @ShapeState.transforms(lang.Skip)
@@ -244,6 +302,9 @@ def assume(state, statement):
 
         lval = statement.lval
         rval = statement.rval
+        state.structures = focus(state.structures, lval)
+        state.structures = focus(state.structures, rval)
+
         passed = [st for st in state.structures if (st._var_eq(lval, rval) == TRUE)]
         if passed:
             state.structures = passed
@@ -254,6 +315,9 @@ def assume(state, statement):
 
         lval = statement.lval
         rval = statement.rval
+        state.structures = focus(state.structures, lval)
+        state.structures = focus(state.structures, rval)
+
         passed = [st for st in state.structures if (st._var_eq(lval, rval) == FALSE)]
         if passed:
             state.structures = passed
@@ -264,6 +328,9 @@ def assume(state, statement):
 
         lval = statement.lval
         rval = statement.rval
+        state.structures = focus(state.structures, lval)
+        state.structures = focus_var_deref(state.structures, rval)
+
         passed = [st for st in state.structures if (st._var_next_eq(lval, rval) == TRUE)]
         if passed:
             state.structures = passed
@@ -274,6 +341,9 @@ def assume(state, statement):
         
         lval = statement.lval
         rval = statement.rval
+        state.structures = focus(state.structures, lval)
+        state.structures = focus_var_deref(state.structures, rval)
+
         passed = [st for st in state.structures if (st._var_next_eq(lval, rval) == FALSE)]
         if passed:
             state.structures = passed
@@ -283,6 +353,8 @@ def assume(state, statement):
     elif isinstance(expr, lang_shape.EqualsVarNull):
         
         lval = statement.lval
+        state.structures = focus(state.structures, lval)
+
         passed = [st for st in state.structures if (st._var_not_null(lval, rval) == FALSE)]
         if passed:
             state.structures = passed
@@ -292,6 +364,8 @@ def assume(state, statement):
     elif isinstance(expr, lang_shape.NotEqualsVarNull):
         
         lval = statement.lval
+        state.structures = focus(state.structures, lval)
+
         passed = [st for st in state.structures if (st._var_not_null(lval, rval) == TRUE)]
         if passed:
             state.structures = passed

@@ -60,6 +60,21 @@ class Structure:
                     self.cycle[u] == self.cycle[v] and \
                     self.shared[u] == self.shared[v]
 
+    def _copy(self, u):
+        v = max(self.indiv) + 1
+        for key in self.var:
+            self.var[key][v] = self.var[key][u]
+            self.reach[key][v] = self.var[key][u]
+        self.cycle[v] = self.cycle[u]
+        self.shared[v] = self.shared[u]
+        self.sm[v] = self.sm[u]
+        self.n[(v,v)] = self.n[(u,u)]
+        for w in self.indiv:
+            self.n[(v,w)] = self.n[(u,w)]
+            self.n[(w,v)] = self.n[(w,u)]
+        self.indiv.add(v)
+        return v
+
     def _summarize(self, u, v):
         self.indiv.pop(v)
         for w in self.indiv:
