@@ -133,7 +133,7 @@ class Structure:
 
     # Transitive closure of n
     def _n_plus(self):
-        n_plus = self.n.copy()
+        n_plus = self.n.deepcopy()
         for u in indiv:
             for v,w in indiv:
                 n_plus[(v,w)] = n_plus[(v,w)]._or(n_plus[(v,u)]._and(n_plus[(u,w)]))
