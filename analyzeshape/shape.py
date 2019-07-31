@@ -50,7 +50,7 @@ def focus(structure, var):
     while workset:
         st = workset.pop(0)
         maybe_indivs = [u for u in st.indiv if st.var[u] == MAYBE]
-        if not maybe_indivs:
+        if not maybe_indivs and coerce(st):
             answerset.append(st)
         else:
             for u in maybe_indivs:
@@ -74,7 +74,7 @@ def focus_var_deref(structure, var):
     while workset:
         st = workset.pop(0)
         maybe_indivs = [(u,u1) for u,u1 in st.indiv if st.var[u1] == TRUE and st.n[(u1,u)] == MAYBE]
-        if not maybe_indivs:
+        if not maybe_indivs and coerce(st):
             answerset.append(st)
         else:
             for (u,u1) in maybe_indivs:
@@ -90,7 +90,11 @@ def focus_var_deref(structure, var):
                     st0.n[(u1,u)] = TRUE
                     st0.n[(u1,v)] = FALSE
                     workset.append(s2)
-    return answerset
+    return 
+
+def coerce(structure):
+    #TODO
+    pass
 
 @dataclasses.dataclass
 class ShapeState(abstract.AbstractState):
@@ -99,6 +103,7 @@ class ShapeState(abstract.AbstractState):
     def join(self, other):
 
         # Discard self state when dealing with 3-valued logic structures
+        # This is the embed operation from paper
         for st in other.structures:
             indiv_copy = st.indiv.copy()
             for u,v in indiv_copy:
@@ -122,10 +127,10 @@ class ShapeState(abstract.AbstractState):
 
     def formula(self):
         formulas = [st.formula() for st in self.structures]
-        return shortcuts.And(*formulas)
+        return shortcuts.Or(*formulas)
 
     def post_transform(self):
-        pass # TODO
+        self.structures = [st for st in self.structures if coerce(st)]
 
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
