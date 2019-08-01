@@ -239,16 +239,42 @@ def next_var_assignment(state, statement):
         for v in st.indiv:
 
             for key in st.var:
-                st.reach[key][v] = reach[key][v]._or(
-                    exists(lambda u : reach[key][u]._and(var[lval][u]))._and(reach[rval][v]))
+                st.reach[key][v] = \
+                    reach[key][v]._or(
+                        exists(lambda u : reach[key][u]._and(var[lval][u]))._and(reach[rval][v])
+                    )
 
-            st.cycle[v] = cycle[v]._or(exists(lambda u : var[lval][u]._and(reach[rval][u]))._and(reach[rval][v]))
+            st.cycle[v] = \
+                cycle[v]._or(
+                    exists(lambda u : var[lval][u]._and(reach[rval][u]))._and(reach[rval][v])
+                )
 
-            if var[rval][v]._and(exists(lambda u : n[(u, v)])) != FALSE:
-                st.shared[v] = shared[v]._or(is_shared(v))
+            st.shared[v] = \
+                (
+                    (
+                        var[rval][v]._and(exists(lambda u : n[(u, v)]))
+                    )._and(
+                        shared[v]._or(is_shared(v))
+                    )
+                )._or(
+                    (
+                        (var[rval][v]._and(exists(lambda u : n[(u, v)])))._not()
+                    )._and(
+                        shared[v]
+                    )
+                )
 
             for w in st.indiv:
-                st.n[(v,w)] = (var[lval][v]._not()._and(n[(v,w)]))._or(var[lval][v]._and(var[rval][w]))
+                st.n[(v,w)] = \
+                    (
+                        (
+                            var[lval][v]._not()
+                        )._and(
+                            n[(v,w)]
+                        )
+                    )._or(
+                        var[lval][v]._and(var[rval][w])
+                    )
 
 
 @ShapeState.transforms(lang_shape.NextNullAssignment)
@@ -274,19 +300,60 @@ def next_null_assignment(state, statement):
         for v in st.indiv:
 
             for key in st.var:
-                if cycle[v]._and(reach[lval][v]) != FALSE:
-                    st.reach[key][v] = is_reachable(key, v)
-                else:
-                    st.reach[key][v] = reach[key][v]._and(exists(lambda u : reach[key][u]._and(var[lval][u]))\
-                        ._and(reach[lval][v]._and(var[lval][v]._not()))._not())
 
-            st.cycle[v] = cycle[v]._and(reach[lval][v]._and(exists(lambda u : var[lval][u]._and(cycle[u]))._not()))
+                st.reach[key][v] = \
+                    (
+                        (
+                            cycle[v]._and(reach[lval][v])
+                        )._and(
+                            is_reachable(key, v)
+                        )
+                    )._or(
+                        (
+                            (cycle[v]._and(reach[lval][v]))._not()
+                        )._and(
+                            (
+                                reach[key][v]
+                            )._and(
+                                (
+                                    exists(lambda u : reach[key][u]._and(var[lval][u]))\
+                                    ._and(reach[lval][v]._and(var[lval][v]._not()))
+                                )._not()
+                            )
+                        )
+                    )
 
-            if exists(lambda u : var[lval][u]._and(n[(u, v)])) != FALSE:
-                st.shared[v] = shared[v]._and(is_shared(v))
+            st.cycle[v] = \
+                cycle[v]._and(
+                    (
+                        reach[lval][v]._and(exists(lambda u : var[lval][u]._and(cycle[u])))
+                    )._not()
+                )
+
+            st.shared[v] = \
+                (
+                    (
+                        exists(lambda u : var[lval][u]._and(n[(u, v)]))
+                    )._and(
+                        shared[v]._and(is_shared(v))
+                    )
+                )._or(
+                    (
+                        (exists(lambda u : var[lval][u]._and(n[(u, v)])))._not()
+                    )._and(
+                        shared[v]
+                    )
+                )
 
             for w in st.indiv:
-                st.n[(v,w)] = (var[lval][v]._not()._and(n[(v,w)]))._or(FALSE)
+                st.n[(v,w)] = \
+                    (
+                        (
+                            var[lval][v]._not()
+                        )._and(
+                            n[(v,w)]
+                        )
+                    )._or(FALSE)
 
         st.reach[lval] = var[lval]
 
