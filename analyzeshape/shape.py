@@ -93,8 +93,36 @@ def focus_var_deref(structure, var):
     return 
 
 def coerce(structure):
-    #TODO
-    pass
+    st_copy = structure.deepcopy()
+    changed = True
+    while changed:
+        changed = False
+        for right, left in st_copy.TYPE1_CONSTRAINTS_1VAR.items():
+            for v in st_copy.indiv:
+                if left(v) == TRUE:
+                    if right(v) == FALSE:
+                        return None
+                    elif right(v) == MAYBE:
+                        changed = True
+                        #TODO: update the structure!! 
+        for right, left in st_copy.TYPE1_CONSTRAINTS_2VAR.items():
+            for v1,v2 in st_copy.indiv:
+                if left(v1,v2) == TRUE:
+                    if st_copy.n[(v1,v2)] == FALSE:
+                        return None
+                    elif st_copy.n[(v1,v2)] == MAYBE:
+                        changed = True
+                        st_copy.n[(v1,v2)] = FALSE
+        for right in st_copy.TYPE2_CONSTRAINTS_2VAR:
+            for v1,v2 in st_copy.indiv:
+                if left(v1,v2) == TRUE:
+                    if st_copy._indv_eq(v1,v2) == FALSE:
+                        return None
+                    elif st_copy._indv_eq(v1,v2) == MAYBE:
+                        changed = True
+                        st_copy.sm[v1] = FALSE
+    return st_copy
+
 
 @dataclasses.dataclass
 class ShapeState(abstract.AbstractState):
@@ -130,7 +158,11 @@ class ShapeState(abstract.AbstractState):
         return shortcuts.Or(*formulas)
 
     def post_transform(self):
-        self.structures = [st for st in self.structures if coerce(st)]
+        new_structures = []
+        for st in self.structures:
+            res = coerce(st)
+            if res:
+                new_structures.add(res)
 
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
@@ -229,8 +261,8 @@ def next_var_assignment(state, statement):
         n = cstate.n
         cycle = cstate.cycle
         exists = cstate._exists
-        is_reachable = cstate._phi_reach
-        is_shared = cstate._phi_shared
+        is_reachable = cstate._indv_reach
+        is_shared = cstate._indv_shared
         not_null = cstate._var_not_null
 
         if not_null(lval) == FALSE:
@@ -290,8 +322,8 @@ def next_null_assignment(state, statement):
         n = cstate.n
         cycle = cstate.cycle
         exists = cstate._exists
-        is_reachable = cstate._phi_reach
-        is_shared = cstate._phi_shared
+        is_reachable = cstate._indv_reach
+        is_shared = cstate._indv_shared
         not_null = cstate._var_not_null
 
         if not_null(lval) == FALSE:

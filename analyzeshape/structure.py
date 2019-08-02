@@ -1,6 +1,7 @@
 import copy
 import dataclasses
 import typing
+import types
 
 from pysmt import shortcuts
 from analyzeshape import lang as lang_shape
@@ -22,8 +23,6 @@ class ThreeValuedBool(Enum):
     def _or(self, other):
         return ThreeValuedBool(max(self, other))
 
-
-
 @dataclasses.dataclass
 class Structure:
     indiv: typing.Set[int]
@@ -33,6 +32,30 @@ class Structure:
     shared: typing.Mapping[int, ThreeValuedBool]
     sm: typing.Mapping[int, ThreeValuedBool]
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
+
+    TYPE1_CONSTRAINTS_1VAR = typing.Mapping[types.FunctionType, types.FunctionType]
+    TYPE1_CONSTRAINTS_2VAR = typing.Mapping[types.FunctionType, types.FunctionType]
+    TYPE2_CONSTRAINTS_2VAR = typing.Set[types.FunctionType]
+
+    def __init__(self):
+        TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_shared(v)] = lambda v: self.shared[v]
+        TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_shared(v)._not()] = lambda v: self.shared[v]._not()
+        TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_cycle(v)] = lambda v: self.cycle[v]
+        TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_cycle(v)._not()] = lambda v: self.cycle[v]._not()
+
+        TYPE1_CONSTRAINTS_2VAR[lambda v1,v2: self._indv_not_n(v1,v2)] = lambda v1,v2: self.n[(v1,v2)]._not()
+        TYPE1_CONSTRAINTS_2VAR[lambda v1,v2: self._indv_not_n_shared(v1,v2)] = lambda v1,v2: self.n[(v1,v2)]._not()
+
+        TYPE2_CONSTRAINTS_2VAR.add(lambda v1,v2: self._indv_both_n(v1,v2))
+        TYPE2_CONSTRAINTS_2VAR.add(lambda v1,v2: self._indv_both_n_shared(v1,v2))
+
+        for var in self.var:
+            TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_reach(var,v)] = lambda v: self.reach[var][v]
+            TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_reach(var,v)._not()] = lambda v: self.reach[var][v]._not()
+            TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_not_var(var,v)] = lambda v: self.var[var][v]._not()
+
+            TYPE2_CONSTRAINTS_2VAR.add(lambda v1,v2: self._indv_both_var(var,v1,v2))
+
 
     def __str__(self):
         lines = []
@@ -95,23 +118,45 @@ class Structure:
         self.sm[u] = MAYBE
 
     # Equality taking summary nodes into account
-    def _indiv_eq(self, u, v):
-        if (u != v):
+    def _indv_eq(self, v1, v2):
+        if (v1 != v2):
             return FALSE
         else:
-            return self.sm(u)._not()
+            return self.sm(v1)._not()
 
     # Is the individual heap shared
-    def _phi_shared(self, v):
+    def _indv_shared(self, v):
         return self._exists(lambda u1 : \
             self._exists(lambda u2 : \
-                self.n[(u1,v)]._and(self.n[(u2,v)])._and(self._indiv_eq(u1,u2)._not())
+                self.n[(u1,v)]._and(self.n[(u2,v)])._and(self._indv_eq(u1,u2)._not())
                 )
             )
 
     # Is the individual reachable from variable
-    def _phi_reach(self, var, v):
-        return self.var[var][v]._or(self._exists(lambda v1 : self.var[var][v1]._and(self._n_plus()[(v1,v)])))
+    def _indv_reach(self, var, v):
+        return self.var[var][v]._or(self._exists(lambda u : self.var[var][u]._and(self._n_plus()[(u,v)])))
+
+    # Is the individual resides on a cycle
+    def _indv_cycle(self, v):
+        return self._n_plus()[(v,v)]
+
+    def _indv_not_var(self, var, v):
+        return self._exists(lambda u : self.var[var][u]._and(self._indv_eq(v, u)._not()))
+
+    def _indv_not_n(self, v1, v2):
+        return self._exists(lambda u : self.n[(v1,u)]._and(self._indv_eq(u, v2)._not()))
+
+    def _indv_not_n_shared(self, v1, v2):
+        return self._exists(lambda u : self.n[(u,v1)]._and(self._indv_eq(u, v2)._not())._and(self.shared[v1]._not()))
+
+    def _indv_both_var(self, var, v1, v2):
+        return self.var[var][v1]._and(self.var[var][v2])
+
+    def _indv_both_n(self, v1, v2):
+        return self._exists(lambda u : self.n[(u,v1)]._and(self.n[(u,v2)]))
+
+    def _indv_both_n_shared(self, v1, v2):
+        return self._exists(lambda u : self.n[(v1,u)]._and(self.n[(v2,u)])._and(self.shared[v]._not()))
 
     def _var_not_null(self, var1):
         return self._exists(lambda u : self.var[var1][u])
@@ -119,7 +164,7 @@ class Structure:
     def _var_eq(self, var1, var2):
         return self._exists(lambda u1 : \
             self._exists(lambda u2 : \
-                self.var[var1][u1]._and(self.var[var1][u2])._and(self._indiv_eq(u1, u2))))
+                self.var[var1][u1]._and(self.var[var1][u2])._and(self._indv_eq(u1, u2))))
 
     def _var_next_eq(self, var1, var2):
         return self._exists(lambda u1 : \
