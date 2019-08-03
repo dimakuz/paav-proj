@@ -14,12 +14,13 @@ LOG = logging.getLogger(__name__)
 
 
 class ThreeValuedBool(IntEnum):
-    TRUE = 1
-    MAYBE = 0.5
+    TRUE = 2
+    MAYBE = 1
     FALSE = 0
 
     def _not(self):
-        return ThreeValuedBool(1 - self)
+
+        return ThreeValuedBool(2 - self)
 
     def _and(self, other):
         return ThreeValuedBool(min(self, other))
@@ -122,6 +123,8 @@ class Structure:
     def copy_indiv(self, u):
         v = max(self.indiv) + 1
         for key in self.var:
+            LOG.debug('111111 %s\n', type(self.var[key]))
+            LOG.debug('222222 %s\n', self.var[key])
             self.var[key][v] = self.var[key][u]
             self.reach[key][v] = self.var[key][u]
         self.cycle[v] = self.cycle[u]
@@ -171,8 +174,6 @@ class Structure:
 
     # Is the individual reachable from variable
     def _v_reach(self, var, v):
-        LOG.debug('type var %s', type(var))
-        LOG.debug('type v %s', type(v))
         return self.var[var][v]._or(self._exists(lambda u : self.var[var][u]._and(self._n_plus()[(u,v)])))
 
     # Is the individual resides on a cycle
@@ -223,10 +224,10 @@ class Structure:
         return n_plus
 
     def _exists(self, pred):
-        return ThreeValuedBool(max(pred(v) for v in self.indiv))
+        return ThreeValuedBool(max(pred(v) for v in self.indiv)) if self.indiv else FALSE
 
     def _forall(self, pred):
-        return ThreeValuedBool(min(pred(v) for v in self.indiv))
+        return ThreeValuedBool(min(pred(v) for v in self.indiv)) if self.indiv else TRUE
 
 
     @classmethod
@@ -250,7 +251,6 @@ class Structure:
                 (par_num, lh, rh, fix) = constraint
                 if par_num == 1:
                     for v in self.indiv:
-                        LOG.debug('vvvvvvv %s %s', type(v), v)
                         if lh(self,v) == TRUE:
                             if rh(self,v) == FALSE:
                                 return False
@@ -269,15 +269,15 @@ class Structure:
         return True
 
         
-    def reset(self):
-        indiv.clear()
-        cycle.clear()
-        shared.clear()
-        sm.clear()
-        n.clear()
-        for key in self.var:
-            self.var[key].clear()
-            self.reach[key].clear()
+    # def reset(self):
+    #     self.indiv.clear()
+    #     self.cycle.clear()
+    #     self.shared.clear()
+    #     self.sm.clear()
+    #     self.n.clear()
+    #     for key in self.var:
+    #         self.var[key].clear()
+    #         self.reach[key].clear()
 
     def formula(self):
         clauses = []
