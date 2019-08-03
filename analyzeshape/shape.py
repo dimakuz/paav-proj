@@ -2,6 +2,7 @@ import copy
 import dataclasses
 import logging
 import typing
+import copy
 
 from pysmt import shortcuts
 
@@ -48,99 +49,69 @@ def transforms(stmt_type):
         return func
     return decorator
 
-def focus(structure, var):
-    workset = [structure]
-    answerset = []
-    while workset:
-        st = workset.pop(0)
-        maybe_indivs = [u for u in st.indiv if st.var[u] == MAYBE]
-        if not maybe_indivs and coerce(st):
-            answerset.append(st)
-        else:
-            for u in maybe_indivs:
-                st0 = st.deepcopy()
-                st0.var[u] = TRUE
-                workset.append(st0)
-                st1 = st.deepcopy()
-                st1.var[u] = FALSE
-                workset.append(st1)
-                if (st.sm[u] == MAYBE):
-                    st2 = st.deepcopy()
-                    v = st2.copy(u)
-                    st2.var[u] = TRUE
-                    st2.var[v] = FALSE
-                    workset.append(s2)
-    return answerset
-
-def focus_var_deref(structure, var):
-    workset = [structure]
-    answerset = []
-    while workset:
-        st = workset.pop(0)
-        maybe_indivs = [(u,u1) for u,u1 in st.indiv if st.var[u1] == TRUE and st.n[(u1,u)] == MAYBE]
-        if not maybe_indivs and coerce(st):
-            answerset.append(st)
-        else:
-            for (u,u1) in maybe_indivs:
-                st0 = st.deepcopy()
-                st0.n[(u1,u)] = TRUE
-                workset.append(st0)
-                st1 = st.deepcopy()
-                st0.n[(u1,u)] = FALSE
-                workset.append(st1)
-                if (st.sm[u] == MAYBE):
-                    st2 = st.deepcopy()
-                    v = st2.copy(u)
-                    st0.n[(u1,u)] = TRUE
-                    st0.n[(u1,v)] = FALSE
-                    workset.append(s2)
-    return answerset
-
-def coerce(structure):
-    changed = True
-    while changed:
-        changed = False
-        for constraint in structure.constr:
-            (par_num, lh, rh, fix) = constraint
-
-            LOG.debug('lh %s %s', type(lh), lh)
-            LOG.debug('rh %s %s', type(rh), rh)
-
-            LOG.debug('indivvv %s %s', type(structure.indiv), structure.indiv)
-
-            if par_num == 1:
-                for v in structure.indiv:
-                    LOG.debug('vvvvvvv %s %s', type(v), v)
-                    if lh(v) == TRUE:
-                        if rh(v) == FALSE:
-                            return False
-                        elif rh(v) == MAYBE:
-                            fix(v)
-                            changed = True
-            elif par_num == 2:
-                for v1,v2 in structure.indiv:
-                    if lh(v1,v2) == TRUE:
-                        if rh(v1,v2) == FALSE:
-                            return False
-                        elif rh(v1,v2) == MAYBE:
-                            fix(v1,v2)
-                            changed = True
-    return True
-
 
 @dataclasses.dataclass
 class ShapeState(abstract.AbstractState):
     structures: typing.List[structure.Structure]
+
+    def focus(self, var):
+        workset = self.structures
+        answerset = []
+        while workset:
+            st = workset.pop(0)
+            maybe_indivs = [u for u in st.indiv if st.var[u] == MAYBE]
+            if not maybe_indivs and st.coerce():
+                answerset.append(st)
+            else:
+                for u in maybe_indivs:
+                    st0 = st.deepcopy()
+                    st0.var[u] = TRUE
+                    workset.append(st0)
+                    st1 = st.deepcopy()
+                    st1.var[u] = FALSE
+                    workset.append(st1)
+                    if (st.sm[u] == MAYBE):
+                        st2 = st.deepcopy()
+                        v = st2.copy_indiv(u)
+                        st2.var[u] = TRUE
+                        st2.var[v] = FALSE
+                        workset.append(s2)
+        self.structures = answerset
+
+    def focus_var_deref(self, var):
+        workset = self.structures
+        answerset = []
+        while workset:
+            st = workset.pop(0)
+            maybe_indivs = [(u,u1) for u,u1 in st.indiv if st.var[u1] == TRUE and st.n[(u1,u)] == MAYBE]
+            if not maybe_indivs and st.coerce():
+                answerset.append(st)
+            else:
+                for (u,u1) in maybe_indivs:
+                    st0 = st.deepcopy()
+                    st0.n[(u1,u)] = TRUE
+                    workset.append(st0)
+                    st1 = st.deepcopy()
+                    st0.n[(u1,u)] = FALSE
+                    workset.append(st1)
+                    if (st.sm[u] == MAYBE):
+                        st2 = st.deepcopy()
+                        v = st2.copy_indiv(u)
+                        st0.n[(u1,u)] = TRUE
+                        st0.n[(u1,v)] = FALSE
+                        workset.append(s2)
+        self.structures = answerset
 
     def join(self, other):
 
         # Discard self state when dealing with 3-valued logic structures
         # This is the embed operation from paper
         for st in other.structures:
-            indiv_copy = st.indiv.copy()
-            for u,v in indiv_copy:
-                if u in st.indiv and v in st.indiv and u < v and st._summarizable(u, v):
-                    st._summarize(u, v)
+            indiv_copy = copy.deepcopy(st.indiv)
+            for u in indiv_copy:
+                for v in indiv_copy:
+                    if u in st.indiv and v in st.indiv and u < v and st.summarizable(u, v):
+                        st.summarize(u, v)
         return other
 
     def __str__(self):
@@ -149,9 +120,8 @@ class ShapeState(abstract.AbstractState):
 
     @classmethod
     def initial(cls, symbols):
-        LOG.debug('initializing state!!')
         return cls(
-            structures=[structure.Structure(symbols)]
+            structures=[structure.Structure.initial(symbols)]
         )
         
     def reset(self):
@@ -165,7 +135,7 @@ class ShapeState(abstract.AbstractState):
     def post_transform(self):
         new_structures = []
         for st in self.structures:
-            if coerce(st):
+            if st.coerce():
                 new_structures.append(st)
 
 
@@ -223,7 +193,7 @@ def var_next_assignment(state, statement):
     
     lval = statement.lval
     rval = statement.rval
-    state.structures = focus_var_deref(state.structures, rval)
+    state.focus_var_deref(rval)
 
     for st in state.structures:
         cstate = st.deepcopy()
@@ -258,8 +228,8 @@ def next_var_assignment(state, statement):
     
     lval = statement.lval
     rval = statement.rval
-    state.structures = focus(state.structures, rval)
-    state.structures = focus(state.structures, lval)
+    state.focus(lval)
+    state.focus(rval)
 
     for st in state.structures:
 
@@ -321,7 +291,7 @@ def next_var_assignment(state, statement):
 def next_null_assignment(state, statement):
     
     lval = statement.lval
-    state.structures = focus(state.structures, lval)
+    state.focus(lval)
 
     for st in state.structures:
         cstate = st.deepcopy()
@@ -414,8 +384,8 @@ def assume(state, statement):
 
         lval = statement.lval
         rval = statement.rval
-        state.structures = focus(state.structures, lval)
-        state.structures = focus(state.structures, rval)
+        state.focus(lval)
+        state.focus(rval)
 
         passed = [st for st in state.structures if (st._var_eq(lval, rval) == TRUE)]
         if passed:
@@ -427,8 +397,8 @@ def assume(state, statement):
 
         lval = statement.lval
         rval = statement.rval
-        state.structures = focus(state.structures, lval)
-        state.structures = focus(state.structures, rval)
+        state.focus(lval)
+        state.focus(rval)
 
         passed = [st for st in state.structures if (st._var_eq(lval, rval) == FALSE)]
         if passed:
@@ -440,8 +410,8 @@ def assume(state, statement):
 
         lval = statement.lval
         rval = statement.rval
-        state.structures = focus(state.structures, lval)
-        state.structures = focus_var_deref(state.structures, rval)
+        state.focus(lval)
+        state.focus_var_deref(rval)
 
         passed = [st for st in state.structures if (st._var_next_eq(lval, rval) == TRUE)]
         if passed:
@@ -453,8 +423,8 @@ def assume(state, statement):
         
         lval = statement.lval
         rval = statement.rval
-        state.structures = focus(state.structures, lval)
-        state.structures = focus_var_deref(state.structures, rval)
+        state.focus(lval)
+        state.focus_var_deref(rval)
 
         passed = [st for st in state.structures if (st._var_next_eq(lval, rval) == FALSE)]
         if passed:
@@ -465,7 +435,7 @@ def assume(state, statement):
     elif isinstance(expr, lang_shape.EqualsVarNull):
         
         lval = statement.lval
-        state.structures = focus(state.structures, lval)
+        state.focus(lval)
 
         passed = [st for st in state.structures if (st._var_not_null(lval, rval) == FALSE)]
         if passed:
@@ -476,7 +446,7 @@ def assume(state, statement):
     elif isinstance(expr, lang_shape.NotEqualsVarNull):
         
         lval = statement.lval
-        state.structures = focus(state.structures, lval)
+        state.focus(lval)
 
         passed = [st for st in state.structures if (st._var_not_null(lval, rval) == TRUE)]
         if passed:

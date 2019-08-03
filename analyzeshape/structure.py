@@ -3,16 +3,17 @@ import dataclasses
 import typing
 import logging
 import types
+import copy
 
 from pysmt import shortcuts
 from analyzeshape import lang as lang_shape
 from analyzeframework import lang
-from enum import Enum
+from enum import IntEnum
 
 LOG = logging.getLogger(__name__)
 
 
-class ThreeValuedBool(Enum):
+class ThreeValuedBool(IntEnum):
     TRUE = 1
     MAYBE = 0.5
     FALSE = 0
@@ -45,45 +46,48 @@ class Structure:
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
 
-    def init_constr(self, symbols):
+    @classmethod
+    def init_constr(cls, symbols):
+
+        # Coerce fixing functions
+        def fix_shared(st,v):
+            st.shared[v] = TRUE
+        def fix_shared_not(st,v):
+            st.shared[v] = FALSE
+        def fix_cycle(st,v):
+            st.cycle[v] = TRUE
+        def fix_cycle_not(st,v):
+            st.cycle[v] = FALSE
+        def fix_n_not(st,v1,v2):
+            st.n[(v1,v2)] = FALSE
+        def fix_reach(st,var,v):
+            st.reach[var][v] = TRUE
+        def fix_reach_not(st,var,v):
+            st.reach[var][v] = FALSE
+        def fix_var_not(st,var,v):
+            st.var[var][v] = FALSE
+        def fix_sm_not(st,v):
+            st.sm[v] = FALSE
 
         constr = set()
-        def fix_shared(v):
-            self.shared[v] = TRUE
-        def fix_shared_not(v):
-            self.shared[v] = FALSE
-        def fix_cycle(v):
-            self.cycle[v] = TRUE
-        def fix_cycle_not(v):
-            self.cycle[v] = FALSE
-        def fix_n_not(v1,v2):
-            self.n[(v1,v2)] = FALSE
-        def fix_reach(var,v):
-            self.reach[var][v] = TRUE
-        def fix_reach_not(var,v):
-            self.reach[var][v] = FALSE
-        def fix_var_not(var,v):
-            self.var[var][v] = FALSE
-        def fix_sm_not(v):
-            self.sm[v] = FALSE
 
-        constr.add((1, lambda v: self._v_shared(v),             lambda v: self.shared[v],              fix_shared))
-        constr.add((1, lambda v: self._v_shared(v)._not(),      lambda v: self.shared[v]._not(),       fix_shared_not))
-        constr.add((1, lambda v: self._v_cycle(v),              lambda v: self.cycle[v],               fix_cycle))
-        constr.add((1, lambda v: self._v_cycle(v)._not(),       lambda v: self.cycle[v]._not(),        fix_cycle_not))
+        constr.add((1, lambda st,v: st._v_shared(v),             lambda st,v: st.shared[v],              fix_shared))
+        constr.add((1, lambda st,v: st._v_shared(v)._not(),      lambda st,v: st.shared[v]._not(),       fix_shared_not))
+        constr.add((1, lambda st,v: st._v_cycle(v),              lambda st,v: st.cycle[v],               fix_cycle))
+        constr.add((1, lambda st,v: st._v_cycle(v)._not(),       lambda st,v: st.cycle[v]._not(),        fix_cycle_not))
 
-        constr.add((2, lambda v1,v2: self._v_not_n(v1,v2),      lambda v1,v2: self.n[(v1,v2)]._not(),  fix_n_not))
-        constr.add((2, lambda v1,v2: self._v_not_n_hs(v1,v2),   lambda v1,v2: self.n[(v1,v2)]._not(),  fix_n_not))
+        constr.add((2, lambda st,v1,v2: st._v_not_n(v1,v2),      lambda st,v1,v2: st.n[(v1,v2)]._not(),  fix_n_not))
+        constr.add((2, lambda st,v1,v2: st._v_not_n_hs(v1,v2),   lambda st,v1,v2: st.n[(v1,v2)]._not(),  fix_n_not))
 
-        constr.add((1, lambda v: self._v_n(v),                  lambda v: self.sm[v]._not(),            fix_sm_not))
-        constr.add((1, lambda v: self._v_n_hs(v),               lambda v: self.sm[v]._not(),            fix_sm_not))
+        constr.add((1, lambda st,v: st._v_n(v),                  lambda st,v: st.sm[v]._not(),            fix_sm_not))
+        constr.add((1, lambda st,v: st._v_n_hs(v),               lambda st,v: st.sm[v]._not(),            fix_sm_not))
 
         for var in symbols: 
-            constr.add((1, lambda v: self._v_reach(var,v),          lambda v: self.reach[var][v],         fix_reach))
-            constr.add((1, lambda v: self._v_reach(var,v)._not(),   lambda v: self.reach[var][v]._not(),  fix_reach_not))
-            constr.add((1, lambda v: self._v_not_var(var,v),        lambda v: self.var[var][v]._not(),    fix_var_not))
+            constr.add((1, lambda st,v: st._v_reach(var,v),          lambda st,v: st.reach[var][v],         fix_reach))
+            constr.add((1, lambda st,v: st._v_reach(var,v)._not(),   lambda st,v: st.reach[var][v]._not(),  fix_reach_not))
+            constr.add((1, lambda st,v: st._v_not_var(var,v),        lambda st,v: st.var[var][v]._not(),    fix_var_not))
 
-            constr.add((1, lambda v: self.var[var][v],          lambda v: self.sm[v]._not(),            fix_sm_not))
+            constr.add((1, lambda st,v: st.var[var][v],          lambda st,v: st.sm[v]._not(),            fix_sm_not))
 
         return constr
 
@@ -109,13 +113,13 @@ class Structure:
         return '\n'.join(lines)
 
 
-    def _summarizable(self, u, v):
+    def summarizable(self, u, v):
         return all(self.var[key][u] == self.var[key][v] and \
                     self.reach[key][u] == self.reach[key][v] for key in self.var) and \
                     self.cycle[u] == self.cycle[v] and \
                     self.shared[u] == self.shared[v]
 
-    def _copy(self, u):
+    def copy_indiv(self, u):
         v = max(self.indiv) + 1
         for key in self.var:
             self.var[key][v] = self.var[key][u]
@@ -130,7 +134,7 @@ class Structure:
         self.indiv.add(v)
         return v
 
-    def _summarize(self, u, v):
+    def summarize(self, u, v):
         self.indiv.pop(v)
         for w in self.indiv:
             if self.n[(w,u)] != self.n[(w,v)]:
@@ -155,13 +159,13 @@ class Structure:
         if (v1 != v2):
             return FALSE
         else:
-            return self.sm(v1)._not()
+            return self.sm[v1]._not()
 
     # Is the individual heap shared
     def _v_shared(self, v):
         return self._exists(lambda u1 : \
             self._exists(lambda u2 : \
-                self.n[(u1,v)]._and(self.n[(u2,v)])._and(self._indv_eq(u1,u2)._not())
+                self.n[(u1,v)]._and(self.n[(u2,v)])._and(self._v_eq(u1,u2)._not())
                 )
             )
 
@@ -176,13 +180,13 @@ class Structure:
         return self._n_plus()[(v,v)]
 
     def _v_not_var(self, var, v):
-        return self._exists(lambda u : self.var[var][u]._and(self._indv_eq(v, u)._not()))
+        return self._exists(lambda u : self.var[var][u]._and(self._v_eq(v, u)._not()))
 
     def _v_not_n(self, v1, v2):
-        return self._exists(lambda u : self.n[(v1,u)]._and(self._indv_eq(u, v2)._not()))
+        return self._exists(lambda u : self.n[(v1,u)]._and(self._v_eq(u, v2)._not()))
 
     def _v_not_n_hs(self, v1, v2):
-        return self._exists(lambda u : self.n[(u,v1)]._and(self._indv_eq(u, v2)._not())._and(self.shared[v1]._not()))
+        return self._exists(lambda u : self.n[(u,v1)]._and(self._v_eq(u, v2)._not())._and(self.shared[v1]._not()))
 
     def _v_n(self, v):
         return self._exists(lambda u : self.n[(u,v)])
@@ -196,7 +200,7 @@ class Structure:
     def _var_eq(self, var1, var2):
         return self._exists(lambda u1 : \
             self._exists(lambda u2 : \
-                self.var[var1][u1]._and(self.var[var1][u2])._and(self._indv_eq(u1, u2))))
+                self.var[var1][u1]._and(self.var[var1][u2])._and(self._v_eq(u1, u2))))
 
     def _var_next_eq(self, var1, var2):
         return self._exists(lambda u1 : \
@@ -208,31 +212,62 @@ class Structure:
     def _var_reach(self, var1, var2):
         return self._exists(lambda u : self.var[var2][u]._and(self.reach[var1][u]))
 
+
     # Transitive closure of n
     def _n_plus(self):
-        n_plus = self.n.deepcopy()
-        for u in indiv:
-            for v,w in indiv:
-                n_plus[(v,w)] = n_plus[(v,w)]._or(n_plus[(v,u)]._and(n_plus[(u,w)]))
+        n_plus = copy.deepcopy(self.n)
+        for u in self.indiv:
+            for v in self.indiv:
+                for w in self.indiv:
+                    n_plus[(v,w)] = n_plus[(v,w)]._or(n_plus[(v,u)]._and(n_plus[(u,w)]))
         return n_plus
 
     def _exists(self, pred):
-        return ThreeValuedBool(max(pred(v).val for v in self.indiv))
+        return ThreeValuedBool(max(pred(v) for v in self.indiv))
 
     def _forall(self, pred):
-        return ThreeValuedBool(min(pred(v).val for v in self.indiv))
+        return ThreeValuedBool(min(pred(v) for v in self.indiv))
 
 
-    def __init__(self, symbols):
-        LOG.debug('initializing structure!!')
-        self.indiv = set()
-        self.var = {symbol: dict() for symbol in symbols}
-        self.reach = {symbol: dict() for symbol in symbols}
-        self.cycle = dict()
-        self.shared = dict()
-        self.sm = dict()
-        self.n = dict()
-        self.constr = self.init_constr(symbols)
+    @classmethod
+    def initial(cls, symbols):
+        return cls(
+            indiv=set(),
+            var={symbol: dict() for symbol in symbols},
+            reach={symbol: dict() for symbol in symbols},
+            cycle=dict(),
+            shared=dict(),
+            sm=dict(),
+            n=dict(),
+            constr=cls.init_constr(symbols)
+        )
+
+    def coerce(self):
+        changed = True
+        while changed:
+            changed = False
+            for constraint in self.constr:
+                (par_num, lh, rh, fix) = constraint
+                if par_num == 1:
+                    for v in self.indiv:
+                        LOG.debug('vvvvvvv %s %s', type(v), v)
+                        if lh(self,v) == TRUE:
+                            if rh(self,v) == FALSE:
+                                return False
+                            elif rh(self,v) == MAYBE:
+                                fix(self,v)
+                                changed = True
+                elif par_num == 2:
+                    for v1 in self.indiv:
+                        for v2 in self.indiv:
+                            if lh(self,v1,v2) == TRUE:
+                                if rh(self,v1,v2) == FALSE:
+                                    return False
+                                elif rh(self,v1,v2) == MAYBE:
+                                    fix(self,v1,v2)
+                                    changed = True
+        return True
+
         
     def reset(self):
         indiv.clear()
