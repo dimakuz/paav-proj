@@ -33,28 +33,46 @@ class Structure:
     sm: typing.Mapping[int, ThreeValuedBool]
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
-    TYPE1_CONSTRAINTS_1VAR = typing.Mapping[types.FunctionType, types.FunctionType]
-    TYPE1_CONSTRAINTS_2VAR = typing.Mapping[types.FunctionType, types.FunctionType]
-    TYPE2_CONSTRAINTS_2VAR = typing.Set[types.FunctionType]
+    constr = typing.Set[typing.Tuple[int, callable, callable, callable]]
 
     def __init__(self):
-        TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_shared(v)] = lambda v: self.shared[v]
-        TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_shared(v)._not()] = lambda v: self.shared[v]._not()
-        TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_cycle(v)] = lambda v: self.cycle[v]
-        TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_cycle(v)._not()] = lambda v: self.cycle[v]._not()
 
-        TYPE1_CONSTRAINTS_2VAR[lambda v1,v2: self._indv_not_n(v1,v2)] = lambda v1,v2: self.n[(v1,v2)]._not()
-        TYPE1_CONSTRAINTS_2VAR[lambda v1,v2: self._indv_not_n_shared(v1,v2)] = lambda v1,v2: self.n[(v1,v2)]._not()
+        def fix_shared(v):
+            self.shared[v] = TRUE
+        def fix_shared_not(v):
+            self.shared[v] = FALSE
+        def fix_cycle(v):
+            self.cycle[v] = TRUE
+        def fix_cycle_not(v):
+            self.cycle[v] = FALSE
+        def fix_n_not(v1,v2):
+            self.n[(v1,v2)] = FALSE
+        def fix_reach(var,v):
+            self.reach[var][v] = TRUE
+        def fix_reach_not(var,v):
+            self.reach[var][v] = FALSE
+        def fix_var_not(var,v):
+            self.var[var][v] = FALSE
+        def fix_sm_not(v):
+            self.sm[v] = FALSE
 
-        TYPE2_CONSTRAINTS_2VAR.add(lambda v1,v2: self._indv_both_n(v1,v2))
-        TYPE2_CONSTRAINTS_2VAR.add(lambda v1,v2: self._indv_both_n_shared(v1,v2))
+        constr.add((1, lambda v: self._v_shared(v),             lambda v: self.shared[v],              fix_shared))
+        constr.add((1, lambda v: self._v_shared(v)._not(),      lambda v: self.shared[v]._not(),       fix_shared_not))
+        constr.add((1, lambda v: self._v_cycle(v),              lambda v: self.cycle[v],               fix_cycle))
+        constr.add((1, lambda v: self._v_cycle(v)._not(),       lambda v: self.cycle[v]._not(),        fix_cycle_not))
 
-        for var in self.var:
-            TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_reach(var,v)] = lambda v: self.reach[var][v]
-            TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_reach(var,v)._not()] = lambda v: self.reach[var][v]._not()
-            TYPE1_CONSTRAINTS_1VAR[lambda v: self._indv_not_var(var,v)] = lambda v: self.var[var][v]._not()
+        constr.add((2, lambda v1,v2: self._v_not_n(v1,v2),      lambda v1,v2: self.n[(v1,v2)]._not(),  fix_n_not))
+        constr.add((2, lambda v1,v2: self._v_not_n_hs(v1,v2),   lambda v1,v2: self.n[(v1,v2)]._not(),  fix_n_not))
 
-            TYPE2_CONSTRAINTS_2VAR.add(lambda v1,v2: self._indv_both_var(var,v1,v2))
+        constr.add((1, lambda v: self._v_n(v),                  lambda v: self.sm[v]._not(),            fix_sm_not))
+        constr.add((1, lambda v: self._v_n_hs(v),               lambda v: self.sm[v]._not(),            fix_sm_not))
+
+        for var in self.var: 
+            constr.add((1, lambda v: self._v_reach(var,v),              lambda v: self.reach[var][v],         fix_reach))
+            constr.add((1, lambda v: self._v_reach(var,v)._not(),       lambda v: self.reach[var][v]._not(),  fix_reach_not))
+            constr.add((1, lambda v: self._v_not_var(var,v),            lambda v: self.var[var][v]._not(),    fix_var_not))
+
+            constr.add((1, lambda v: self.var[var][v],          lambda v: self.sm[v]._not(),            fix_sm_not))
 
 
     def __str__(self):
@@ -118,14 +136,14 @@ class Structure:
         self.sm[u] = MAYBE
 
     # Equality taking summary nodes into account
-    def _indv_eq(self, v1, v2):
+    def _v_eq(self, v1, v2):
         if (v1 != v2):
             return FALSE
         else:
             return self.sm(v1)._not()
 
     # Is the individual heap shared
-    def _indv_shared(self, v):
+    def _v_shared(self, v):
         return self._exists(lambda u1 : \
             self._exists(lambda u2 : \
                 self.n[(u1,v)]._and(self.n[(u2,v)])._and(self._indv_eq(u1,u2)._not())
@@ -133,30 +151,27 @@ class Structure:
             )
 
     # Is the individual reachable from variable
-    def _indv_reach(self, var, v):
+    def _v_reach(self, var, v):
         return self.var[var][v]._or(self._exists(lambda u : self.var[var][u]._and(self._n_plus()[(u,v)])))
 
     # Is the individual resides on a cycle
-    def _indv_cycle(self, v):
+    def _v_cycle(self, v):
         return self._n_plus()[(v,v)]
 
-    def _indv_not_var(self, var, v):
+    def _v_not_var(self, var, v):
         return self._exists(lambda u : self.var[var][u]._and(self._indv_eq(v, u)._not()))
 
-    def _indv_not_n(self, v1, v2):
+    def _v_not_n(self, v1, v2):
         return self._exists(lambda u : self.n[(v1,u)]._and(self._indv_eq(u, v2)._not()))
 
-    def _indv_not_n_shared(self, v1, v2):
+    def _v_not_n_hs(self, v1, v2):
         return self._exists(lambda u : self.n[(u,v1)]._and(self._indv_eq(u, v2)._not())._and(self.shared[v1]._not()))
 
-    def _indv_both_var(self, var, v1, v2):
-        return self.var[var][v1]._and(self.var[var][v2])
+    def _v_n(self, v):
+        return self._exists(lambda u : self.n[(u,v)])
 
-    def _indv_both_n(self, v1, v2):
-        return self._exists(lambda u : self.n[(u,v1)]._and(self.n[(u,v2)]))
-
-    def _indv_both_n_shared(self, v1, v2):
-        return self._exists(lambda u : self.n[(v1,u)]._and(self.n[(v2,u)])._and(self.shared[v]._not()))
+    def _v_n_hs(self, v):
+        return self._exists(lambda u : self.n[(v,u)]._and(self.shared[u]._not()))
 
     def _var_not_null(self, var1):
         return self._exists(lambda u : self.var[var1][u])

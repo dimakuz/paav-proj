@@ -90,38 +90,32 @@ def focus_var_deref(structure, var):
                     st0.n[(u1,u)] = TRUE
                     st0.n[(u1,v)] = FALSE
                     workset.append(s2)
-    return 
+    return answerset
 
 def coerce(structure):
-    st_copy = structure.deepcopy()
     changed = True
     while changed:
         changed = False
-        for right, left in st_copy.TYPE1_CONSTRAINTS_1VAR.items():
-            for v in st_copy.indiv:
-                if left(v) == TRUE:
-                    if right(v) == FALSE:
-                        return None
-                    elif right(v) == MAYBE:
-                        changed = True
-                        #TODO: update the structure!! 
-        for right, left in st_copy.TYPE1_CONSTRAINTS_2VAR.items():
-            for v1,v2 in st_copy.indiv:
-                if left(v1,v2) == TRUE:
-                    if st_copy.n[(v1,v2)] == FALSE:
-                        return None
-                    elif st_copy.n[(v1,v2)] == MAYBE:
-                        changed = True
-                        st_copy.n[(v1,v2)] = FALSE
-        for right in st_copy.TYPE2_CONSTRAINTS_2VAR:
-            for v1,v2 in st_copy.indiv:
-                if left(v1,v2) == TRUE:
-                    if st_copy._indv_eq(v1,v2) == FALSE:
-                        return None
-                    elif st_copy._indv_eq(v1,v2) == MAYBE:
-                        changed = True
-                        st_copy.sm[v1] = FALSE
-    return st_copy
+        for constraint in structure.constr:
+            (par_num, lh, rh, fix) = constraint
+
+            if par_num == 1:
+                for v in structure.indiv:
+                    if lh(v) == TRUE:
+                        if rh(v) == FALSE:
+                            return False
+                        elif rh(v) == MAYBE:
+                            fix(v)
+                            changed = True
+            elif par_num == 2:
+                for v1,v2 in structure.indiv:
+                    if lh(v1,v2) == TRUE:
+                        if rh(v1,v2) == FALSE:
+                            return False
+                        elif rh(v1,v2) == MAYBE:
+                            fix(v1,v2)
+                            changed = True
+    return True
 
 
 @dataclasses.dataclass
@@ -160,9 +154,8 @@ class ShapeState(abstract.AbstractState):
     def post_transform(self):
         new_structures = []
         for st in self.structures:
-            res = coerce(st)
-            if res:
-                new_structures.add(res)
+            if coerce(st):
+                new_structures.add(st)
 
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
@@ -261,8 +254,8 @@ def next_var_assignment(state, statement):
         n = cstate.n
         cycle = cstate.cycle
         exists = cstate._exists
-        is_reachable = cstate._indv_reach
-        is_shared = cstate._indv_shared
+        is_reachable = cstate._v_reach
+        is_shared = cstate._v_shared
         not_null = cstate._var_not_null
 
         if not_null(lval) == FALSE:
@@ -322,8 +315,8 @@ def next_null_assignment(state, statement):
         n = cstate.n
         cycle = cstate.cycle
         exists = cstate._exists
-        is_reachable = cstate._indv_reach
-        is_shared = cstate._indv_shared
+        is_reachable = cstate._v_reach
+        is_shared = cstate._v_shared
         not_null = cstate._var_not_null
 
         if not_null(lval) == FALSE:
