@@ -21,6 +21,10 @@ EVEN = frozenset((EVEN_atom,))
 TOP = ODD.union(EVEN)
 BOTTOM = frozenset()
 
+TRUE = structure.ThreeValuedBool.TRUE
+FALSE = structure.ThreeValuedBool.FALSE
+MAYBE = structure.ThreeValuedBool.MAYBE
+
 
 def _get_val_parity(val):
     if val % 2 == 1:
@@ -99,8 +103,14 @@ def coerce(structure):
         for constraint in structure.constr:
             (par_num, lh, rh, fix) = constraint
 
+            LOG.debug('lh %s %s', type(lh), lh)
+            LOG.debug('rh %s %s', type(rh), rh)
+
+            LOG.debug('indivvv %s %s', type(structure.indiv), structure.indiv)
+
             if par_num == 1:
                 for v in structure.indiv:
+                    LOG.debug('vvvvvvv %s %s', type(v), v)
                     if lh(v) == TRUE:
                         if rh(v) == FALSE:
                             return False
@@ -120,7 +130,7 @@ def coerce(structure):
 
 @dataclasses.dataclass
 class ShapeState(abstract.AbstractState):
-    structures: typing.Set[structure.Structure]
+    structures: typing.List[structure.Structure]
 
     def join(self, other):
 
@@ -139,8 +149,9 @@ class ShapeState(abstract.AbstractState):
 
     @classmethod
     def initial(cls, symbols):
+        LOG.debug('initializing state!!')
         return cls(
-            structures=set([Structure().initial(symbols)])
+            structures=[structure.Structure(symbols)]
         )
         
     def reset(self):
@@ -155,7 +166,7 @@ class ShapeState(abstract.AbstractState):
         new_structures = []
         for st in self.structures:
             if coerce(st):
-                new_structures.add(st)
+                new_structures.append(st)
 
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
@@ -182,19 +193,23 @@ def var_new_assignment(state, statement):
     lval = statement.lval
 
     for st in state.structures:
-        v = max(st.indiv) + 1
+        v = max(st.indiv) + 1 if st.indiv else 0
         for u in st.indiv:
             st.var[lval][u] = FALSE
             st.n[(u,v)] = FALSE
             st.n[(v,u)] = FALSE
 
         for key in st.var:
+            LOG.debug('key %s', key)
             st.var[key][v] = FALSE
             st.reach[key][v] = FALSE
 
         st.var[lval][v] = TRUE
         st.reach[lval][v] = TRUE
         st.n[(v,v)] = FALSE
+
+
+        LOG.debug('st.var %s', st.var)
 
         st.cycle[v] = FALSE
         st.shared[v] = FALSE

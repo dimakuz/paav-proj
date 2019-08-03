@@ -27,6 +27,7 @@ class AbstractState:
         except KeyError:
             LOG.warning(f'No transformer for {statement}')
             return res
+
         transformer(res, statement)
         res.post_transform()
         LOG.debug('Transformed state is: %s\n', res)

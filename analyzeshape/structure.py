@@ -1,12 +1,15 @@
 import copy
 import dataclasses
 import typing
+import logging
 import types
 
 from pysmt import shortcuts
 from analyzeshape import lang as lang_shape
 from analyzeframework import lang
 from enum import Enum
+
+LOG = logging.getLogger(__name__)
 
 
 class ThreeValuedBool(Enum):
@@ -23,6 +26,12 @@ class ThreeValuedBool(Enum):
     def _or(self, other):
         return ThreeValuedBool(max(self, other))
 
+
+TRUE = ThreeValuedBool.TRUE
+FALSE = ThreeValuedBool.FALSE
+MAYBE = ThreeValuedBool.MAYBE
+
+
 @dataclasses.dataclass
 class Structure:
     indiv: typing.Set[int]
@@ -33,10 +42,12 @@ class Structure:
     sm: typing.Mapping[int, ThreeValuedBool]
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
-    constr = typing.Set[typing.Tuple[int, callable, callable, callable]]
+    constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
-    def __init__(self):
 
+    def init_constr(self, symbols):
+
+        constr = set()
         def fix_shared(v):
             self.shared[v] = TRUE
         def fix_shared_not(v):
@@ -67,12 +78,14 @@ class Structure:
         constr.add((1, lambda v: self._v_n(v),                  lambda v: self.sm[v]._not(),            fix_sm_not))
         constr.add((1, lambda v: self._v_n_hs(v),               lambda v: self.sm[v]._not(),            fix_sm_not))
 
-        for var in self.var: 
-            constr.add((1, lambda v: self._v_reach(var,v),              lambda v: self.reach[var][v],         fix_reach))
-            constr.add((1, lambda v: self._v_reach(var,v)._not(),       lambda v: self.reach[var][v]._not(),  fix_reach_not))
-            constr.add((1, lambda v: self._v_not_var(var,v),            lambda v: self.var[var][v]._not(),    fix_var_not))
+        for var in symbols: 
+            constr.add((1, lambda v: self._v_reach(var,v),          lambda v: self.reach[var][v],         fix_reach))
+            constr.add((1, lambda v: self._v_reach(var,v)._not(),   lambda v: self.reach[var][v]._not(),  fix_reach_not))
+            constr.add((1, lambda v: self._v_not_var(var,v),        lambda v: self.var[var][v]._not(),    fix_var_not))
 
             constr.add((1, lambda v: self.var[var][v],          lambda v: self.sm[v]._not(),            fix_sm_not))
+
+        return constr
 
 
     def __str__(self):
@@ -94,6 +107,7 @@ class Structure:
         lines.append(f'cycle: [{sm}]')
 
         return '\n'.join(lines)
+
 
     def _summarizable(self, u, v):
         return all(self.var[key][u] == self.var[key][v] and \
@@ -135,6 +149,7 @@ class Structure:
             self.n.pop((w,v))
         self.sm[u] = MAYBE
 
+
     # Equality taking summary nodes into account
     def _v_eq(self, v1, v2):
         if (v1 != v2):
@@ -152,6 +167,8 @@ class Structure:
 
     # Is the individual reachable from variable
     def _v_reach(self, var, v):
+        LOG.debug('type var %s', type(var))
+        LOG.debug('type v %s', type(v))
         return self.var[var][v]._or(self._exists(lambda u : self.var[var][u]._and(self._n_plus()[(u,v)])))
 
     # Is the individual resides on a cycle
@@ -205,16 +222,17 @@ class Structure:
     def _forall(self, pred):
         return ThreeValuedBool(min(pred(v).val for v in self.indiv))
 
-    def initial(cls, symbols):
-        return cls(
-            indiv=set(),
-            var={symbol: dict() for symbol in symbols},
-            reach={symbol: dict() for symbol in symbols},
-            cycle=dict(),
-            shared=dict(),
-            sm=dict(),
-            n=dict()
-        )
+
+    def __init__(self, symbols):
+        LOG.debug('initializing structure!!')
+        self.indiv = set()
+        self.var = {symbol: dict() for symbol in symbols}
+        self.reach = {symbol: dict() for symbol in symbols}
+        self.cycle = dict()
+        self.shared = dict()
+        self.sm = dict()
+        self.n = dict()
+        self.constr = self.init_constr(symbols)
         
     def reset(self):
         indiv.clear()
