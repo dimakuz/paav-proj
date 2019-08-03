@@ -60,8 +60,9 @@ class ShapeState(abstract.AbstractState):
         while workset:
             st = workset.pop(0)
             u = next((u for u in st.indiv if st.var[var][u] == MAYBE), None)
-            if not u and st.coerce():
-                answerset.append(st)
+            if not u:
+                if st.coerce():
+                    answerset.append(st)
             else:
                 st0 = copy.deepcopy(st)
                 st0.var[u] = TRUE
@@ -69,13 +70,14 @@ class ShapeState(abstract.AbstractState):
                 st1 = copy.deepcopy(st)
                 st1.var[u] = FALSE
                 workset.append(st1)
-                if (st.sm[u] == MAYBE):
+                if st.sm[u] == MAYBE:
                     st2 = copy.deepcopy(st)
                     v = st2.copy_indiv(u)
                     st2.var[u] = TRUE
                     st2.var[v] = FALSE
                     workset.append(st2)
         self.structures = answerset
+        LOG.debug('num of structures %d\n', len(self.structures))
 
     def focus_var_deref(self, var):
         workset = self.structures
@@ -84,8 +86,9 @@ class ShapeState(abstract.AbstractState):
             st = workset.pop(0)
             res = next(((v,u) for u in st.indiv for v in st.indiv if\
                 st.var[var][v] == TRUE and st.n[(v,u)] == MAYBE), None)
-            if not res and st.coerce():
-                answerset.append(st)
+            if not res:
+                if st.coerce():
+                    answerset.append(st)
             else:
                 (u,v) = res
                 st0 = copy.deepcopy(st)
@@ -94,13 +97,14 @@ class ShapeState(abstract.AbstractState):
                 st1 = copy.deepcopy(st)
                 st0.n[(v,u)] = FALSE
                 workset.append(st1)
-                if (st.sm[u] == MAYBE):
+                if st.sm[u] == MAYBE:
                     st2 = copy.deepcopy(st)
                     w = st2.copy_indiv(u)
                     st0.n[(v,u)] = TRUE
                     st0.n[(v,w)] = FALSE
                     workset.append(st2)
         self.structures = answerset
+        LOG.debug('num of structures %d\n', len(self.structures))
 
     def join(self, other):
 
@@ -111,6 +115,7 @@ class ShapeState(abstract.AbstractState):
             for u in indiv_copy:
                 for v in indiv_copy:
                     if u in st.indiv and v in st.indiv and u < v and st.summarizable(u, v):
+                        LOG.debug('something is summarizable!!! %s %s',u,v)
                         st.summarize(u, v)
         return other
 
@@ -136,6 +141,7 @@ class ShapeState(abstract.AbstractState):
         for st in self.structures:
             if st.coerce():
                 new_structures.append(st)
+        self.structures = new_structures
 
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
@@ -204,7 +210,7 @@ def var_next_assignment(state, statement):
         exists = cstate._exists
         not_null = cstate._var_not_null
 
-        if not_null(lval) == FALSE:
+        if not_null(rval) == FALSE:
             raise RuntimeError(f'Possible null pointer reference detected in {statement}')
 
         for v in st.indiv:

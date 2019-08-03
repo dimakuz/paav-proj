@@ -21,7 +21,7 @@ class VarNextAssignment(lang.Statement):
     rval: str
 
     def __str__(self):
-        return f'{self.lval} := {self.rval}'
+        return f'{self.lval} := {self.rval}.n'
 
 
 @dataclasses.dataclass
@@ -30,7 +30,7 @@ class NextVarAssignment(lang.Statement):
     rval: str
 
     def __str__(self):
-        return f'{self.lval} := {self.rval}'
+        return f'{self.lval}.n := {self.rval}'
 
 
 @dataclasses.dataclass
@@ -54,7 +54,7 @@ class NextNullAssignment(lang.Statement):
     lval: str
 
     def __str__(self):
-        return f'{self.lval} := NULL'
+        return f'{self.lval}.n := NULL'
 
 
 @dataclasses.dataclass
@@ -87,7 +87,7 @@ class EqualsVarNext(lang.Predicate):
     rval: lang.Symbol
 
     def __str__(self):
-        return f'{self.lval} = {self.rval}'
+        return f'{self.lval} = {self.rval}.n'
 
     def formula(self):
         return shortcuts.Symbol(f'EQNEXT-{self.lval}-{self.rval}')
@@ -99,7 +99,7 @@ class NotEqualsVarNext(lang.Predicate):
     rval: lang.Symbol
 
     def __str__(self):
-        return f'{self.lval} != {self.rval}'
+        return f'{self.lval} != {self.rval}.n'
 
     def formula(self):
         return shortcuts.Not(shortcuts.Symbol(f'EQNEXT-{self.lval}-{self.rval}'))

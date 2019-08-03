@@ -33,4 +33,4 @@ L42 yy.n := NULL L43
 L43 yy.n := z L44
 L44 assert (LS x xx) L45
 L45 assert (LS x xx LS y yy LS z zz) L46
-L46 assert (LS x zz LS y zz) L47
+L46 assert (LS x zz LS x xx) L47

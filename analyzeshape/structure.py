@@ -28,6 +28,14 @@ class ThreeValuedBool(IntEnum):
     def _or(self, other):
         return ThreeValuedBool(max(self, other))
 
+    def __str__(self):
+        if self == TRUE:
+            return 'TRUE'
+        elif self == MAYBE:
+            return 'MAYBE'
+        else:
+            return 'FALSE'
+
 
 TRUE = ThreeValuedBool.TRUE
 FALSE = ThreeValuedBool.FALSE
@@ -96,20 +104,20 @@ class Structure:
     def __str__(self):
         lines = []
         for symbol in self.var:
-            var = ','.join(f'indiv-{v} = {self.var[symbol][v]}' for v in self.indiv)
+            var = ', '.join(f'v{v} = {str(self.var[symbol][v])}' for v in self.indiv)
             lines.append(f'var_{symbol.name}: [{var}]')
 
-            reach = ','.join(f'indiv-{v} = {self.reach[symbol][v]}' for v in self.indiv)
+            reach = ', '.join(f'v{v} = {str(self.reach[symbol][v])}' for v in self.indiv)
             lines.append(f'reach_{symbol.name}: [{reach}]')
 
-        cycle = ','.join(f'indiv-{v} = {self.cycle[v]}' for v in self.indiv)
+        cycle = ', '.join(f'v{v} = {str(self.cycle[v])}' for v in self.indiv)
         lines.append(f'cycle: [{cycle}]')
 
-        shared = ','.join(f'indiv-{v} = {self.shared[v]}' for v in self.indiv)
-        lines.append(f'cycle: [{shared}]')
+        shared = ', '.join(f'v{v} = {str(self.shared[v])}' for v in self.indiv)
+        lines.append(f'shared: [{shared}]')
 
-        sm = ','.join(f'indiv-{v} = {self.sm[v]}' for v in self.indiv)
-        lines.append(f'cycle: [{sm}]')
+        sm = ', '.join(f'v{v} = {str(self.sm[v])}' for v in self.indiv)
+        lines.append(f'sm: [{sm}]')
 
         return '\n'.join(lines)
 
@@ -123,8 +131,6 @@ class Structure:
     def copy_indiv(self, u):
         v = max(self.indiv) + 1
         for key in self.var:
-            LOG.debug('111111 %s\n', type(self.var[key]))
-            LOG.debug('222222 %s\n', self.var[key])
             self.var[key][v] = self.var[key][u]
             self.reach[key][v] = self.var[key][u]
         self.cycle[v] = self.cycle[u]
@@ -138,7 +144,7 @@ class Structure:
         return v
 
     def summarize(self, u, v):
-        self.indiv.pop(v)
+        self.indiv.remove(v)
         for w in self.indiv:
             if self.n[(w,u)] != self.n[(w,v)]:
                 self.n[(w,u)] = MAYBE
@@ -244,40 +250,32 @@ class Structure:
         )
 
     def coerce(self):
-        changed = True
-        while changed:
-            changed = False
-            for constraint in self.constr:
-                (par_num, lh, rh, fix) = constraint
-                if par_num == 1:
-                    for v in self.indiv:
-                        if lh(self,v) == TRUE:
-                            if rh(self,v) == FALSE:
-                                return False
-                            elif rh(self,v) == MAYBE:
-                                fix(self,v)
-                                changed = True
-                elif par_num == 2:
-                    for v1 in self.indiv:
-                        for v2 in self.indiv:
-                            if lh(self,v1,v2) == TRUE:
-                                if rh(self,v1,v2) == FALSE:
-                                    return False
-                                elif rh(self,v1,v2) == MAYBE:
-                                    fix(self,v1,v2)
-                                    changed = True
         return True
 
-        
-    # def reset(self):
-    #     self.indiv.clear()
-    #     self.cycle.clear()
-    #     self.shared.clear()
-    #     self.sm.clear()
-    #     self.n.clear()
-    #     for key in self.var:
-    #         self.var[key].clear()
-    #         self.reach[key].clear()
+        # changed = True
+        # while changed:
+        #     changed = False
+        #     for constraint in self.constr:
+        #         (par_num, lh, rh, fix) = constraint
+        #         if par_num == 1:
+        #             for v in self.indiv:
+        #                 if lh(self,v) == TRUE:
+        #                     if rh(self,v) == FALSE:
+        #                         return False
+        #                     elif rh(self,v) == MAYBE:
+        #                         fix(self,v)
+        #                         changed = True
+        #         elif par_num == 2:
+        #             for v1 in self.indiv:
+        #                 for v2 in self.indiv:
+        #                     if lh(self,v1,v2) == TRUE:
+        #                         if rh(self,v1,v2) == FALSE:
+        #                             return False
+        #                         elif rh(self,v1,v2) == MAYBE:
+        #                             fix(self,v1,v2)
+        #                             changed = True
+        # return True
+
 
     def formula(self):
         clauses = []
