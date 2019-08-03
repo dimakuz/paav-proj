@@ -22,7 +22,7 @@ class Lexer(sly.Lexer):
     NEW = 'new'
     LABEL = r'L\d+'
     NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
-    NEXT = r'[a-zA-Z_][a-zA-Z0-9_]*\.n'
+    NEXT = r'\.n'
     ASSIGN = r':='
     EQUAL = r'='
     NOTEQUAL = r'!='
@@ -82,21 +82,17 @@ class Parser(sly.Parser):
     def sym(self, p):
         return lang.Symbol(p.NAME)
 
-    @_('NEXT')
-    def next(self, p):
-        return lang.Symbol(p.NEXT[:-2])
-
     @_('sym ASSIGN sym')
     def stmt(self, p):
         return lang_shape.VarVarAssignment(p.sym0, p.sym1)
 
-    @_('sym ASSIGN next')
+    @_('sym ASSIGN sym NEXT')
     def stmt(self, p):
-        return lang_shape.VarNextAssignment(p.sym, p.next)
+        return lang_shape.VarNextAssignment(p.sym0, p.sym1)
 
-    @_('next ASSIGN sym')
+    @_('sym NEXT ASSIGN sym')
     def stmt(self, p):
-        return lang_shape.NextVarAssignment(p.NEXT, p.sym)
+        return lang_shape.NextVarAssignment(p.sym0, p.sym1)
 
     @_('sym ASSIGN NEW')
     def stmt(self, p):
@@ -106,9 +102,9 @@ class Parser(sly.Parser):
     def stmt(self, p):
         return lang_shape.VarNullAssignment(p.sym)
 
-    @_('next ASSIGN NULL')
+    @_('sym NEXT ASSIGN NULL')
     def stmt(self, p):
-        return lang_shape.NextNullAssignment(p.next)
+        return lang_shape.NextNullAssignment(p.sym)
 
     @_('ASSUME LPAREN expr RPAREN')
     def stmt(self, p):
@@ -126,9 +122,9 @@ class Parser(sly.Parser):
     def pred_expr(self, p):
         return lang_shape.EqualsVarNull(p.sym)
 
-    @_('sym EQUAL next')
+    @_('sym EQUAL sym NEXT')
     def pred_expr(self, p):
-        return lang_shape.EqualsVarNext(p.sym, p.next)
+        return lang_shape.EqualsVarNext(p.sym0, p.sym1)
 
     @_('sym NOTEQUAL sym')
     def pred_expr(self, p):
@@ -136,11 +132,11 @@ class Parser(sly.Parser):
 
     @_('sym NOTEQUAL NULL')
     def pred_expr(self, p):
-        return lang_shape.NotEqualsVarVar(p.sym)
+        return lang_shape.NotEqualsVarNull(p.sym)
 
-    @_('sym NOTEQUAL next')
+    @_('sym NOTEQUAL sym NEXT')
     def pred_expr(self, p):
-        return lang_shape.NotEqualsVarNext(p.sym, p.next)
+        return lang_shape.NotEqualsVarNext(p.sym0, p.sym1)
 
     @_('TRUE')
     def expr(self, p):

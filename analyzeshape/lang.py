@@ -6,14 +6,6 @@ from analyzeframework import lang
 
 
 
-@dataclasses.dataclass(frozen=True)
-class SymbolNext:
-    name: str
-
-    def __str__(self):
-        return f'{self.name}'
-
-
 @dataclasses.dataclass
 class VarVarAssignment(lang.Statement):
     lval: str
