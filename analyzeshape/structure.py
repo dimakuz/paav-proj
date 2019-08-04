@@ -106,7 +106,8 @@ class Structure:
         for symbol in self.var:
             var = ', '.join(f'v{v} = {str(self.var[symbol][v])}' for v in self.indiv)
             lines.append(f'var_{symbol.name}: [{var}]')
-
+        
+        for symbol in self.var:
             reach = ', '.join(f'v{v} = {str(self.reach[symbol][v])}' for v in self.indiv)
             lines.append(f'reach_{symbol.name}: [{reach}]')
 
@@ -250,31 +251,31 @@ class Structure:
         )
 
     def coerce(self):
+        changed = True
+        while changed:
+            changed = False
+            for i, constraint in enumerate(self.constr):
+                (par_num, lh, rh, fix) = constraint
+                if par_num == 1:
+                    for v in self.indiv:
+                        if lh(self,v) == TRUE:
+                            if rh(self,v) == FALSE:
+                                LOG.debug('%d -- 1 lh %s, rh %s', i, lh, rh)
+                                return False
+                            elif rh(self,v) == MAYBE:
+                                fix(self,v)
+                                changed = True
+                elif par_num == 2:
+                    for v1 in self.indiv:
+                        for v2 in self.indiv:
+                            if lh(self,v1,v2) == TRUE:
+                                if rh(self,v1,v2) == FALSE:
+                                    LOG.debug('%d -- 2 lh %s, rh %s', i, lh, rh)
+                                    return False
+                                elif rh(self,v1,v2) == MAYBE:
+                                    fix(self,v1,v2)
+                                    changed = True
         return True
-
-        # changed = True
-        # while changed:
-        #     changed = False
-        #     for constraint in self.constr:
-        #         (par_num, lh, rh, fix) = constraint
-        #         if par_num == 1:
-        #             for v in self.indiv:
-        #                 if lh(self,v) == TRUE:
-        #                     if rh(self,v) == FALSE:
-        #                         return False
-        #                     elif rh(self,v) == MAYBE:
-        #                         fix(self,v)
-        #                         changed = True
-        #         elif par_num == 2:
-        #             for v1 in self.indiv:
-        #                 for v2 in self.indiv:
-        #                     if lh(self,v1,v2) == TRUE:
-        #                         if rh(self,v1,v2) == FALSE:
-        #                             return False
-        #                         elif rh(self,v1,v2) == MAYBE:
-        #                             fix(self,v1,v2)
-        #                             changed = True
-        # return True
 
 
     def formula(self):

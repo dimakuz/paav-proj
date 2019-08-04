@@ -77,7 +77,7 @@ class ShapeState(abstract.AbstractState):
                     st2.var[v] = FALSE
                     workset.append(st2)
         self.structures = answerset
-        LOG.debug('num of structures %d\n', len(self.structures))
+        LOG.debug('num of structures focus %d\n', len(self.structures))
 
     def focus_var_deref(self, var):
         workset = self.structures
@@ -104,10 +104,13 @@ class ShapeState(abstract.AbstractState):
                     st0.n[(v,w)] = FALSE
                     workset.append(st2)
         self.structures = answerset
-        LOG.debug('num of structures %d\n', len(self.structures))
+        LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
 
     def join(self, other):
 
+        if not other.structures:
+            return self
+        
         # Discard self state when dealing with 3-valued logic structures
         # This is the embed operation from paper
         for st in other.structures:
@@ -117,6 +120,7 @@ class ShapeState(abstract.AbstractState):
                     if u in st.indiv and v in st.indiv and u < v and st.summarizable(u, v):
                         LOG.debug('something is summarizable!!! %s %s',u,v)
                         st.summarize(u, v)
+        LOG.debug('num of structures join %d\n', len(other.structures))
         return other
 
     def __str__(self):
@@ -142,6 +146,7 @@ class ShapeState(abstract.AbstractState):
             if st.coerce():
                 new_structures.append(st)
         self.structures = new_structures
+        LOG.debug('num of structures coerce all %d\n', len(self.structures))
 
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
