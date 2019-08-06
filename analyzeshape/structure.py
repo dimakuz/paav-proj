@@ -4,6 +4,7 @@ import typing
 import logging
 import types
 import copy
+import itertools
 
 from pysmt import shortcuts
 from analyzeshape import lang as lang_shape
@@ -53,6 +54,44 @@ class Structure:
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
+
+
+    # Equality should be agnostic to the label assigned to each individual!
+    # Unfortunately, seems like the general case is the graph isomorphism problem
+    # So we ought to restrict our input - only individuals in the set difference
+    def __eq__(self, other):
+
+        # Different size - different structure
+        if len(self.indiv) != len(other.indiv):
+            return False
+
+        self_minus_other = self.indiv.difference(other.indiv)
+
+        # Same individuals - same structure
+        if not self_minus_other:
+            return True
+
+        other_minus_self = list(other.indiv.difference(self.indiv))
+        intersection = self.indiv.intersection(other.indiv)
+
+        for perm in itertools.permutations(self_minus_other):
+            for ind, v in enumerate(perm):
+
+                u = other_minus_self[ind]
+
+                sm_fit = self.sm[v] == other.sm[u]
+                var_fit = all(self.var[var][v] == other.var[var][u] for var in self.var)
+                n_fit = all(self.n[(v,w)] == other.n[(u,w)] for w in intersection) and \
+                        all(self.n[(v,w)] == other.n[(u,other_minus_self[indw])] for indw,w in enumerate(perm))
+
+                if not sm_fit or not var_fit or not n_fit:
+                    break
+
+            # Found a permutation that fits - same structure
+            return True
+
+        # Looped over all permutations and nothing fits - different structure
+        return False
 
 
     @classmethod
