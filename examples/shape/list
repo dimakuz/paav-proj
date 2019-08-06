@@ -1,17 +1,16 @@
 h t tmp
-L1 h := NULL L2
-L2 t := NULL L3
 L3 t := new L4
 L4 h := t L5
 L5 tmp := NULL L6
 L6 tmp := new L7
-L7 tmp.n := h L8
-L8 h := tmp L9
-L9 assume(TRUE) L6
-L9 assume(TRUE) L10
-L10 tmp := h L11
-L11 assume(tmp != t) L12
-L11 assume(tmp = t) L15
-L12 assert(tmp != NULL) L13
-L13 tmp := tmp.n L11
+L7 tmp.n := NULL L8
+L8 tmp.n := h L9
+L9 h := tmp L10
+L10 assume(TRUE) L6
+L10 assume(TRUE) L11
+L11 tmp := h L12
+L12 assume(tmp != t) L13
+L12 assume(tmp = t) L15
+L13 assert(tmp != NULL) L14
+L14 tmp := tmp.n L12
 L15 skip L16

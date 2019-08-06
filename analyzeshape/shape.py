@@ -110,7 +110,7 @@ class ShapeState(abstract.AbstractState):
 
         if not other.structures:
             return self
-        
+
         # Discard self state when dealing with 3-valued logic structures
         # This is the embed operation from paper
         for st in other.structures:
@@ -176,20 +176,17 @@ def var_new_assignment(state, statement):
         v = max(st.indiv) + 1 if st.indiv else 0
         for u in st.indiv:
             st.var[lval][u] = FALSE
+            st.reach[lval][u] = FALSE
             st.n[(u,v)] = FALSE
             st.n[(v,u)] = FALSE
 
         for key in st.var:
-            LOG.debug('key %s', key)
             st.var[key][v] = FALSE
             st.reach[key][v] = FALSE
 
         st.var[lval][v] = TRUE
         st.reach[lval][v] = TRUE
         st.n[(v,v)] = FALSE
-
-
-        LOG.debug('st.var %s', st.var)
 
         st.cycle[v] = FALSE
         st.shared[v] = FALSE

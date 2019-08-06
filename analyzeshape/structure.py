@@ -81,22 +81,22 @@ class Structure:
         constr = set()
 
         constr.add(('shared', 1, lambda st,v: st._v_shared(v),             lambda st,v: st.shared[v],              fix_shared))
-        constr.add(('shared not', 1, lambda st,v: st._v_shared(v)._not(),      lambda st,v: st.shared[v]._not(),       fix_shared_not))
+        constr.add(('shared-not', 1, lambda st,v: st._v_shared(v)._not(),      lambda st,v: st.shared[v]._not(),       fix_shared_not))
         constr.add(('cycle', 1, lambda st,v: st._v_cycle(v),              lambda st,v: st.cycle[v],               fix_cycle))
-        constr.add(('cycle not', 1, lambda st,v: st._v_cycle(v)._not(),       lambda st,v: st.cycle[v]._not(),        fix_cycle_not))
+        constr.add(('cycle-not', 1, lambda st,v: st._v_cycle(v)._not(),       lambda st,v: st.cycle[v]._not(),        fix_cycle_not))
 
-        constr.add(('n not', 2, lambda st,v1,v2: st._v_not_n(v1,v2),      lambda st,v1,v2: st.n[(v1,v2)]._not(),  fix_n_not))
-        constr.add(('n not shared', 2, lambda st,v1,v2: st._v_not_n_hs(v1,v2),   lambda st,v1,v2: st.n[(v1,v2)]._not(),  fix_n_not))
+        constr.add(('n-not', 2, lambda st,v1,v2: st._v_not_n(v1,v2),      lambda st,v1,v2: st.n[(v1,v2)]._not(),  fix_n_not))
+        constr.add(('n-not-shared', 2, lambda st,v1,v2: st._v_not_n_hs(v1,v2),   lambda st,v1,v2: st.n[(v1,v2)]._not(),  fix_n_not))
 
-        constr.add(('sm not', 1, lambda st,v: st._v_n(v),                  lambda st,v: st.sm[v]._not(),            fix_sm_not))
-        constr.add(('sm not shared', 1, lambda st,v: st._v_n_hs(v),               lambda st,v: st.sm[v]._not(),            fix_sm_not))
+        constr.add(('sm-not', 1, lambda st,v: st._v_n(v),                  lambda st,v: st.sm[v]._not(),            fix_sm_not))
+        constr.add(('sm-not-shared', 1, lambda st,v: st._v_n_hs(v),               lambda st,v: st.sm[v]._not(),            fix_sm_not))
 
         for var in symbols: 
-            constr.add((f'reach {var}', 1, lambda st,v: st._v_reach(var,v),          lambda st,v: st.reach[var][v],         fix_reach))
-            constr.add((f'reach {var} not', 1, lambda st,v: st._v_reach(var,v)._not(),   lambda st,v: st.reach[var][v]._not(),  fix_reach_not))
-            constr.add((f'var {var} not' 1, lambda st,v: st._v_not_var(var,v),        lambda st,v: st.var[var][v]._not(),    fix_var_not))
+            constr.add((f'reach-{var}', 1, lambda st,v: st._v_reach(var,v),          lambda st,v: st.reach[var][v],         fix_reach))
+            constr.add((f'reach-{var}-not', 1, lambda st,v: st._v_reach(var,v)._not(),   lambda st,v: st.reach[var][v]._not(),  fix_reach_not))
+            constr.add((f'var-{var}-not', 1, lambda st,v: st._v_not_var(var,v),        lambda st,v: st.var[var][v]._not(),    fix_var_not))
 
-            constr.add((f'sm {var} not', 1, lambda st,v: st.var[var][v],          lambda st,v: st.sm[v]._not(),            fix_sm_not))
+            constr.add((f'sm-{var}-not', 1, lambda st,v: st.var[var][v],          lambda st,v: st.sm[v]._not(),            fix_sm_not))
 
         return constr
 
@@ -197,7 +197,7 @@ class Structure:
         return self._exists(lambda u : self.n[(v1,u)]._and(self._v_eq(u, v2)._not()))
 
     def _v_not_n_hs(self, v1, v2):
-        return self._exists(lambda u : self.n[(u,v1)]._and(self._v_eq(u, v2)._not())._and(self.shared[v1]._not()))
+        return self._exists(lambda u : self.n[(u,v2)]._and(self._v_eq(u, v1)._not())._and(self.shared[v2]._not()))
 
     def _v_n(self, v):
         return self._exists(lambda u : self.n[(u,v)])
@@ -257,13 +257,16 @@ class Structure:
         changed = True
         while changed:
             changed = False
-            for constraint in self.constr):
+            for constraint in self.constr:
                 (name, par_num, lh, rh, fix) = constraint
                 if par_num == 1:
                     for v in self.indiv:
+                        # LOG.debug('checking coerce with func=%s, v=v%s', name, v)
                         if lh(self,v) == TRUE:
                             if rh(self,v) == FALSE:
-                                LOG.debug('%s -- v=%s', name, v)
+                                LOG.debug('%s -- v=v%s', name, v)
+                                # for var in self.var:
+                                    # LOG.debug('%s, v%s: reach lh: %s vs. rh: %s', var, v, self._v_reach(var,v)._not(), self.reach[var][v]._not())
                                 return False
                             elif rh(self,v) == MAYBE:
                                 fix(self,v)
@@ -273,7 +276,8 @@ class Structure:
                         for v2 in self.indiv:
                             if lh(self,v1,v2) == TRUE:
                                 if rh(self,v1,v2) == FALSE:
-                                    LOG.debug('%s -- v1=%s, v2=%s', name, v1, v2)
+                                    LOG.debug('%s -- v1=v%s, v2=v%s', name, v1, v2)
+                                    LOG.debug('v%s, v%s: n not (shared) lh: %s vs. rh: %s', v1, v2, self._v_not_n_hs(v1,v2), self.n[(v1,v2)]._not())
                                     return False
                                 elif rh(self,v1,v2) == MAYBE:
                                     fix(self,v1,v2)
