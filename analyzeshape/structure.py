@@ -80,23 +80,23 @@ class Structure:
 
         constr = set()
 
-        constr.add((1, lambda st,v: st._v_shared(v),             lambda st,v: st.shared[v],              fix_shared))
-        constr.add((1, lambda st,v: st._v_shared(v)._not(),      lambda st,v: st.shared[v]._not(),       fix_shared_not))
-        constr.add((1, lambda st,v: st._v_cycle(v),              lambda st,v: st.cycle[v],               fix_cycle))
-        constr.add((1, lambda st,v: st._v_cycle(v)._not(),       lambda st,v: st.cycle[v]._not(),        fix_cycle_not))
+        constr.add(('shared', 1, lambda st,v: st._v_shared(v),             lambda st,v: st.shared[v],              fix_shared))
+        constr.add(('shared not', 1, lambda st,v: st._v_shared(v)._not(),      lambda st,v: st.shared[v]._not(),       fix_shared_not))
+        constr.add(('cycle', 1, lambda st,v: st._v_cycle(v),              lambda st,v: st.cycle[v],               fix_cycle))
+        constr.add(('cycle not', 1, lambda st,v: st._v_cycle(v)._not(),       lambda st,v: st.cycle[v]._not(),        fix_cycle_not))
 
-        constr.add((2, lambda st,v1,v2: st._v_not_n(v1,v2),      lambda st,v1,v2: st.n[(v1,v2)]._not(),  fix_n_not))
-        constr.add((2, lambda st,v1,v2: st._v_not_n_hs(v1,v2),   lambda st,v1,v2: st.n[(v1,v2)]._not(),  fix_n_not))
+        constr.add(('n not', 2, lambda st,v1,v2: st._v_not_n(v1,v2),      lambda st,v1,v2: st.n[(v1,v2)]._not(),  fix_n_not))
+        constr.add(('n not shared', 2, lambda st,v1,v2: st._v_not_n_hs(v1,v2),   lambda st,v1,v2: st.n[(v1,v2)]._not(),  fix_n_not))
 
-        constr.add((1, lambda st,v: st._v_n(v),                  lambda st,v: st.sm[v]._not(),            fix_sm_not))
-        constr.add((1, lambda st,v: st._v_n_hs(v),               lambda st,v: st.sm[v]._not(),            fix_sm_not))
+        constr.add(('sm not', 1, lambda st,v: st._v_n(v),                  lambda st,v: st.sm[v]._not(),            fix_sm_not))
+        constr.add(('sm not shared', 1, lambda st,v: st._v_n_hs(v),               lambda st,v: st.sm[v]._not(),            fix_sm_not))
 
         for var in symbols: 
-            constr.add((1, lambda st,v: st._v_reach(var,v),          lambda st,v: st.reach[var][v],         fix_reach))
-            constr.add((1, lambda st,v: st._v_reach(var,v)._not(),   lambda st,v: st.reach[var][v]._not(),  fix_reach_not))
-            constr.add((1, lambda st,v: st._v_not_var(var,v),        lambda st,v: st.var[var][v]._not(),    fix_var_not))
+            constr.add((f'reach {var}', 1, lambda st,v: st._v_reach(var,v),          lambda st,v: st.reach[var][v],         fix_reach))
+            constr.add((f'reach {var} not', 1, lambda st,v: st._v_reach(var,v)._not(),   lambda st,v: st.reach[var][v]._not(),  fix_reach_not))
+            constr.add((f'var {var} not' 1, lambda st,v: st._v_not_var(var,v),        lambda st,v: st.var[var][v]._not(),    fix_var_not))
 
-            constr.add((1, lambda st,v: st.var[var][v],          lambda st,v: st.sm[v]._not(),            fix_sm_not))
+            constr.add((f'sm {var} not', 1, lambda st,v: st.var[var][v],          lambda st,v: st.sm[v]._not(),            fix_sm_not))
 
         return constr
 
@@ -106,7 +106,7 @@ class Structure:
         for symbol in self.var:
             var = ', '.join(f'v{v} = {str(self.var[symbol][v])}' for v in self.indiv)
             lines.append(f'var_{symbol.name}: [{var}]')
-        
+
         for symbol in self.var:
             reach = ', '.join(f'v{v} = {str(self.reach[symbol][v])}' for v in self.indiv)
             lines.append(f'reach_{symbol.name}: [{reach}]')
@@ -119,6 +119,9 @@ class Structure:
 
         sm = ', '.join(f'v{v} = {str(self.sm[v])}' for v in self.indiv)
         lines.append(f'sm: [{sm}]')
+
+        n = ', '.join(f'v{v0},v{v1} = {str(self.n[(v0,v1)])}' for v0 in self.indiv for v1 in self.indiv)
+        lines.append(f'n: [{n}]')
 
         return '\n'.join(lines)
 
@@ -254,13 +257,13 @@ class Structure:
         changed = True
         while changed:
             changed = False
-            for i, constraint in enumerate(self.constr):
-                (par_num, lh, rh, fix) = constraint
+            for constraint in self.constr):
+                (name, par_num, lh, rh, fix) = constraint
                 if par_num == 1:
                     for v in self.indiv:
                         if lh(self,v) == TRUE:
                             if rh(self,v) == FALSE:
-                                LOG.debug('%d -- 1 lh %s, rh %s', i, lh, rh)
+                                LOG.debug('%s -- v=%s', name, v)
                                 return False
                             elif rh(self,v) == MAYBE:
                                 fix(self,v)
@@ -270,7 +273,7 @@ class Structure:
                         for v2 in self.indiv:
                             if lh(self,v1,v2) == TRUE:
                                 if rh(self,v1,v2) == FALSE:
-                                    LOG.debug('%d -- 2 lh %s, rh %s', i, lh, rh)
+                                    LOG.debug('%s -- v1=%s, v2=%s', name, v1, v2)
                                     return False
                                 elif rh(self,v1,v2) == MAYBE:
                                     fix(self,v1,v2)
