@@ -55,6 +55,18 @@ class Structure:
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
+    def deepcopy(self):
+        newst = Structure.initial(self.var.keys())
+        newst.indiv = copy.deepcopy(self.indiv)
+        for var in self.var:
+            newst.var[var] = copy.deepcopy(self.var[var])
+            newst.reach[var] = copy.deepcopy(self.reach[var])
+        newst.cycle = copy.deepcopy(self.cycle)
+        newst.shared = copy.deepcopy(self.shared)
+        newst.sm = copy.deepcopy(self.sm)
+        newst.n = copy.deepcopy(self.n)
+        return newst
+
 
     # Equality should be agnostic to the label assigned to each individual!
     # Is this the graph isomorphism problem?

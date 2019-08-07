@@ -64,14 +64,14 @@ class ShapeState(abstract.AbstractState):
                 if st.coerce():
                     answerset.append(st)
             else:
-                st0 = copy.deepcopy(st)
+                st0 = st.deepcopy()
                 st0.var[u] = TRUE
                 workset.append(st0)
-                st1 = copy.deepcopy(st)
+                st1 = st.deepcopy()
                 st1.var[u] = FALSE
                 workset.append(st1)
                 if st.sm[u] == MAYBE:
-                    st2 = copy.deepcopy(st)
+                    st2 = st.deepcopy()
                     v = st2.copy_indiv(u)
                     st2.var[u] = TRUE
                     st2.var[v] = FALSE
@@ -90,18 +90,18 @@ class ShapeState(abstract.AbstractState):
                 if st.coerce():
                     answerset.append(st)
             else:
-                (u,v) = res
-                st0 = copy.deepcopy(st)
+                (v,u) = res
+                st0 = st.deepcopy()
                 st0.n[(v,u)] = TRUE
                 workset.append(st0)
-                st1 = copy.deepcopy(st)
-                st0.n[(v,u)] = FALSE
+                st1 = st.deepcopy()
+                st1.n[(v,u)] = FALSE
                 workset.append(st1)
                 if st.sm[u] == MAYBE:
-                    st2 = copy.deepcopy(st)
+                    st2 = st.deepcopy()
                     w = st2.copy_indiv(u)
-                    st0.n[(v,u)] = TRUE
-                    st0.n[(v,w)] = FALSE
+                    st2.n[(v,u)] = TRUE
+                    st2.n[(v,w)] = FALSE
                     workset.append(st2)
         self.structures = answerset
         LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
@@ -158,9 +158,8 @@ def var_var_assignment(state, statement):
 
     for st in state.structures:
 
-        cstate = copy.deepcopy(st)
-        var = cstate.var
-        reach = cstate.reach
+        var = copy.deepcopy(st.var)
+        reach = copy.deepcopy(st.reach)
 
         for v in st.indiv:
             st.var[lval][v] = var[rval][v]
@@ -203,14 +202,14 @@ def var_next_assignment(state, statement):
     state.focus_var_deref(rval)
 
     for st in state.structures:
-        cstate = copy.deepcopy(st)
-        var = cstate.var
-        reach = cstate.reach
-        n = cstate.n
-        cycle = cstate.cycle
-        shared = cstate.shared
-        exists = cstate._exists
-        not_null = cstate._var_not_null
+        var = copy.deepcopy(st.var)
+        reach = copy.deepcopy(st.reach)
+        n = copy.deepcopy(st.n)
+        cycle = copy.deepcopy(st.cycle)
+        shared = copy.deepcopy(st.shared)
+
+        exists = st._exists
+        not_null = st._var_not_null
 
         if not_null(rval) == FALSE:
             raise RuntimeError(f'Possible null pointer reference detected in {statement}')
@@ -241,16 +240,16 @@ def next_var_assignment(state, statement):
 
     for st in state.structures:
 
-        cstate = copy.deepcopy(st)
-        var = cstate.var
-        reach = cstate.reach
-        n = cstate.n
-        cycle = cstate.cycle
-        shared = cstate.shared
-        exists = cstate._exists
-        is_reachable = cstate._v_reach
-        is_shared = cstate._v_shared
-        not_null = cstate._var_not_null
+        var = copy.deepcopy(st.var)
+        reach = copy.deepcopy(st.reach)
+        n = copy.deepcopy(st.n)
+        cycle = copy.deepcopy(st.cycle)
+        shared = copy.deepcopy(st.shared)
+
+        exists = st._exists
+        is_reachable = st._v_reach
+        is_shared = st._v_shared
+        not_null = st._var_not_null
 
         if not_null(lval) == FALSE:
             raise RuntimeError(f'Possible null pointer reference detected in {statement}')
@@ -303,16 +302,16 @@ def next_null_assignment(state, statement):
     state.focus(lval)
 
     for st in state.structures:
-        cstate = copy.deepcopy(st)
-        var = cstate.var
-        reach = cstate.reach
-        n = cstate.n
-        cycle = cstate.cycle
-        shared = cstate.shared
-        exists = cstate._exists
-        is_reachable = cstate._v_reach
-        is_shared = cstate._v_shared
-        not_null = cstate._var_not_null
+        var = copy.deepcopy(st.var)
+        reach = copy.deepcopy(st.reach)
+        n = copy.deepcopy(st.n)
+        cycle = copy.deepcopy(st.cycle)
+        shared = copy.deepcopy(st.shared)
+
+        exists = st._exists
+        is_reachable = st._v_reach
+        is_shared = st._v_shared
+        not_null = st._var_not_null
 
         if not_null(lval) == FALSE:
             raise RuntimeError(f'Possible null pointer reference detected in {statement}')
