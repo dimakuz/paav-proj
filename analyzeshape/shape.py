@@ -65,16 +65,16 @@ class ShapeState(abstract.AbstractState):
                     answerset.append(st)
             else:
                 st0 = st.deepcopy()
-                st0.var[u] = TRUE
+                st0.var[var][u] = TRUE
                 workset.append(st0)
                 st1 = st.deepcopy()
-                st1.var[u] = FALSE
+                st1.var[var][u] = FALSE
                 workset.append(st1)
                 if st.sm[u] == MAYBE:
                     st2 = st.deepcopy()
                     v = st2.copy_indiv(u)
-                    st2.var[u] = TRUE
-                    st2.var[v] = FALSE
+                    st2.var[var][u] = TRUE
+                    st2.var[var][v] = FALSE
                     workset.append(st2)
         self.structures = answerset
         LOG.debug('num of structures focus %d\n', len(self.structures))
