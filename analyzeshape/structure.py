@@ -55,7 +55,7 @@ class Structure:
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
-    def deepcopy(self):
+    def copy(self):
         newst = Structure.initial(self.var.keys())
         newst.indiv = copy.deepcopy(self.indiv)
         for var in self.var:
@@ -323,8 +323,8 @@ class Structure:
                         for v2 in self.indiv:
                             if lh(self,v1,v2) == TRUE:
                                 if rh(self,v1,v2) == FALSE:
-                                    LOG.debug('%s -- v1=v%s, v2=v%s', name, v1, v2)
-                                    LOG.debug('v%s, v%s: n not (shared) lh: %s vs. rh: %s', v1, v2, self._v_not_n_hs(v1,v2), self.n[(v1,v2)]._not())
+                                    # LOG.debug('%s -- v1=v%s, v2=v%s', name, v1, v2)
+                                    # LOG.debug('v%s, v%s: n not (shared) lh: %s vs. rh: %s', v1, v2, self._v_not_n_hs(v1,v2), self.n[(v1,v2)]._not())
                                     return False
                                 elif rh(self,v1,v2) == MAYBE:
                                     fix(self,v1,v2)

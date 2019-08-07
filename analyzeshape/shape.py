@@ -64,14 +64,14 @@ class ShapeState(abstract.AbstractState):
                 if st.coerce():
                     answerset.append(st)
             else:
-                st0 = st.deepcopy()
+                st0 = st.copy()
                 st0.var[var][u] = TRUE
                 workset.append(st0)
-                st1 = st.deepcopy()
+                st1 = st.copy()
                 st1.var[var][u] = FALSE
                 workset.append(st1)
                 if st.sm[u] == MAYBE:
-                    st2 = st.deepcopy()
+                    st2 = st.copy()
                     v = st2.copy_indiv(u)
                     st2.var[var][u] = TRUE
                     st2.var[var][v] = FALSE
@@ -91,20 +91,21 @@ class ShapeState(abstract.AbstractState):
                     answerset.append(st)
             else:
                 (v,u) = res
-                st0 = st.deepcopy()
+                st0 = st.copy()
                 st0.n[(v,u)] = TRUE
                 workset.append(st0)
-                st1 = st.deepcopy()
+                st1 = st.copy()
                 st1.n[(v,u)] = FALSE
                 workset.append(st1)
                 if st.sm[u] == MAYBE:
-                    st2 = st.deepcopy()
+                    st2 = st.copy()
                     w = st2.copy_indiv(u)
                     st2.n[(v,u)] = TRUE
                     st2.n[(v,w)] = FALSE
                     workset.append(st2)
         self.structures = answerset
         LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
+
 
     def join(self, other):
 
@@ -202,14 +203,15 @@ def var_next_assignment(state, statement):
     state.focus_var_deref(rval)
 
     for st in state.structures:
-        var = copy.deepcopy(st.var)
-        reach = copy.deepcopy(st.reach)
-        n = copy.deepcopy(st.n)
-        cycle = copy.deepcopy(st.cycle)
-        shared = copy.deepcopy(st.shared)
+        stcopy = st.copy()
+        var = stcopy.var
+        reach = stcopy.reach
+        n = stcopy.n
+        cycle = stcopy.cycle
+        shared = stcopy.shared
 
-        exists = st._exists
-        not_null = st._var_not_null
+        exists = stcopy._exists
+        not_null = stcopy._var_not_null
 
         if not_null(rval) == FALSE:
             raise RuntimeError(f'Possible null pointer reference detected in {statement}')
@@ -240,16 +242,17 @@ def next_var_assignment(state, statement):
 
     for st in state.structures:
 
-        var = copy.deepcopy(st.var)
-        reach = copy.deepcopy(st.reach)
-        n = copy.deepcopy(st.n)
-        cycle = copy.deepcopy(st.cycle)
-        shared = copy.deepcopy(st.shared)
+        stcopy = st.copy()
+        var = stcopy.var
+        reach = stcopy.reach
+        n = stcopy.n
+        cycle = stcopy.cycle
+        shared = stcopy.shared
 
-        exists = st._exists
-        is_reachable = st._v_reach
-        is_shared = st._v_shared
-        not_null = st._var_not_null
+        exists = stcopy._exists
+        is_reachable = stcopy._v_reach
+        is_shared = stcopy._v_shared
+        not_null = stcopy._var_not_null
 
         if not_null(lval) == FALSE:
             raise RuntimeError(f'Possible null pointer reference detected in {statement}')
@@ -302,16 +305,18 @@ def next_null_assignment(state, statement):
     state.focus(lval)
 
     for st in state.structures:
-        var = copy.deepcopy(st.var)
-        reach = copy.deepcopy(st.reach)
-        n = copy.deepcopy(st.n)
-        cycle = copy.deepcopy(st.cycle)
-        shared = copy.deepcopy(st.shared)
 
-        exists = st._exists
-        is_reachable = st._v_reach
-        is_shared = st._v_shared
-        not_null = st._var_not_null
+        stcopy = st.copy()
+        var = stcopy.var
+        reach = stcopy.reach
+        n = stcopy.n
+        cycle = stcopy.cycle
+        shared = stcopy.shared
+
+        exists = stcopy._exists
+        is_reachable = stcopy._v_reach
+        is_shared = stcopy._v_shared
+        not_null = stcopy._var_not_null
 
         if not_null(lval) == FALSE:
             raise RuntimeError(f'Possible null pointer reference detected in {statement}')
