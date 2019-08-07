@@ -57,38 +57,34 @@ class Structure:
 
 
     # Equality should be agnostic to the label assigned to each individual!
-    # Unfortunately, seems like the general case is the graph isomorphism problem
-    # So we ought to restrict our input - only individuals in the set difference
+    # Is this the graph isomorphism problem?
     def __eq__(self, other):
 
         # Different size - different structure
         if len(self.indiv) != len(other.indiv):
             return False
 
-        self_minus_other = self.indiv.difference(other.indiv)
+        intersection = list(self.indiv.intersection(other.indiv))
+        oindiv = list(other.indiv.difference(self.indiv)) + intersection
 
-        # Same individuals - same structure
-        if not self_minus_other:
-            return True
+        for perm in itertools.permutations(self.indiv.difference(other.indiv)):
+            sindiv = list(perm) + intersection
+            fit = True
+            for iv, v in enumerate(sindiv):
 
-        other_minus_self = list(other.indiv.difference(self.indiv))
-        intersection = self.indiv.intersection(other.indiv)
-
-        for perm in itertools.permutations(self_minus_other):
-            for ind, v in enumerate(perm):
-
-                u = other_minus_self[ind]
+                u = oindiv[iv]
 
                 sm_fit = self.sm[v] == other.sm[u]
                 var_fit = all(self.var[var][v] == other.var[var][u] for var in self.var)
-                n_fit = all(self.n[(v,w)] == other.n[(u,w)] for w in intersection) and \
-                        all(self.n[(v,w)] == other.n[(u,other_minus_self[indw])] for indw,w in enumerate(perm))
+                n_fit = all(self.n[(v,w)] == other.n[(u,oindiv[iw])] for iw,w in enumerate(sindiv))
 
                 if not sm_fit or not var_fit or not n_fit:
+                    fit = False
                     break
 
             # Found a permutation that fits - same structure
-            return True
+            if fit:
+                return True
 
         # Looped over all permutations and nothing fits - different structure
         return False
@@ -250,7 +246,7 @@ class Structure:
     def _var_eq(self, var1, var2):
         return self._exists(lambda u1 : \
             self._exists(lambda u2 : \
-                self.var[var1][u1]._and(self.var[var1][u2])._and(self._v_eq(u1, u2))))
+                self.var[var1][u1]._and(self.var[var2][u2])._and(self._v_eq(u1, u2))))
 
     def _var_next_eq(self, var1, var2):
         return self._exists(lambda u1 : \
