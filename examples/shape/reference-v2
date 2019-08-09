@@ -1,0 +1,23 @@
+x y z xx yy zz t p
+L1 skip L8
+L8 t := new L9
+L9 t.n := NULL L10
+L10 t.n := x L11
+L11 x := t L12
+L12 t := new L13
+L13 t.n := NULL L14
+L14 t.n := y L15
+L15 y := t L16
+L16 t := new L17
+L17 t.n := NULL L18
+L18 t.n := z L19
+L19 z := t L6
+L6 assume(TRUE) L8
+L6 assume(TRUE) L20
+L20 xx := x L21
+L21 t := xx.n L22
+L22 assume(t = NULL) L44
+L22 assume(t != NULL) L23
+L23 xx := t L21
+L45 assert (LS x xx t = NULL) L46
+L45 assert (xx != NULL x != NULL y != NULL z != NULL) L46

@@ -1,5 +1,5 @@
 x y z xx yy zz t p
-L7 skip L8
+L1 skip L8
 L8 t := new L9
 L9 t.n := NULL L10
 L10 t.n := x L11
