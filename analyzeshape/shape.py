@@ -129,7 +129,7 @@ class ShapeState(abstract.AbstractState):
                         st.summarize(u, v)
 
     def __str__(self):
-        st_str = ','.join(str(st) for st in self.structures)
+        st_str = '\n\n'.join(str(st) for st in self.structures)
         return f'[{st_str}]'
 
     @classmethod
@@ -146,7 +146,8 @@ class ShapeState(abstract.AbstractState):
         new_structures = []
         for st in self.structures:
             if st.coerce():
-                new_structures.append(st)
+                if st not in new_structures:
+                    new_structures.append(st)
         self.structures = new_structures
         LOG.debug('num of structures coerce all %d\n', len(self.structures))
 
