@@ -73,6 +73,7 @@ class ShapeState(abstract.AbstractState):
                 if st.sm[u] == MAYBE:
                     st2 = st.copy()
                     v = st2.copy_indiv(u)
+                    LOG.debug('copied %d and created %d\n', u, v)
                     st2.var[var][u] = TRUE
                     st2.var[var][v] = FALSE
                     workset.append(st2)
@@ -100,6 +101,9 @@ class ShapeState(abstract.AbstractState):
                 if st.sm[u] == MAYBE:
                     st2 = st.copy()
                     w = st2.copy_indiv(u)
+                    LOG.debug('copied %d and created %d\n', u, w)
+                    LOG.debug('var u: %s, reach u: %s', st2.var[var][u], st2.reach[var][u])
+                    LOG.debug('var w: %s, reach w: %s', st2.var[var][w], st2.reach[var][w])
                     st2.n[(v,u)] = TRUE
                     st2.n[(v,w)] = FALSE
                     workset.append(st2)

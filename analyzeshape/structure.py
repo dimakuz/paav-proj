@@ -213,7 +213,7 @@ class Structure:
         v = max(self.indiv) + 1
         for key in self.var:
             self.var[key][v] = self.var[key][u]
-            self.reach[key][v] = self.var[key][u]
+            self.reach[key][v] = self.reach[key][u]
         self.cycle[v] = self.cycle[u]
         self.shared[v] = self.shared[u]
         self.sm[v] = self.sm[u]
@@ -222,6 +222,7 @@ class Structure:
             self.n[(v,w)] = self.n[(u,w)]
             self.n[(w,v)] = self.n[(w,u)]
         self.indiv.add(v)
+        # LOG.debug('printing whole st after copy indiv!\n %s', self)
         return v
 
     def summarize(self, u, v):
@@ -346,11 +347,12 @@ class Structure:
                         # LOG.debug('checking coerce with func=%s, v=v%s', name, v)
                         if lh(self,v) == TRUE:
                             if rh(self,v) == FALSE:
-                                LOG.debug('%s -- (v)=v%s', name, v)
+                                LOG.debug('removing %s : (v)=v%s', name, v)
                                 # for var in self.var:
                                     # LOG.debug('%s, v%s: reach lh: %s vs. rh: %s', var, v, self._v_reach(var,v)._not(), self.reach[var][v]._not())
                                 return False
                             elif rh(self,v) == MAYBE:
+                                LOG.debug('fixing %s : (v)=v%s', name, v)
                                 fix(self,v)
                                 changed = True
                 elif par_num == 2:
@@ -358,11 +360,10 @@ class Structure:
                         for v2 in self.indiv:
                             if lh(self,v1,v2) == TRUE:
                                 if rh(self,v1,v2) == FALSE:
-                                    LOG.debug('%s -- (v1)=v%s, (v2)=v%s', name, v1, v2)
-                                    # LOG.debug('%s -- v1=v%s, v2=v%s', name, v1, v2)
-                                    # LOG.debug('v%s, v%s: n not (shared) lh: %s vs. rh: %s', v1, v2, self._v_not_n_hs(v1,v2), self.n[(v1,v2)]._not())
+                                    LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                     return False
                                 elif rh(self,v1,v2) == MAYBE:
+                                    LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                     fix(self,v1,v2)
                                     changed = True
         return True
