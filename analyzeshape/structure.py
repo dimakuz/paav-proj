@@ -119,8 +119,8 @@ class Structure:
             st.cycle[v] = FALSE
         def fix_n_not(st,v1,v2):
             st.n[(v1,v2)] = FALSE
-        def fix_sm_not(st,v):
-            st.sm[v] = FALSE
+        def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
+            st.sm[v1] = FALSE
 
         constr = set()
 
@@ -144,11 +144,11 @@ class Structure:
             lambda st,v1,v2: st._v_not_n_hs(v1,v2),   lambda st,v1,v2: st.n[(v1,v2)]._not(),  
             fix_n_not))
 
-        constr.add(('sm-not', 1, 
-            lambda st,v: st._v_n(v),                  lambda st,v: st.sm[v]._not(),            
+        constr.add(('sm-not', 2, 
+            lambda st,v1,v2: st._v_both_n(v1,v2),     lambda st,v1,v2: st._v_eq(v1,v2),            
             fix_sm_not))
-        constr.add(('sm-not-shared', 1, 
-            lambda st,v: st._v_n_hs(v),               lambda st,v: st.sm[v]._not(),            
+        constr.add(('sm-not-shared', 2, 
+            lambda st,v1,v2: st._v_both_n_hs(v1,v2),  lambda st,v1,v2: st._v_eq(v1,v2),            
             fix_sm_not))
 
         for var in symbols:
@@ -171,8 +171,8 @@ class Structure:
                 lambda st,v: st._v_not_var(var,v),      lambda st,v: st.var[var][v]._not(),    
                 fix_var_not))
 
-            constr.add((f'sm-{var}-not', 1, 
-                lambda st,v: st.var[var][v],          lambda st,v: st.sm[v]._not(),            
+            constr.add((f'sm-{var}-not', 2, 
+                lambda st,v1,v2: st._v_both_var(var,v1,v2), lambda st,v1,v2: st._v_eq(v1,v2),            
                 fix_sm_not))
 
         return constr
@@ -222,7 +222,6 @@ class Structure:
             self.n[(v,w)] = self.n[(u,w)]
             self.n[(w,v)] = self.n[(w,u)]
         self.indiv.add(v)
-        # LOG.debug('printing whole st after copy indiv!\n %s', self)
         return v
 
     def summarize(self, u, v):
@@ -282,11 +281,14 @@ class Structure:
     def _v_not_n_hs(self, v1, v2):
         return self._exists(lambda u : self.n[(u,v2)]._and(self._v_eq(u, v1)._not())._and(self.shared[v2]._not()))
 
-    def _v_n(self, v):
-        return self._exists(lambda u : self.n[(u,v)])
+    def _v_both_n(self, v1, v2):
+        return self._exists(lambda u : self.n[(u,v1)]._and(self.n[(u,v2)]))
 
-    def _v_n_hs(self, v):
-        return self._exists(lambda u : self.n[(v,u)]._and(self.shared[u]._not()))
+    def _v_both_n_hs(self, v1, v2):
+        return self._exists(lambda u : self.n[(v1,u)]._and(self.n[(v2,u)])._and(self.shared[u]._not()))
+
+    def _v_both_var(self, var, v1, v2):
+        return self.var[var][v1]._and(self.var[var][v2])
 
     def _var_not_null(self, var1):
         return self._exists(lambda u : self.var[var1][u])
@@ -344,15 +346,12 @@ class Structure:
                 (name, par_num, lh, rh, fix) = constraint
                 if par_num == 1:
                     for v in self.indiv:
-                        # LOG.debug('checking coerce with func=%s, v=v%s', name, v)
                         if lh(self,v) == TRUE:
                             if rh(self,v) == FALSE:
-                                LOG.debug('removing %s : (v)=v%s', name, v)
-                                # for var in self.var:
-                                    # LOG.debug('%s, v%s: reach lh: %s vs. rh: %s', var, v, self._v_reach(var,v)._not(), self.reach[var][v]._not())
+                                # LOG.debug('removing %s : (v)=v%s', name, v)
                                 return False
                             elif rh(self,v) == MAYBE:
-                                LOG.debug('fixing %s : (v)=v%s', name, v)
+                                # LOG.debug('fixing %s : (v)=v%s', name, v)
                                 fix(self,v)
                                 changed = True
                 elif par_num == 2:
@@ -360,10 +359,10 @@ class Structure:
                         for v2 in self.indiv:
                             if lh(self,v1,v2) == TRUE:
                                 if rh(self,v1,v2) == FALSE:
-                                    LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
+                                    # LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                     return False
                                 elif rh(self,v1,v2) == MAYBE:
-                                    LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
+                                    # LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                     fix(self,v1,v2)
                                     changed = True
         return True
