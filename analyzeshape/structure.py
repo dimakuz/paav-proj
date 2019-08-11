@@ -76,11 +76,14 @@ class Structure:
         if len(self.indiv) != len(other.indiv):
             return False
 
-        intersection = list(self.indiv.intersection(other.indiv))
-        oindiv = list(other.indiv.difference(self.indiv)) + intersection
+        # intersection = list(self.indiv.intersection(other.indiv))
+        # oindiv = list(other.indiv.difference(self.indiv)) + intersection
+        oindiv = list(other.indiv)
 
-        for perm in itertools.permutations(self.indiv.difference(other.indiv)):
-            sindiv = list(perm) + intersection
+        for perm in itertools.permutations(self.indiv):
+        # for perm in itertools.permutations(self.indiv.difference(other.indiv)):
+            # sindiv = list(perm) + intersection
+            sindiv = list(perm)
             fit = True
             for iv, v in enumerate(sindiv):
 
@@ -238,6 +241,11 @@ class Structure:
         for w in self.indiv:
             self.n.pop((v,w))
             self.n.pop((w,v))
+        # for w in self.indiv:
+        #     for var in self.var:
+        #         self.reach[var][w] = self._v_reach(var, w)
+        #     self.cycle[w] = self._v_cycle(w)
+        #     self.shared[w] = self._v_shared(w)
         self.sm[u] = MAYBE
 
 
