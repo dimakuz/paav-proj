@@ -80,31 +80,53 @@ class Structure:
         # oindiv = list(other.indiv.difference(self.indiv)) + intersection
         # oindiv = list(other.indiv)
 
-        for perm in itertools.permutations(self.indiv):
-        # for perm in itertools.permutations(self.indiv.difference(other.indiv)):
-            # sindiv = list(perm) + intersection
-            # sindiv = list(perm)
-            match = list(zip(list(perm), other.indiv))
+        # We asume that the structures are after the embed operation and there are no
+        # two individuals who are canonically equal to each other
+        canonical_map = dict()
+        for v in self.indiv:
+            u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w]), None)
+            if not u:
+                # No canonical individual in other structure - different structure
+                return False
+            canonical_map[v] = u
 
-            fit = True
-            for (u,v) in match:
+        LOG.debug('canonical map is %s', (f'self v{v}=u{canonical_map[v]} other' for v in self.indiv))
 
-                # u = oindiv[iv]
+        for v in self.indiv:
+            n_fit = all(self.n[(v,u)] == other.n[(canonical_map[v],canonical_map[u])] for u in self.indiv)
+            if not n_fit:
+                # No n predicate fit - different structure
+                return False
 
-                sm_fit = self.sm[u] == other.sm[v]
-                canonical_fit = self._v_canonical_eq(u, other, v)
-                n_fit = all(self.n[(u,w1)] == other.n[(v,w2)] for (w1,w2) in match)
+        return True
 
-                if not sm_fit or not canonical_fit or not n_fit:
-                    fit = False
-                    break
 
-            # Found a permutation that fits - same structure
-            if fit:
-                return True
 
-        # Looped over all permutations and nothing fits - different structure
-        return False
+        # for perm in itertools.permutations(self.indiv):
+        # # for perm in itertools.permutations(self.indiv.difference(other.indiv)):
+        #     # sindiv = list(perm) + intersection
+        #     # sindiv = list(perm)
+        #     match = list(zip(list(perm), other.indiv))
+
+        #     fit = True
+        #     for (u,v) in match:
+
+        #         # u = oindiv[iv]
+
+        #         sm_fit = self.sm[u] == other.sm[v]
+        #         canonical_fit = self._v_canonical_eq(u, other, v)
+        #         n_fit = all(self.n[(u,w1)] == other.n[(v,w2)] for (w1,w2) in match)
+
+        #         if not sm_fit or not canonical_fit or not n_fit:
+        #             fit = False
+        #             break
+
+        #     # Found a permutation that fits - same structure
+        #     if fit:
+        #         return True
+
+        # # Looped over all permutations and nothing fits - different structure
+        # return False
 
 
     @classmethod

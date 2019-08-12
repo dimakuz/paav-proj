@@ -122,6 +122,7 @@ class ShapeState(abstract.AbstractState):
 
     # Embed operation from paper where we look for summarizable nodes
     def embed(self):
+        new_structures = []
         for st in self.structures:
             indiv_copy = copy.deepcopy(st.indiv)
             for u in indiv_copy:
@@ -129,6 +130,9 @@ class ShapeState(abstract.AbstractState):
                     if u in st.indiv and v in st.indiv and u < v and st._v_canonical_eq(u, st, v):
                         # LOG.debug('something is summarizable!!! %s %s',u,v)
                         st._v_embed(u, v)
+            if st not in new_structures:
+                new_structures.append(st)
+        self.structures = new_structures
 
     def __str__(self):
         st_str = '\n\n'.join(str(st) for st in self.structures)
@@ -148,8 +152,7 @@ class ShapeState(abstract.AbstractState):
         new_structures = []
         for st in self.structures:
             if st.coerce():
-                if st not in new_structures:
-                    new_structures.append(st)
+                new_structures.append(st)
         self.structures = new_structures
         LOG.debug('num of structures coerce all %d\n', len(self.structures))
 
