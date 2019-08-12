@@ -16,8 +16,5 @@ def chaotic_iteration(cfg):
             joined_state = next_node.state.join(transformed_state)
             if next_node.visits == 0 or joined_state != next_node.state:
                 wl.append(next_node)
-                LOG.debug(
-                    'append node %r',
-                    next_node.name,
-                )
+                LOG.debug('append node %r',next_node.name)
                 next_node.state = joined_state

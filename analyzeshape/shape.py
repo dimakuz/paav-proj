@@ -61,8 +61,8 @@ class ShapeState(abstract.AbstractState):
             st = workset.pop(0)
             u = next((u for u in st.indiv if st.var[var][u] == MAYBE), None)
             if not u:
-                if st.coerce():
-                    answerset.append(st)
+                # if st.coerce():
+                answerset.append(st)
             else:
                 st0 = st.copy()
                 st0.var[var][u] = TRUE
@@ -88,8 +88,8 @@ class ShapeState(abstract.AbstractState):
             res = next(((v,u) for u in st.indiv for v in st.indiv if\
                 st.var[var][v] == TRUE and st.n[(v,u)] == MAYBE), None)
             if not res:
-                if st.coerce():
-                    answerset.append(st)
+                # if st.coerce():
+                answerset.append(st)
             else:
                 (v,u) = res
                 st0 = st.copy()
@@ -126,9 +126,9 @@ class ShapeState(abstract.AbstractState):
             indiv_copy = copy.deepcopy(st.indiv)
             for u in indiv_copy:
                 for v in indiv_copy:
-                    if u in st.indiv and v in st.indiv and u < v and st.summarizable(u, v):
+                    if u in st.indiv and v in st.indiv and u < v and st._v_canonical_eq(u, st, v):
                         # LOG.debug('something is summarizable!!! %s %s',u,v)
-                        st.summarize(u, v)
+                        st._v_embed(u, v)
 
     def __str__(self):
         st_str = '\n\n'.join(str(st) for st in self.structures)

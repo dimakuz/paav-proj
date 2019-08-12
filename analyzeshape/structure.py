@@ -68,8 +68,8 @@ class Structure:
         return newst
 
 
-    # Equality should be agnostic to the label assigned to each individual!
-    # Is this the graph isomorphism problem?
+    # Equality should be agnostic to the label assigned to each individual
+    # This is a naive algorithm
     def __eq__(self, other):
 
         # Different size - different structure
@@ -78,22 +78,24 @@ class Structure:
 
         # intersection = list(self.indiv.intersection(other.indiv))
         # oindiv = list(other.indiv.difference(self.indiv)) + intersection
-        oindiv = list(other.indiv)
+        # oindiv = list(other.indiv)
 
         for perm in itertools.permutations(self.indiv):
         # for perm in itertools.permutations(self.indiv.difference(other.indiv)):
             # sindiv = list(perm) + intersection
-            sindiv = list(perm)
+            # sindiv = list(perm)
+            match = list(zip(list(perm), list(other.indiv)))
+
             fit = True
-            for iv, v in enumerate(sindiv):
+            for (u,v) in match:
 
-                u = oindiv[iv]
+                # u = oindiv[iv]
 
-                sm_fit = self.sm[v] == other.sm[u]
-                var_fit = all(self.var[var][v] == other.var[var][u] for var in self.var)
-                n_fit = all(self.n[(v,w)] == other.n[(u,oindiv[iw])] for iw,w in enumerate(sindiv))
+                sm_fit = self.sm[u] == other.sm[v]
+                canonical_fit = self._v_canonical_eq(u, other, v)
+                n_fit = all(self.n[(u,w1)] == other.n[(v,w2)] for (w1,w2) in match)
 
-                if not sm_fit or not var_fit or not n_fit:
+                if not sm_fit or not canonical_fit or not n_fit:
                     fit = False
                     break
 
@@ -203,11 +205,12 @@ class Structure:
         return '\n'.join(lines)
 
 
-    def summarizable(self, u, v):
-        return all(self.var[key][u] == self.var[key][v] and \
-                    self.reach[key][u] == self.reach[key][v] for key in self.var) and \
-                    self.cycle[u] == self.cycle[v] and \
-                    self.shared[u] == self.shared[v]
+    # Equality based on unary predicates
+    def _v_canonical_eq(self, u, other, v):
+        return all(self.var[key][u] == other.var[key][v] and \
+                    self.reach[key][u] == other.reach[key][v] for key in self.var) and \
+                    self.cycle[u] == other.cycle[v] and \
+                    self.shared[u] == other.shared[v]
 
     def copy_indiv(self, u):
         v = max(self.indiv) + 1
@@ -224,7 +227,8 @@ class Structure:
         self.indiv.add(v)
         return v
 
-    def summarize(self, u, v):
+    # Summarize v into u
+    def _v_embed(self, u, v):
         self.indiv.remove(v)
         for w in self.indiv:
             if self.n[(w,u)] != self.n[(w,v)]:
@@ -339,32 +343,36 @@ class Structure:
         )
 
     def coerce(self):
-        changed = True
-        while changed:
-            changed = False
-            for constraint in self.constr:
-                (name, par_num, lh, rh, fix) = constraint
-                if par_num == 1:
-                    for v in self.indiv:
-                        if lh(self,v) == TRUE:
-                            if rh(self,v) == FALSE:
-                                # LOG.debug('removing %s : (v)=v%s', name, v)
+        LOG.debug('START COERCE!!')
+        # changed = True
+        # while changed:
+        #     changed = False
+        for constraint in self.constr:
+            (name, par_num, lh, rh, fix) = constraint
+            if par_num == 1:
+                for v in self.indiv:
+                    if lh(self,v) == TRUE:
+                        if rh(self,v) == FALSE:
+                            # LOG.debug('removing %s : (v)=v%s', name, v)
+                            LOG.debug('END COERCE NO FIX!!')
+                            return False
+                        elif rh(self,v) == MAYBE:
+                            # LOG.debug('fixing %s : (v)=v%s', name, v)
+                            fix(self,v)
+                            # changed = True
+            elif par_num == 2:
+                for v1 in self.indiv:
+                    for v2 in self.indiv:
+                        if lh(self,v1,v2) == TRUE:
+                            if rh(self,v1,v2) == FALSE:
+                                # LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
+                                LOG.debug('END COERCE NO FIX!!')
                                 return False
-                            elif rh(self,v) == MAYBE:
-                                # LOG.debug('fixing %s : (v)=v%s', name, v)
-                                fix(self,v)
-                                changed = True
-                elif par_num == 2:
-                    for v1 in self.indiv:
-                        for v2 in self.indiv:
-                            if lh(self,v1,v2) == TRUE:
-                                if rh(self,v1,v2) == FALSE:
-                                    # LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
-                                    return False
-                                elif rh(self,v1,v2) == MAYBE:
-                                    # LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
-                                    fix(self,v1,v2)
-                                    changed = True
+                            elif rh(self,v1,v2) == MAYBE:
+                                # LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
+                                fix(self,v1,v2)
+                                # changed = True
+        LOG.debug('END COERCE WITH FIX!!')
         return True
 
 
