@@ -196,7 +196,7 @@ def var_new_assignment(state, statement):
         st.shared[v] = FALSE
         st.sm[v] = FALSE
 
-        st.indiv.add(v)
+        st.indiv.append(v)
 
 
 @ShapeState.transforms(lang_shape.VarNextAssignment)

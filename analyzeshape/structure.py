@@ -45,7 +45,7 @@ MAYBE = ThreeValuedBool.MAYBE
 
 @dataclasses.dataclass
 class Structure:
-    indiv: typing.Set[int]
+    indiv: typing.List[int]
     var: typing.Mapping[lang.Symbol, typing.Mapping[int, ThreeValuedBool]]
     reach: typing.Mapping[lang.Symbol, typing.Mapping[int, ThreeValuedBool]]
     cycle: typing.Mapping[int, ThreeValuedBool]
@@ -84,7 +84,7 @@ class Structure:
         # for perm in itertools.permutations(self.indiv.difference(other.indiv)):
             # sindiv = list(perm) + intersection
             # sindiv = list(perm)
-            match = list(zip(list(perm), list(other.indiv)))
+            match = list(zip(list(perm), other.indiv))
 
             fit = True
             for (u,v) in match:
@@ -224,7 +224,7 @@ class Structure:
         for w in self.indiv:
             self.n[(v,w)] = self.n[(u,w)]
             self.n[(w,v)] = self.n[(w,u)]
-        self.indiv.add(v)
+        self.indiv.append(v)
         return v
 
     # Summarize v into u
@@ -332,7 +332,7 @@ class Structure:
     @classmethod
     def initial(cls, symbols):
         return cls(
-            indiv=set(),
+            indiv=[],
             var={symbol: dict() for symbol in symbols},
             reach={symbol: dict() for symbol in symbols},
             cycle=dict(),
@@ -343,18 +343,18 @@ class Structure:
         )
 
     def coerce(self):
-        LOG.debug('START COERCE!!')
         # changed = True
         # while changed:
         #     changed = False
         for constraint in self.constr:
+            # LOG.debug('begin single constaint check')
             (name, par_num, lh, rh, fix) = constraint
             if par_num == 1:
                 for v in self.indiv:
+                    # LOG.debug('begin single assignment check')
                     if lh(self,v) == TRUE:
                         if rh(self,v) == FALSE:
                             # LOG.debug('removing %s : (v)=v%s', name, v)
-                            LOG.debug('END COERCE NO FIX!!')
                             return False
                         elif rh(self,v) == MAYBE:
                             # LOG.debug('fixing %s : (v)=v%s', name, v)
@@ -363,16 +363,16 @@ class Structure:
             elif par_num == 2:
                 for v1 in self.indiv:
                     for v2 in self.indiv:
+                        # LOG.debug('begin double assignment check')
                         if lh(self,v1,v2) == TRUE:
                             if rh(self,v1,v2) == FALSE:
                                 # LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
-                                LOG.debug('END COERCE NO FIX!!')
                                 return False
                             elif rh(self,v1,v2) == MAYBE:
                                 # LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                 fix(self,v1,v2)
                                 # changed = True
-        LOG.debug('END COERCE WITH FIX!!')
+            # LOG.debug('end single constaint check')
         return True
 
 
