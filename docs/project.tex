@@ -1,0 +1,39 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{fullpage}
+\usepackage[top=2cm, bottom=4.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{mathpartir}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{mathabx}
+\usepackage{tabularx}
+\hypersetup{%
+	colorlinks=false,
+	linkbordercolor=white
+}
+
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.05in}
+
+\newcommand\course{Program Analysis and Verification}
+\newcommand\namea{Ilya Shervin 308640218}
+\newcommand\nameb{Dmitry Kuznetsov 322081183}
+
+\newcommand{\hoare}[3]{{\{\;#1\;\}\;#2\;\{\;#3\;\}}}
+
+\pagestyle{fancyplain}
+\headheight 35pt  
+\lhead{\namea\\\nameb}
+\chead{\textbf{\Large Final Project}}
+\rhead{\course \\ \today}
+\lfoot{}
+\cfoot{}
+\rfoot{\small\thepage}
+\headsep 1.5em
+
+\begin{document}
+\input{parity}
+\end{document}
