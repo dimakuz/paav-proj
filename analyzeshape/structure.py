@@ -52,6 +52,7 @@ class Structure:
     shared: typing.Mapping[int, ThreeValuedBool]
     sm: typing.Mapping[int, ThreeValuedBool]
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
+    n_plus: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
@@ -130,6 +131,8 @@ class Structure:
     @classmethod
     def init_constr(cls, symbols):
 
+        constr = set()
+
         # Coerce fixing functions
         def fix_shared(st,v):
             st.shared[v] = TRUE
@@ -144,7 +147,29 @@ class Structure:
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
             st.sm[v1] = FALSE
 
-        constr = set()
+        for var in symbols:
+
+            # Coerce fixing functions
+            def fix_reach(st,v):
+                st.reach[var][v] = TRUE
+            def fix_reach_not(st,v):
+                st.reach[var][v] = FALSE
+            def fix_var_not(st,v):
+                st.var[var][v] = FALSE
+
+            constr.add((f'reach-{var}', 1, 
+                lambda st,v: st._v_reach(var,v),        lambda st,v: st.reach[var][v],         
+                fix_reach))
+            constr.add((f'reach-{var}-not', 1, 
+                lambda st,v: st._v_reach(var,v)._not(), lambda st,v: st.reach[var][v]._not(),  
+                fix_reach_not))
+            constr.add((f'var-{var}-not', 1, 
+                lambda st,v: st._v_not_var(var,v),      lambda st,v: st.var[var][v]._not(),    
+                fix_var_not))
+
+            constr.add((f'sm-{var}-not', 2, 
+                lambda st,v1,v2: st._v_both_var(var,v1,v2), lambda st,v1,v2: st._v_eq(v1,v2),            
+                fix_sm_not))
 
         constr.add(('shared', 1, 
             lambda st,v: st._v_shared(v),             lambda st,v: st.shared[v],              
@@ -172,30 +197,6 @@ class Structure:
         constr.add(('sm-not-shared', 2, 
             lambda st,v1,v2: st._v_both_n_hs(v1,v2),  lambda st,v1,v2: st._v_eq(v1,v2),            
             fix_sm_not))
-
-        for var in symbols:
-
-            def fix_reach(st,v):
-                st.reach[var][v] = TRUE
-            def fix_reach_not(st,v):
-                st.reach[var][v] = FALSE
-            def fix_var_not(st,v):
-                st.var[var][v] = FALSE
-
-
-            constr.add((f'reach-{var}', 1, 
-                lambda st,v: st._v_reach(var,v),        lambda st,v: st.reach[var][v],         
-                fix_reach))
-            constr.add((f'reach-{var}-not', 1, 
-                lambda st,v: st._v_reach(var,v)._not(), lambda st,v: st.reach[var][v]._not(),  
-                fix_reach_not))
-            constr.add((f'var-{var}-not', 1, 
-                lambda st,v: st._v_not_var(var,v),      lambda st,v: st.var[var][v]._not(),    
-                fix_var_not))
-
-            constr.add((f'sm-{var}-not', 2, 
-                lambda st,v1,v2: st._v_both_var(var,v1,v2), lambda st,v1,v2: st._v_eq(v1,v2),            
-                fix_sm_not))
 
         return constr
 
@@ -290,11 +291,11 @@ class Structure:
 
     # Is the individual reachable from variable
     def _v_reach(self, var, v):
-        return self.var[var][v]._or(self._exists(lambda u : self.var[var][u]._and(self._n_plus()[(u,v)])))
+        return self.var[var][v]._or(self._exists(lambda u : self.var[var][u]._and(self.n_plus[(u,v)])))
 
     # Is the individual resides on a cycle
     def _v_cycle(self, v):
-        return self._n_plus()[(v,v)]
+        return self.n_plus[(v,v)]
 
     def _v_not_var(self, var, v):
         return self._exists(lambda u : self.var[var][u]._and(self._v_eq(v, u)._not()))
@@ -334,13 +335,12 @@ class Structure:
 
 
     # Transitive closure of n
-    def _n_plus(self):
-        n_plus = copy.deepcopy(self.n)
+    def update_n_plus(self):
+        self.n_plus = copy.deepcopy(self.n)
         for u in self.indiv:
             for v in self.indiv:
                 for w in self.indiv:
-                    n_plus[(v,w)] = n_plus[(v,w)]._or(n_plus[(v,u)]._and(n_plus[(u,w)]))
-        return n_plus
+                    self.n_plus[(v,w)] = self.n_plus[(v,w)]._or(self.n_plus[(v,u)]._and(self.n_plus[(u,w)]))
 
     def _exists(self, pred):
         return ThreeValuedBool(max(pred(v) for v in self.indiv)) if self.indiv else FALSE
@@ -359,10 +359,14 @@ class Structure:
             shared=dict(),
             sm=dict(),
             n=dict(),
+            n_plus=dict(),
             constr=cls.init_constr(symbols)
         )
 
     def coerce(self):
+
+        self.update_n_plus()
+
         # changed = True
         # while changed:
         #     changed = False

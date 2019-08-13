@@ -265,7 +265,6 @@ def next_var_assignment(state, statement):
         shared = stcopy.shared
 
         exists = stcopy._exists
-        is_reachable = stcopy._v_reach
         is_shared = stcopy._v_shared
         not_null = stcopy._var_not_null
 
@@ -335,6 +334,7 @@ def next_null_assignment(state, statement):
         shared = stcopy.shared
 
         exists = stcopy._exists
+        stcopy.update_n_plus()
         is_reachable = stcopy._v_reach
         is_shared = stcopy._v_shared
         not_null = stcopy._var_not_null
