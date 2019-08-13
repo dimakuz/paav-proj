@@ -78,7 +78,7 @@ class ShapeState(abstract.AbstractState):
                     st2.var[var][v] = FALSE
                     workset.append(st2)
         self.structures = answerset
-        LOG.debug('num of structures focus %d\n', len(self.structures))
+        # LOG.debug('num of structures focus %d\n', len(self.structures))
 
     def focus_var_deref(self, var):
         workset = self.structures
@@ -106,7 +106,7 @@ class ShapeState(abstract.AbstractState):
                     st2.n[(v,w)] = FALSE
                     workset.append(st2)
         self.structures = answerset
-        LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
+        # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
 
 
     def join(self, other):
@@ -117,12 +117,12 @@ class ShapeState(abstract.AbstractState):
         # Discard self state when dealing with 3-valued logic structures
         other.embed()
 
-        LOG.debug('num of structures join %d\n', len(other.structures))
+        # LOG.debug('num of structures join %d\n', len(other.structures))
         return other
 
     # Embed operation from paper where we look for summarizable nodes
     def embed(self):
-        new_structures = []
+        # new_structures = []
         for st in self.structures:
             indiv_copy = copy.deepcopy(st.indiv)
             for u in indiv_copy:
@@ -130,9 +130,9 @@ class ShapeState(abstract.AbstractState):
                     if u in st.indiv and v in st.indiv and u < v and st._v_canonical_eq(u, st, v):
                         # LOG.debug('something is summarizable!!! %s %s',u,v)
                         st._v_embed(u, v)
-            if st not in new_structures:
-                new_structures.append(st)
-        self.structures = new_structures
+            # if st not in new_structures:
+                # new_structures.append(st)
+        # self.structures = new_structures
 
     def __str__(self):
         st_str = '\n\n'.join(str(st) for st in self.structures)
@@ -154,7 +154,7 @@ class ShapeState(abstract.AbstractState):
             if st.coerce():
                 new_structures.append(st)
         self.structures = new_structures
-        LOG.debug('num of structures coerce all %d\n', len(self.structures))
+        # LOG.debug('num of structures coerce all %d\n', len(self.structures))
 
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
