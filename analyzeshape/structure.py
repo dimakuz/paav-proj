@@ -85,12 +85,10 @@ class Structure:
         canonical_map = dict()
         for v in self.indiv:
             u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w]), None)
-            if not u:
+            if u is None:
                 # No canonical individual in other structure - different structure
                 return False
             canonical_map[v] = u
-
-        LOG.debug('canonical map is %s', (f'self v{v}=u{canonical_map[v]} other' for v in self.indiv))
 
         for v in self.indiv:
             n_fit = all(self.n[(v,u)] == other.n[(canonical_map[v],canonical_map[u])] for u in self.indiv)

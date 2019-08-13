@@ -60,7 +60,7 @@ class ShapeState(abstract.AbstractState):
         while workset:
             st = workset.pop(0)
             u = next((u for u in st.indiv if st.var[var][u] == MAYBE), None)
-            if not u:
+            if u is None:
                 # if st.coerce():
                 answerset.append(st)
             else:
@@ -87,7 +87,7 @@ class ShapeState(abstract.AbstractState):
             st = workset.pop(0)
             res = next(((v,u) for u in st.indiv for v in st.indiv if\
                 st.var[var][v] == TRUE and st.n[(v,u)] == MAYBE), None)
-            if not res:
+            if res is None:
                 # if st.coerce():
                 answerset.append(st)
             else:
