@@ -135,8 +135,9 @@ class ShapeState(abstract.AbstractState):
         # self.structures = new_structures
 
     def __str__(self):
-        st_str = '\n\n'.join(str(st) for st in self.structures)
-        return f'[{st_str}]'
+        # st_str = '\n\n'.join(str(st) for st in self.structures)
+        # return f'[{st_str}]'
+        return f'num of structures: {len(self.structures)}\n{str(self.structures[0])}'
 
     @classmethod
     def initial(cls, symbols):

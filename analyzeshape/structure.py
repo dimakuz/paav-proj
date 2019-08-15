@@ -147,56 +147,93 @@ class Structure:
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
             st.sm[v1] = FALSE
 
+        def get_reach_lh(var):
+            def reach_lh(st,v):
+                return st._v_reach(var,v)
+            return reach_lh
+
+        def get_reach_rh(var):
+            def reach_rh(st,v):
+                return st.reach[var][v]
+            return reach_rh
+
+        def get_reach_fix(var):
+            def reach_fix(st,v):
+                st.reach[var][v] = TRUE
+            return reach_fix
+
+        def get_reach_not_lh(var):
+            def reach_not_lh(st,v):
+                return st._v_reach(var,v)._not()
+            return reach_not_lh
+
+        def get_reach_not_rh(var):
+            def reach_not_rh(st,v):
+                return st.reach[var][v]._not()
+            return reach_not_rh
+
+        def get_reach_not_fix(var):
+            def reach_not_fix(st,v):
+                st.reach[var][v] = FALSE
+            return reach_not_fix
+
+        def get_var_not_lh(var):
+            def var_not_lh(st,v):
+                return st._v_not_var(var,v)
+            return var_not_lh
+
+        def get_var_not_rh(var):
+            def var_not_rh(st,v):
+                return st.var[var][v]._not()
+            return var_not_rh
+
+        def get_var_not_fix(var):
+            def var_not_fix(st,v):
+                st.var[var][v] = FALSE
+            return var_not_fix
+
+        def get_sm_not_lh(var):
+            def sm_not_lh(st,v1,v2):
+                return st._v_both_var(var,v1,v2)
+            return sm_not_lh
+
         for var in symbols:
 
-            # Coerce fixing functions
-            def fix_reach(st,v):
-                st.reach[var][v] = TRUE
-            def fix_reach_not(st,v):
-                st.reach[var][v] = FALSE
-            def fix_var_not(st,v):
-                st.var[var][v] = FALSE
-
             constr.add((f'reach-{var}', 1, 
-                lambda st,v: st._v_reach(var,v),        lambda st,v: st.reach[var][v],         
-                fix_reach))
+                get_reach_lh(var), get_reach_rh(var), get_reach_fix(var)))
+
             constr.add((f'reach-{var}-not', 1, 
-                lambda st,v: st._v_reach(var,v)._not(), lambda st,v: st.reach[var][v]._not(),  
-                fix_reach_not))
+                get_reach_not_lh(var), get_reach_not_rh(var), get_reach_not_fix(var)))
+
             constr.add((f'var-{var}-not', 1, 
-                lambda st,v: st._v_not_var(var,v),      lambda st,v: st.var[var][v]._not(),    
-                fix_var_not))
+                get_var_not_lh(var), get_var_not_rh(var), get_var_not_fix(var)))
 
             constr.add((f'sm-{var}-not', 2, 
-                lambda st,v1,v2: st._v_both_var(var,v1,v2), lambda st,v1,v2: st._v_eq(v1,v2),            
-                fix_sm_not))
+                get_sm_not_lh(var), lambda st,v1,v2: st._v_eq(v1,v2), fix_sm_not))
 
         constr.add(('shared', 1, 
-            lambda st,v: st._v_shared(v),             lambda st,v: st.shared[v],              
-            fix_shared))
+            lambda st,v: st._v_shared(v), lambda st,v: st.shared[v], fix_shared))
+
         constr.add(('shared-not', 1, 
-            lambda st,v: st._v_shared(v)._not(),      lambda st,v: st.shared[v]._not(),       
-            fix_shared_not))
+            lambda st,v: st._v_shared(v)._not(), lambda st,v: st.shared[v]._not(), fix_shared_not))
+
         constr.add(('cycle', 1, 
-            lambda st,v: st._v_cycle(v),              lambda st,v: st.cycle[v],               
-            fix_cycle))
+            lambda st,v: st._v_cycle(v), lambda st,v: st.cycle[v], fix_cycle))
+
         constr.add(('cycle-not', 1, 
-            lambda st,v: st._v_cycle(v)._not(),       lambda st,v: st.cycle[v]._not(),        
-            fix_cycle_not))
+            lambda st,v: st._v_cycle(v)._not(), lambda st,v: st.cycle[v]._not(), fix_cycle_not))
 
         constr.add(('n-not', 2, 
-            lambda st,v1,v2: st._v_not_n(v1,v2),      lambda st,v1,v2: st.n[(v1,v2)]._not(),  
-            fix_n_not))
+            lambda st,v1,v2: st._v_not_n(v1,v2), lambda st,v1,v2: st.n[(v1,v2)]._not(), fix_n_not))
+
         constr.add(('n-not-shared', 2, 
-            lambda st,v1,v2: st._v_not_n_hs(v1,v2),   lambda st,v1,v2: st.n[(v1,v2)]._not(),  
-            fix_n_not))
+            lambda st,v1,v2: st._v_not_n_hs(v1,v2), lambda st,v1,v2: st.n[(v1,v2)]._not(), fix_n_not))
 
         constr.add(('sm-not', 2, 
-            lambda st,v1,v2: st._v_both_n(v1,v2),     lambda st,v1,v2: st._v_eq(v1,v2),            
-            fix_sm_not))
+            lambda st,v1,v2: st._v_both_n(v1,v2), lambda st,v1,v2: st._v_eq(v1,v2), fix_sm_not))
+        
         constr.add(('sm-not-shared', 2, 
-            lambda st,v1,v2: st._v_both_n_hs(v1,v2),  lambda st,v1,v2: st._v_eq(v1,v2),            
-            fix_sm_not))
+            lambda st,v1,v2: st._v_both_n_hs(v1,v2), lambda st,v1,v2: st._v_eq(v1,v2), fix_sm_not))
 
         return constr
 
@@ -377,11 +414,12 @@ class Structure:
                 for v in self.indiv:
                     # LOG.debug('begin single assignment check')
                     if lh(self,v) == TRUE:
-                        if rh(self,v) == FALSE:
-                            # LOG.debug('removing %s : (v)=v%s', name, v)
+                        res = rh(self,v)
+                        if res == FALSE:
+                            LOG.debug('removing %s : (v)=v%s', name, v)
                             return False
-                        elif rh(self,v) == MAYBE:
-                            # LOG.debug('fixing %s : (v)=v%s', name, v)
+                        elif res == MAYBE:
+                            LOG.debug('fixing %s : (v)=v%s', name, v)
                             fix(self,v)
                             # changed = True
             elif par_num == 2:
@@ -389,11 +427,12 @@ class Structure:
                     for v2 in self.indiv:
                         # LOG.debug('begin double assignment check')
                         if lh(self,v1,v2) == TRUE:
-                            if rh(self,v1,v2) == FALSE:
-                                # LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
+                            res = rh(self,v1,v2)
+                            if res == FALSE:
+                                LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                 return False
-                            elif rh(self,v1,v2) == MAYBE:
-                                # LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
+                            elif res == MAYBE:
+                                LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                 fix(self,v1,v2)
                                 # changed = True
             # LOG.debug('end single constaint check')
