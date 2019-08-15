@@ -84,6 +84,9 @@ class ParityState(abstract.AbstractState):
             antipar={symbol: set() for symbol in symbols}
         )
 
+    def initialize_head(self, vars):
+        pass
+
     def reset(self):
         for key in self.modulo:
             self.modulo[key] = BOTTOM

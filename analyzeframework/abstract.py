@@ -21,7 +21,7 @@ class AbstractState:
     def transform(self, statement):
         LOG.debug('Processing statement %s', statement)
         res = self.copy()
-        LOG.debug('Initial state is:\n %s\n', res)
+        # LOG.debug('Initial state is:\n %s\n', res)
         try:
             transformer = self.TRANSFORMERS[type(self)][type(statement)]
         except KeyError:
@@ -29,9 +29,9 @@ class AbstractState:
             return res
 
         transformer(res, statement)
-        LOG.debug('Transformed state is:\n %s\n', res)
+        # LOG.debug('Transformed state is:\n %s\n', res)
         res.post_transform()
-        LOG.debug('Post Transformed state is:\n %s\n', res)
+        # LOG.debug('Post Transformed state is:\n %s\n', res)
         return res
 
     # Augment / Coerce

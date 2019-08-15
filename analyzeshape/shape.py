@@ -61,7 +61,6 @@ class ShapeState(abstract.AbstractState):
             st = workset.pop(0)
             u = next((u for u in st.indiv if st.var[var][u] == MAYBE), None)
             if u is None:
-                # if st.coerce():
                 answerset.append(st)
             else:
                 st0 = st.copy()
@@ -73,7 +72,6 @@ class ShapeState(abstract.AbstractState):
                 if st.sm[u] == MAYBE:
                     st2 = st.copy()
                     v = st2.copy_indiv(u)
-                    # LOG.debug('copied %d and created %d\n', u, v)
                     st2.var[var][u] = TRUE
                     st2.var[var][v] = FALSE
                     workset.append(st2)
@@ -88,7 +86,6 @@ class ShapeState(abstract.AbstractState):
             res = next(((v,u) for u in st.indiv for v in st.indiv if\
                 st.var[var][v] == TRUE and st.n[(v,u)] == MAYBE), None)
             if res is None:
-                # if st.coerce():
                 answerset.append(st)
             else:
                 (v,u) = res
@@ -101,7 +98,6 @@ class ShapeState(abstract.AbstractState):
                 if st.sm[u] == MAYBE:
                     st2 = st.copy()
                     w = st2.copy_indiv(u)
-                    # LOG.debug('copied %d and created %d\n', u, w)
                     st2.n[(v,u)] = TRUE
                     st2.n[(v,w)] = FALSE
                     workset.append(st2)
@@ -111,18 +107,18 @@ class ShapeState(abstract.AbstractState):
 
     def join(self, other):
 
-        if not other.structures:
-            return self
+        structures = [st for st in self.structures]
 
-        # Discard self state when dealing with 3-valued logic structures
         other.embed()
+        for st in other.structures:
+            if st not in self.structures:
+                structures.append(st)
 
-        # LOG.debug('num of structures join %d\n', len(other.structures))
-        return other
+        return ShapeState(structures)
+
 
     # Embed operation from paper where we look for summarizable nodes
     def embed(self):
-        # new_structures = []
         for st in self.structures:
             indiv_copy = copy.deepcopy(st.indiv)
             for u in indiv_copy:
@@ -130,24 +126,24 @@ class ShapeState(abstract.AbstractState):
                     if u in st.indiv and v in st.indiv and u < v and st._v_canonical_eq(u, st, v):
                         # LOG.debug('something is summarizable!!! %s %s',u,v)
                         st._v_embed(u, v)
-            # if st not in new_structures:
-                # new_structures.append(st)
-        # self.structures = new_structures
 
     def __str__(self):
-        # st_str = '\n\n'.join(str(st) for st in self.structures)
-        # return f'[{st_str}]'
-        return f'num of structures: {len(self.structures)}\n{str(self.structures[0])}'
+        st_str = '\n\n'.join(str(st) for st in self.structures)
+        return f'[{st_str}]'
+        # return f'num of structures: {len(self.structures)}\n{str(self.structures[0])}'
 
     @classmethod
-    def initial(cls, symbols):
+    def initial(cls, sybols):
         return cls(
-            structures=[structure.Structure.initial(symbols)]
+            structures=[]
         )
+
+    def initialize_head(self, symbols):
+        self.structures = [structure.Structure.initial(symbols)]
 
     def formula(self):
         formulas = [st.formula() for st in self.structures]
-        return shortcuts.Or(*formulas)
+        return shortcuts.And(*formulas)
 
     def post_transform(self):
         new_structures = []
@@ -319,7 +315,7 @@ def next_var_assignment(state, statement):
 
 @ShapeState.transforms(lang_shape.NextNullAssignment)
 def next_null_assignment(state, statement):
-    
+
     lval = statement.lval
     state.focus(lval)
 

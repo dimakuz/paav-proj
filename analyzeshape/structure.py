@@ -69,20 +69,17 @@ class Structure:
         return newst
 
 
-    # Equality should be agnostic to the label assigned to each individual
-    # This is a naive algorithm
+    # Equality should be agnostic to the label assigned to each individual, which means this is
+    # the graph isomporphism problem
+    # This is the efficient version from the paper, that compares canonical representations of an individual
     def __eq__(self, other):
 
         # Different size - different structure
         if len(self.indiv) != len(other.indiv):
             return False
 
-        # intersection = list(self.indiv.intersection(other.indiv))
-        # oindiv = list(other.indiv.difference(self.indiv)) + intersection
-        # oindiv = list(other.indiv)
-
         # We asume that the structures are after the embed operation and there are no
-        # two individuals who are canonically equal to each other
+        # two individuals that are canonically equal to each other
         canonical_map = dict()
         for v in self.indiv:
             u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w]), None)
@@ -98,34 +95,6 @@ class Structure:
                 return False
 
         return True
-
-
-
-        # for perm in itertools.permutations(self.indiv):
-        # # for perm in itertools.permutations(self.indiv.difference(other.indiv)):
-        #     # sindiv = list(perm) + intersection
-        #     # sindiv = list(perm)
-        #     match = list(zip(list(perm), other.indiv))
-
-        #     fit = True
-        #     for (u,v) in match:
-
-        #         # u = oindiv[iv]
-
-        #         sm_fit = self.sm[u] == other.sm[v]
-        #         canonical_fit = self._v_canonical_eq(u, other, v)
-        #         n_fit = all(self.n[(u,w1)] == other.n[(v,w2)] for (w1,w2) in match)
-
-        #         if not sm_fit or not canonical_fit or not n_fit:
-        #             fit = False
-        #             break
-
-        #     # Found a permutation that fits - same structure
-        #     if fit:
-        #         return True
-
-        # # Looped over all permutations and nothing fits - different structure
-        # return False
 
 
     @classmethod
@@ -303,11 +272,6 @@ class Structure:
         for w in self.indiv:
             self.n.pop((v,w))
             self.n.pop((w,v))
-        # for w in self.indiv:
-        #     for var in self.var:
-        #         self.reach[var][w] = self._v_reach(var, w)
-        #     self.cycle[w] = self._v_cycle(w)
-        #     self.shared[w] = self._v_shared(w)
         self.sm[u] = MAYBE
 
 
@@ -404,38 +368,29 @@ class Structure:
 
         self.update_n_plus()
 
-        # changed = True
-        # while changed:
-        #     changed = False
         for constraint in self.constr:
-            # LOG.debug('begin single constaint check')
             (name, par_num, lh, rh, fix) = constraint
             if par_num == 1:
                 for v in self.indiv:
-                    # LOG.debug('begin single assignment check')
                     if lh(self,v) == TRUE:
                         res = rh(self,v)
                         if res == FALSE:
-                            LOG.debug('removing %s : (v)=v%s', name, v)
+                            # LOG.debug('removing %s : (v)=v%s', name, v)
                             return False
                         elif res == MAYBE:
-                            LOG.debug('fixing %s : (v)=v%s', name, v)
+                            # LOG.debug('fixing %s : (v)=v%s', name, v)
                             fix(self,v)
-                            # changed = True
             elif par_num == 2:
                 for v1 in self.indiv:
                     for v2 in self.indiv:
-                        # LOG.debug('begin double assignment check')
                         if lh(self,v1,v2) == TRUE:
                             res = rh(self,v1,v2)
                             if res == FALSE:
-                                LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
+                                # LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                 return False
                             elif res == MAYBE:
-                                LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
+                                # LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                 fix(self,v1,v2)
-                                # changed = True
-            # LOG.debug('end single constaint check')
         return True
 
 

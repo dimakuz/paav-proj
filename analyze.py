@@ -50,6 +50,8 @@ def main():
     for node in control.nodes.values():
         node.state = state.initial(par.vars)
 
+    control.head.state.initialize_head(par.vars)
+
     chaotic.chaotic_iteration(control)
 
     viz.dump_cfg(control)

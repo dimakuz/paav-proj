@@ -127,6 +127,9 @@ class SumState(abstract.AbstractState):
             diff=DiffMatrix.initial(vars),
         )
 
+    def initialize_head(self, vars):
+        pass
+
     def join(self, other):
         return SumState(
             const={
