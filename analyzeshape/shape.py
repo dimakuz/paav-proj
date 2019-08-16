@@ -130,7 +130,10 @@ class ShapeState(abstract.AbstractState):
     def __str__(self):
         st_str = '\n\n'.join(str(st) for st in self.structures)
         return f'[{st_str}]'
-        # return f'num of structures: {len(self.structures)}\n{str(self.structures[0])}'
+        # if self.structures:
+        #    return f'num of structures: {len(self.structures)}\n{str(self.structures[0])}'
+        # else:
+        #    return f'num of structures: {len(self.structures)}'
 
     @classmethod
     def initial(cls, sybols):
@@ -163,12 +166,9 @@ def var_var_assignment(state, statement):
 
     for st in state.structures:
 
-        var = copy.deepcopy(st.var)
-        reach = copy.deepcopy(st.reach)
-
         for v in st.indiv:
-            st.var[lval][v] = var[rval][v]
-            st.reach[lval][v] = reach[rval][v]
+            st.var[lval][v] = st.var[rval][v]
+            st.reach[lval][v] = st.reach[rval][v]
 
 
 @ShapeState.transforms(lang_shape.VarNewAssignment)
@@ -209,15 +209,9 @@ def var_next_assignment(state, statement):
     valid_st = state.structures.copy()
 
     for st in state.structures:
-        stcopy = st.copy()
-        var = stcopy.var
-        reach = stcopy.reach
-        n = stcopy.n
-        cycle = stcopy.cycle
-        shared = stcopy.shared
 
-        exists = stcopy._exists
-        not_null = stcopy._var_not_null
+        exists = st._exists
+        not_null = st._var_not_null
 
         # Possible null pointer reference detected
         if not_null(rval) == FALSE:
@@ -225,8 +219,8 @@ def var_next_assignment(state, statement):
             continue
 
         for v in st.indiv:
-            st.var[lval][v] = exists(lambda u : var[rval][u]._and(n[(u, v)]))
-            st.reach[lval][v] = reach[rval][v]._and(cycle[v]._or(var[rval][v]._not()))
+            st.var[lval][v] = exists(lambda u : st.var[rval][u]._and(st.n[(u, v)]))
+            st.reach[lval][v] = st.reach[rval][v]._and(st.cycle[v]._or(st.var[rval][v]._not()))
 
     state.structures = valid_st
 
@@ -272,6 +266,23 @@ def next_var_assignment(state, statement):
 
         for v in st.indiv:
 
+            for w in st.indiv:
+                st.n[(v,w)] = \
+                    (
+                        (
+                            var[lval][v]._not()
+                        )._and(
+                            n[(v,w)]
+                        )
+                    )._or(
+                        var[lval][v]._and(var[rval][w])
+                    )
+
+        stcopy.n = st.n
+        stcopy.update_n_plus()
+
+        for v in st.indiv:
+
             for key in st.var:
                 st.reach[key][v] = \
                     reach[key][v]._or(
@@ -298,18 +309,6 @@ def next_var_assignment(state, statement):
                     )
                 )
 
-            for w in st.indiv:
-                st.n[(v,w)] = \
-                    (
-                        (
-                            var[lval][v]._not()
-                        )._and(
-                            n[(v,w)]
-                        )
-                    )._or(
-                        var[lval][v]._and(var[rval][w])
-                    )
-
     state.structures = valid_st
 
 
@@ -331,7 +330,6 @@ def next_null_assignment(state, statement):
         shared = stcopy.shared
 
         exists = stcopy._exists
-        stcopy.update_n_plus()
         is_reachable = stcopy._v_reach
         is_shared = stcopy._v_shared
         not_null = stcopy._var_not_null
@@ -340,6 +338,21 @@ def next_null_assignment(state, statement):
         if not_null(lval) == FALSE:
             valid_st.remove(st)
             continue
+
+        for v in st.indiv:
+
+            for w in st.indiv:
+                st.n[(v,w)] = \
+                    (
+                        (
+                            var[lval][v]._not()
+                        )._and(
+                            n[(v,w)]
+                        )
+                    )._or(FALSE)
+
+        stcopy.n = st.n
+        stcopy.update_n_plus()
 
         for v in st.indiv:
 
@@ -388,16 +401,6 @@ def next_null_assignment(state, statement):
                         shared[v]
                     )
                 )
-
-            for w in st.indiv:
-                st.n[(v,w)] = \
-                    (
-                        (
-                            var[lval][v]._not()
-                        )._and(
-                            n[(v,w)]
-                        )
-                    )._or(FALSE)
 
         st.reach[lval] = var[lval]
 
