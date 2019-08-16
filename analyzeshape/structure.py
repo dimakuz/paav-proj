@@ -21,13 +21,28 @@ class ThreeValuedBool(IntEnum):
 
     def _not(self):
 
-        return ThreeValuedBool(2 - self)
+        if self == TRUE:
+            return FALSE
+        elif self == FALSE:
+            return TRUE
+        else:
+            return MAYBE
 
     def _and(self, other):
-        return ThreeValuedBool(min(self, other))
+        if self == FALSE or other == FALSE:
+            return FALSE
+        elif self == MAYBE or other == MAYBE:
+            return MAYBE
+        else:
+            return TRUE
 
     def _or(self, other):
-        return ThreeValuedBool(max(self, other))
+        if self == TRUE or other == TRUE:
+            return TRUE
+        elif self == MAYBE or other == MAYBE:
+            return MAYBE
+        else:
+            return FALSE
 
     def __str__(self):
         if self == TRUE:
@@ -344,10 +359,10 @@ class Structure:
                     self.n_plus[(v,w)] = self.n_plus[(v,w)]._or(self.n_plus[(v,u)]._and(self.n_plus[(u,w)]))
 
     def _exists(self, pred):
-        return ThreeValuedBool(max(pred(v) for v in self.indiv)) if self.indiv else FALSE
+        return max(pred(v) for v in self.indiv) if self.indiv else FALSE
 
     def _forall(self, pred):
-        return ThreeValuedBool(min(pred(v) for v in self.indiv)) if self.indiv else TRUE
+        return min(pred(v) for v in self.indiv) if self.indiv else TRUE
 
 
     @classmethod
