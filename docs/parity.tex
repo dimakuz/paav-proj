@@ -1,1 +1,21 @@
 \section*{Parity analysis}
+\subsection*{Abstract Domain}
+In this analysis we define abstract domain as the collection of all available states. Our state is defined as a 3-tuple $(Modulo,SamePar,AntiPar)$.
+
+\begin{itemize}
+	\item $Modulo: Symbols \rightarrow \{\bot, ODD, EVEN, \top\}$ - a mapping that tracks parity of symbols in the program. Each of the symbols is mapped to one of the values:
+	\begin{itemize}
+		\item $\bot$ - if no info about symbol parity is known.
+		\item $ODD$ - if symbol is known to be odd-valued.
+		\item $EVEN$ - if symbol is known to be even-value.
+		\item $\top$ - if symbol can be either odd or even.
+	\end{itemize}
+	\item $SamePar: Symbols \rightarrow 2^{Symbols}$ - a mapping of symbols to symbol set of similar parity.
+	
+	For example, given $x, y$, if we know that $x$ is now equal to $y$, $y$ will be added to $SamePar[x]$.
+	
+	\item $AntiPar: Symbols \rightarrow 2^{Symbols}$ - a mapping of symbols to symbol set of opposing parity (i.e. for two given symbols, one is odd and other is even).
+	
+	For example, given $x, y$, if we know that $x$ is now equal to $y + 1$, $y$ will be added to $AnitPar[x]$.
+\end{itemize}
+Our abstract domain is then all possible assignments to the 3-tuple.
