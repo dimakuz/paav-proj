@@ -69,7 +69,7 @@ class Structure:
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
     n_plus: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
-    constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
+    constr: typing.Set[typing.Tuple[str, int, callable, callable, callable]]
 
     def copy(self):
         newst = Structure.initial(self.var.keys())
@@ -97,7 +97,7 @@ class Structure:
         # two individuals that are canonically equal to each other
         canonical_map = dict()
         for v in self.indiv:
-            u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w]), None)
+            u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w)), None)
             if u is None:
                 # No canonical individual in other structure - different structure
                 return False
@@ -252,7 +252,8 @@ class Structure:
         return all(self.var[key][u] == other.var[key][v] and \
                     self.reach[key][u] == other.reach[key][v] for key in self.var) and \
                     self.cycle[u] == other.cycle[v] and \
-                    self.shared[u] == other.shared[v]
+                    self.shared[u] == other.shared[v] and \
+                    self.sm[u] == other.sm[v]
 
     def copy_indiv(self, u):
         v = max(self.indiv) + 1

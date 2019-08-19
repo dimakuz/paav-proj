@@ -105,35 +105,52 @@ class ShapeState(abstract.AbstractState):
         # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
 
 
-    def join(self, other):
+    def join(self, other, is_loop):
 
-        structures = [st for st in self.structures]
+        LOG.debug('num of structures self %d', len(self.structures))
+        LOG.debug('num of structures other %d', len(other.structures))
 
-        other.embed()
+        structures = []
+        if is_loop:
+            for st in self.structures:
+                if st not in structures:
+                    structures.append(st)
+            other.embed()
         for st in other.structures:
-            if st not in self.structures:
+            if st not in structures:
                 structures.append(st)
 
+        LOG.debug('num of structures after %d', len(structures))
         return ShapeState(structures)
 
 
     # Embed operation from paper where we look for summarizable nodes
     def embed(self):
+        LOG.debug('starting embed')
         for st in self.structures:
-            indiv_copy = copy.deepcopy(st.indiv)
-            for u in indiv_copy:
-                for v in indiv_copy:
-                    if u in st.indiv and v in st.indiv and u < v and st._v_canonical_eq(u, st, v):
-                        # LOG.debug('something is summarizable!!! %s %s',u,v)
-                        st._v_embed(u, v)
+            done = False
+            while not done:
+                LOG.debug('another embed check loop...')
+                embed = False
+                indiv_copy = [v for v in st.indiv]
+                for u in indiv_copy:
+                    for v in indiv_copy:
+                        if u in st.indiv and v in st.indiv and u < v and st._v_canonical_eq(u, st, v):
+                            LOG.debug('something is summarizable!!! %s %s',u,v)
+                            st._v_embed(u, v)
+                            embed = True
+
+                if not embed:
+                    done = True
+        LOG.debug('finishing embed')
 
     def __str__(self):
         st_str = '\n\n'.join(str(st) for st in self.structures)
         return f'[{st_str}]'
         # if self.structures:
-        #    return f'num of structures: {len(self.structures)}\n{str(self.structures[0])}'
+           # return f'num of structures: {len(self.structures)}\n{str(self.structures[0])}'
         # else:
-        #    return f'num of structures: {len(self.structures)}'
+           # return f'num of structures: {len(self.structures)}'
 
     @classmethod
     def initial(cls, sybols):
@@ -418,6 +435,8 @@ def assume(state, statement):
     if isinstance(expr, lang.Falsehood):
         state.structures = []
     elif isinstance(expr, lang.Truth):
+        # l = max(state.lengths) + 1 if state.lengths else 0
+        # state.lengths.add(l)
         pass
     elif isinstance(expr, lang_shape.EqualsVarVar):
 

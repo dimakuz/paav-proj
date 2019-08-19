@@ -13,7 +13,7 @@ def chaotic_iteration(cfg):
         for edge in node.out_edges:
             next_node = edge.successor
             transformed_state = node.state.transform(edge.statement)
-            joined_state = next_node.state.join(transformed_state)
+            joined_state = next_node.state.join(transformed_state, len(next_node.in_edges) > 1)
             if next_node.visits == 0 or joined_state != next_node.state:
                 wl.append(next_node)
                 LOG.debug('append node %r',next_node.name)

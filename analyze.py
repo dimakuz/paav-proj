@@ -30,6 +30,7 @@ def main():
     opts = parse_args()
     logging.basicConfig(level=logging.DEBUG)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("requests").setLevel(logging.WARNING)
 
 
     if opts.type == 'parity':
