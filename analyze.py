@@ -29,6 +29,8 @@ def parse_args():
 def main():
     opts = parse_args()
     logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 
     if opts.type == 'parity':
         state = parity.ParityState
@@ -55,6 +57,10 @@ def main():
     chaotic.chaotic_iteration(control)
 
     viz.dump_cfg(control)
+    if opts.type == 'shape':
+        for node in control.nodes.values():
+            viz.dump_shape(node)
+
 
 if __name__ == '__main__':
     main()
