@@ -105,13 +105,14 @@ class ShapeState(abstract.AbstractState):
         # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
 
 
-    def join(self, other, is_loop):
+    def join(self, other, loop_head):
 
         LOG.debug('num of structures self %d', len(self.structures))
         LOG.debug('num of structures other %d', len(other.structures))
+        LOG.debug('loop head %s', loop_head)
 
         structures = []
-        if is_loop:
+        if loop_head:
             for st in self.structures:
                 if st not in structures:
                     structures.append(st)
@@ -212,6 +213,7 @@ def var_new_assignment(state, statement):
         st.cycle[v] = FALSE
         st.shared[v] = FALSE
         st.sm[v] = FALSE
+        st.smsize[v] = shortcuts.Int(1)
 
         st.indiv.append(v)
 

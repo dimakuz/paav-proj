@@ -6,7 +6,7 @@ import types
 import copy
 import itertools
 
-from pysmt import shortcuts
+from pysmt import shortcuts, fnode
 from analyzeshape import lang as lang_shape
 from analyzeframework import lang
 from enum import IntEnum
@@ -66,6 +66,7 @@ class Structure:
     cycle: typing.Mapping[int, ThreeValuedBool]
     shared: typing.Mapping[int, ThreeValuedBool]
     sm: typing.Mapping[int, ThreeValuedBool]
+    smsize: typing.Mapping[int, fnode.FNode]
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
     n_plus: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
@@ -81,6 +82,7 @@ class Structure:
         newst.shared = copy.deepcopy(self.shared)
         newst.sm = copy.deepcopy(self.sm)
         newst.n = copy.deepcopy(self.n)
+        newst.smsize = copy.deepcopy(self.smsize)
         return newst
 
 
@@ -263,6 +265,7 @@ class Structure:
         self.cycle[v] = self.cycle[u]
         self.shared[v] = self.shared[u]
         self.sm[v] = self.sm[u]
+        self.smsize[v] = self.smsize[u]
         self.n[(v,v)] = self.n[(u,u)]
         for w in self.indiv:
             self.n[(v,w)] = self.n[(u,w)]
@@ -289,6 +292,8 @@ class Structure:
             self.n.pop((v,w))
             self.n.pop((w,v))
         self.sm[u] = MAYBE
+        self.smsize[u] = shortcuts.Plus(self.smsize[u], self.smsize[v])
+        self.smsize.pop(v)
 
 
     # Equality taking summary nodes into account
@@ -375,6 +380,7 @@ class Structure:
             cycle=dict(),
             shared=dict(),
             sm=dict(),
+            smsize=dict(),
             n=dict(),
             n_plus=dict(),
             constr=cls.init_constr(symbols)
