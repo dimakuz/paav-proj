@@ -18,7 +18,7 @@ class AbstractState:
     def copy(self):
         return copy.deepcopy(self)
 
-    def transform(self, statement):
+    def transform(self, statement, name=None):
         LOG.debug('Processing statement %s', statement)
         res = self.copy()
         # LOG.debug('Initial state is:\n %s\n', res)
@@ -28,7 +28,7 @@ class AbstractState:
             LOG.warning(f'No transformer for {statement}')
             return res
 
-        transformer(res, statement)
+        transformer(res, statement, name)
         # LOG.debug('Transformed state is:\n %s\n', res)
         res.post_transform()
         # LOG.debug('Post Transformed state is:\n %s\n', res)
@@ -36,4 +36,7 @@ class AbstractState:
 
     # Augment / Coerce
     def post_transform(self):
+        pass
+
+    def join(self, other, loop_top=False, loop_bottom=False):
         pass

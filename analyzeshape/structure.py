@@ -6,7 +6,7 @@ import types
 import copy
 import itertools
 
-from pysmt import shortcuts
+from pysmt import shortcuts, fnode
 from analyzeshape import lang as lang_shape
 from analyzeframework import lang
 from enum import IntEnum
@@ -69,6 +69,8 @@ class Structure:
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
     n_plus: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
+    size: typing.Mapping[int, fnode.FNode]
+
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
     def copy(self):
@@ -81,17 +83,26 @@ class Structure:
         newst.shared = copy.deepcopy(self.shared)
         newst.sm = copy.deepcopy(self.sm)
         newst.n = copy.deepcopy(self.n)
+
+        newst.size = copy.deepcopy(self.size)
         return newst
 
 
-    # Equality should be agnostic to the label assigned to each individual, which means this is
-    # the graph isomporphism problem
+    # Equality should be agnostic to the label assigned to each individual, which means this is the graph isomporphism problem
     # This is the efficient version from the paper, that compares canonical representations of an individual
     def __eq__(self, other):
 
+        if self.get_canonical_map(other):
+            return True
+        else:
+            return False
+
+
+    def get_canonical_map(self, other):
+
         # Different size - different structure
         if len(self.indiv) != len(other.indiv):
-            return False
+            return None
 
         # We asume that the structures are after the embed operation and there are no
         # two individuals that are canonically equal to each other
@@ -100,16 +111,16 @@ class Structure:
             u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w]), None)
             if u is None:
                 # No canonical individual in other structure - different structure
-                return False
+                return None
             canonical_map[v] = u
 
         for v in self.indiv:
             n_fit = all(self.n[(v,u)] == other.n[(canonical_map[v],canonical_map[u])] for u in self.indiv)
             if not n_fit:
                 # No n predicate fit - different structure
-                return False
+                return None
 
-        return True
+        return canonical_map
 
 
     @classmethod
@@ -130,6 +141,7 @@ class Structure:
             st.n[(v1,v2)] = FALSE
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
             st.sm[v1] = FALSE
+            st.size[v1] = shortcuts.Int(1)
 
         def get_reach_lh(var):
             def reach_lh(st,v):
@@ -262,6 +274,7 @@ class Structure:
         self.cycle[v] = self.cycle[u]
         self.shared[v] = self.shared[u]
         self.sm[v] = self.sm[u]
+        self.size[v] = self.size[u]
         self.n[(v,v)] = self.n[(u,u)]
         for w in self.indiv:
             self.n[(v,w)] = self.n[(u,w)]
@@ -288,6 +301,8 @@ class Structure:
             self.n.pop((v,w))
             self.n.pop((w,v))
         self.sm[u] = MAYBE
+        self.size[u] = shortcuts.Plus(self.size[u], self.size[v])
+        self.size.pop(v)
 
 
     # Equality taking summary nodes into account
@@ -376,6 +391,7 @@ class Structure:
             sm=dict(),
             n=dict(),
             n_plus=dict(),
+            size=dict(),
             constr=cls.init_constr(symbols)
         )
 

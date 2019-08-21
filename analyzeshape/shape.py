@@ -53,6 +53,8 @@ def transforms(stmt_type):
 @dataclasses.dataclass
 class ShapeState(abstract.AbstractState):
     structures: typing.List[structure.Structure]
+    arbitrary_size: shortcuts.Symbol
+    in_loop: bool=False
 
     def focus(self, var):
         workset = self.structures
@@ -74,6 +76,8 @@ class ShapeState(abstract.AbstractState):
                     v = st2.copy_indiv(u)
                     st2.var[var][u] = TRUE
                     st2.var[var][v] = FALSE
+                    st2.size[u] = shortcuts.Minus(st2.size[u], 1)
+                    st2.size[v] = shortcuts.Minus(st2.size[v], 1)
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus %d\n', len(self.structures))
@@ -100,19 +104,39 @@ class ShapeState(abstract.AbstractState):
                     w = st2.copy_indiv(u)
                     st2.n[(v,u)] = TRUE
                     st2.n[(v,w)] = FALSE
+                    st2.size[u] = shortcuts.Minus(st2.size[u], 1)
+                    st2.size[w] = shortcuts.Minus(st2.size[w], 1)
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
 
 
-    def join(self, other):
+    def join(self, other, loop_top=False, loop_bottom=False):
+
+        if loop_top:
+            in_loop = True
 
         structures = [st for st in self.structures]
 
         other.embed()
         for st in other.structures:
-            if st not in self.structures:
-                structures.append(st)
+            for next_st in self.structures:
+                canonical_map = st.get_canonical_map(next_st)
+                if canonical_map:
+                    if arbitrary_size and in_loop:
+                        # CHANGE NEXT_ST
+                        for v in canonical_map:
+                            # updated_size = st.size[v]
+                            # old_size = next_st.size[v]
+                            next_st.size[v] = shortcuts.Plus(
+                                next_st.size[v], shortcuts.Times(
+                                    shortcuts.Minus(st.size[v], next_st.size[v]), arbitrary_size
+                                    )
+                                )
+                        in_loop = False
+                        arbitrary_size = None
+                else:
+                    structures.append(st) 
 
         return ShapeState(structures)
 
@@ -138,7 +162,8 @@ class ShapeState(abstract.AbstractState):
     @classmethod
     def initial(cls, sybols):
         return cls(
-            structures=[]
+            structures=[],
+            arbitrary_size=None
         )
 
     def initialize_head(self, symbols):
@@ -195,6 +220,7 @@ def var_new_assignment(state, statement):
         st.cycle[v] = FALSE
         st.shared[v] = FALSE
         st.sm[v] = FALSE
+        st.sm[v] = shortcuts.Int(1)
 
         st.indiv.append(v)
 
@@ -413,12 +439,12 @@ def noop(state, statement):
     pass
 
 @ShapeState.transforms(lang.Assume)
-def assume(state, statement):
+def assume(state, statement, name):
     expr = statement.expr
     if isinstance(expr, lang.Falsehood):
         state.structures = []
     elif isinstance(expr, lang.Truth):
-        pass
+        state.arbitrary_size = shortcuts.Symbol(name, shortucts.INT)
     elif isinstance(expr, lang_shape.EqualsVarVar):
 
         lval = expr.lval
