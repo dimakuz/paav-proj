@@ -76,8 +76,8 @@ class ShapeState(abstract.AbstractState):
                     v = st2.copy_indiv(u)
                     st2.var[var][u] = TRUE
                     st2.var[var][v] = FALSE
-                    st2.size[u] = shortcuts.Minus(st2.size[u], shortcuts.Int(1))
-                    st2.size[v] = shortcuts.Minus(st2.size[v], shortcuts.Int(1))
+                    st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
+                    st2.size[v] = shortcuts.simplify(shortcuts.Minus(st2.size[v], shortcuts.Int(1)))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus %d\n', len(self.structures))
@@ -104,8 +104,8 @@ class ShapeState(abstract.AbstractState):
                     w = st2.copy_indiv(u)
                     st2.n[(v,u)] = TRUE
                     st2.n[(v,w)] = FALSE
-                    st2.size[u] = shortcuts.Minus(st2.size[u], shortcuts.Int(1))
-                    st2.size[w] = shortcuts.Minus(st2.size[w], shortcuts.Int(1))
+                    st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
+                    st2.size[w] = shortcuts.simplify(shortcuts.Minus(st2.size[w], shortcuts.Int(1)))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
@@ -120,20 +120,28 @@ class ShapeState(abstract.AbstractState):
         LOG.debug('begin join num of structures self %d num of structures other %d', len(self.structures), len(other.structures))
 
         other.embed()
-        for st in other.structures:
-            canonical_map = None
-            for next_st in self.structures:
-                # If we are at an assume node we have an arbitrary value, so we ignore the sizes of the summary nodes
-                # while comparing, so that we can factor the size with the arbitrary value
-                # Otherwise we compare normally, taking sizes into account
-                ignore_size = arbitrary_visits is not None
-                canonical_map = next_st.get_canonical_map(st, ignore_size)
-                LOG.debug('found canonical map? %s', str(canonical_map is not None))
-                if canonical_map:
-                    # if arbitrary_visits and other.in_loop:
-                    if arbitrary_visits:
+
+        ignore_size = arbitrary_visits is not None
+
+        if not ignore_size:
+            for st in other.structures:
+                if st not in self.structures:
+                    structures.append(st)
+        else:
+            for st in other.structures:
+                canonical_map = None
+                for next_st in self.structures:
+                    # If we are at an assume node we have an arbitrary value, so we ignore the sizes of the summary nodes
+                    # while comparing, so that we can factor the size with the arbitrary value
+                    # Otherwise we compare normally, taking sizes into account
+                    ignore_size = arbitrary_visits is not None
+                    canonical_map = next_st.get_canonical_map(st, True)
+                    LOG.debug('found canonical map? %s', str(canonical_map is not None))
+                    if canonical_map:
+                        # if arbitrary_visits and other.in_loop:
 
                         if any([next_st.sm[v] == MAYBE for v in canonical_map]):
+                            replace = False
                             next_st_copy = next_st.copy()
                             # CHANGE NEXT_ST
                             # v is in next_st
@@ -148,25 +156,30 @@ class ShapeState(abstract.AbstractState):
                                     # LOG.debug('old v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
                                     if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
                                         structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
+
                                         next_st_copy.size[v] = shortcuts.Plus(
                                             next_st_copy.size[v], shortcuts.Times(
                                                 shortcuts.Minus(st.size[u], next_st_copy.size[v]), arbitrary_visits
                                                 )
                                             )
                                         next_st_copy.size[v] = shortcuts.simplify(next_st_copy.size[v])
+                                        replace = True
+
                                     LOG.debug('new v size: %s', str(next_st_copy.size[v]))
                                     # LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
-                            structures.remove(next_st)
-                            structures.append(next_st_copy)
-                    break
 
-            if not canonical_map:
-                LOG.debug('did not find canonical map, adding to structures')
-                structures.append(st)
-            elif arbitrary_visits:
-                LOG.debug('found a map, did not add but updated next_st (likely)')
-            else:
-                LOG.debug('found a map, did not add and did not update anything')
+                            if replace:
+                                structures.remove(next_st)
+                                structures.append(next_st_copy)
+                        break
+
+                if not canonical_map:
+                    LOG.debug('did not find canonical map, adding to structures')
+                    structures.append(st)
+                elif arbitrary_visits:
+                    LOG.debug('found a map, did not add but updated next_st (likely)')
+                else:
+                    LOG.debug('found a map, did not add and did not update anything')
 
         # if arbitrary_visits:
             # self.in_loop = False

@@ -120,13 +120,13 @@ class Structure:
     # This is the efficient version from the paper, that compares canonical representations of an individual
     def __eq__(self, other):
 
-        if self.get_canonical_map(other):
+        if self.get_canonical_map(other, False):
             return True
         else:
             return False
 
 
-    def get_canonical_map(self, other, ignore_size=False):
+    def get_canonical_map(self, other, ignore_size):
 
         # Different size - different structure
         if len(self.indiv) != len(other.indiv):
@@ -136,13 +136,38 @@ class Structure:
         # two individuals that are canonically equal to each other
         canonical_map = dict()
         for v in self.indiv:
+            # str() - hack to quickly compare size formulas
             u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and \
-                self.sm[v] == other.sm[w] and \
-                (ignore_size or _size_eq(self.size[v], other.size[w]))), None)
-            if u is None:
+                self.sm[v] == other.sm[w]), None)
+
+            if u is not None:
+                if ignore_size:
+                    canonical_map[v] = u
+                elif str(self.size[v]) == str(other.size[u]):
+                    canonical_map[v] = u
+                else:
+                    # LOG.debug('self %s, other %s', str(self.size[v]), str(other.size[u]))
+                    # if _size_eq(self.size[v], other.size[u]):
+                    #     LOG.debug('they were equal after all...')
+                    #     canonical_map[v] = u
+                    # else:
+                    return None
+            else:
                 # No canonical individual in other structure - different structure
+
+                # u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and \
+                #     self.sm[v] == other.sm[w]), None)
+                # if u is None:
+                #     LOG.debug('really a different indiv!')
+                # else:
+                #     LOG.debug('there is a matching u=v%s !', u)
+                #     LOG.debug('self size %s', self.size[v])
+                #     LOG.debug('other size of u %s', other.size[u])
+                #     LOG.debug('are sizes equal? %s', str(self.size[v])==str(other.size[u]))
+                #     for w in other.indiv:
+                #         LOG.debug('other size %s', other.size[w])
                 return None
-            canonical_map[v] = u
+            # canonical_map[v] = u
 
         for v in self.indiv:
             n_fit = all(self.n[(v,u)] == other.n[(canonical_map[v],canonical_map[u])] for u in self.indiv)
@@ -283,7 +308,7 @@ class Structure:
         sm = ', '.join(f'v{v} = {str(self.sm[v])}' for v in self.indiv)
         lines.append(f'sm: [{sm}]')
 
-        size = ', '.join(f'v{v} = {str(shortcuts.simplify(self.size[v]))}' for v in self.indiv)
+        size = ', '.join(f'v{v} = {str(self.size[v])}' for v in self.indiv)
         lines.append(f'size: [{size}]')
 
         n = ', '.join(f'v{v0},v{v1} = {str(self.n[(v0,v1)])}' for v0 in self.indiv for v1 in self.indiv)
@@ -338,7 +363,7 @@ class Structure:
             if self.n[(u,w)] != self.n[(v,w)]:
                 self.n[(u,w)] = MAYBE        
         self.sm[u] = MAYBE
-        self.size[u] = shortcuts.Plus(self.size[u],self.size[v])
+        self.size[u] = shortcuts.simplify(shortcuts.Plus(self.size[u],self.size[v]))
 
     # Equality taking summary nodes into account
     def _v_eq(self, v1, v2):
