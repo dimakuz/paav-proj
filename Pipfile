@@ -6,6 +6,7 @@ verify_ssl = true
 [dev-packages]
 graphviz = "*"
 pytest = "*"
+snakeviz = "*"
 
 [packages]
 sly = "*"
@@ -18,4 +19,5 @@ python_version = "3.7"
 
 [scripts]
 analyze = "python analyze.py"
+analyze-profile = "python -m cProfile -o prof analyze.py"
 test = 'py.test -v .'
