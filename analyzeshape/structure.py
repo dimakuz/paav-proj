@@ -17,41 +17,29 @@ LOG = logging.getLogger(__name__)
 
 def _size_eq(v_size, u_size):
 
-    v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
-    u_arbitrary_sizes = shortcuts.get_free_variables(u_size)
+    constraints = shortcuts.And(_size_get_constraints(v_size), _size_get_constraints(u_size))
+    cex = shortcuts.get_model(shortcuts.And(constraints, shortcuts.NotEquals(v_size, u_size)))
 
-    constraints = shortcuts.And(
-        shortcuts.And(
-            *(shortcuts.GT(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in v_arbitrary_sizes)),
-        shortcuts.And(
-            *(shortcuts.GT(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in u_arbitrary_sizes))
-        )
-
-    cex = shortcuts.get_model(shortcuts.And(constraints, shortcuts.Equals(v_size, u_size)))
-
-    return cex is not None
-
+    return cex is None
 
 def _size_always_larger(v_size, u_size):
 
-    v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
-    u_arbitrary_sizes = shortcuts.get_free_variables(u_size)
-
-    constraints = shortcuts.And(
-        shortcuts.And(
-            *(shortcuts.GT(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in v_arbitrary_sizes)),
-        shortcuts.And(
-            *(shortcuts.GT(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in u_arbitrary_sizes))
-        )
-
-    cex = shortcuts.get_model(shortcuts.And(constraints, shortcuts.LT(v_size, u_size)))
+    constraints = shortcuts.And(_size_get_constraints(v_size), _size_get_constraints(u_size))
+    cex = shortcuts.get_model(shortcuts.And(constraints, shortcuts.LE(v_size, u_size)))
 
     return cex is None
+
+def _size_get_constraints(v_size):
+    v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
+    return shortcuts.And(*(shortcuts.GE(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in v_arbitrary_sizes))
 
 
 def _size_new_name(v_size, name):
     v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
     return name not in (arbitrary_size.symbol_name() for arbitrary_size in v_arbitrary_sizes)
+
+def _size_even(v_size):
+    return shortcuts.Equals(v_size, shortcuts.Times(shortcuts.FreshSymbol(shortcuts.INT), shortcuts.Int(2)))
 
 
 class ThreeValuedBool(IntEnum):
@@ -411,6 +399,34 @@ class Structure:
     def _var_reach(self, var1, var2):
         return self._exists(lambda u : self.var[var2][u]._and(self.reach[var1][u]))
 
+    # Assuming that var2 is reachable from var1
+    def _var_get_length(self, var1, var2):
+        v1 = next((u for u in self.indiv if self.var[var1][u] == TRUE), None)
+        v2 = next((u for u in self.indiv if self.var[var2][u] == TRUE), None)
+
+        if v1 is None or v2 is None:
+            return shortcuts.Int(-1)
+
+        size = shortcuts.Int(0)
+
+        next_v = next((v for v in self.indiv if self.n[(v1,v)] != FALSE), None)
+        while next_v != v2:
+            if next_v is None:
+                return shortcuts.Int(-1)
+            size = shortcuts.Plus(size, self.size[next_v])
+            next_v = next((v for v in self.indiv if self.n[(next_v,v)] != FALSE), None)
+
+        return size
+
+    # Assuming var1 is not null
+    def _var_get_size(self, var1):
+        v1 = next((u for u in self.indiv if self.var[var1][u] == TRUE), None)
+
+        if v1 is None or v2 is None:
+            return shortcuts.Int(-1)
+
+        return self.size[v1]
+
 
     # Transitive closure of n
     def update_n_plus(self):
@@ -501,5 +517,37 @@ class Structure:
                         shortcuts.Bool(self._var_reach(var1, var2) == TRUE)
                     ),
                 )
+                len12 = self._var_get_length(var1, var2)
+                clauses.append(
+                    shortcuts.Iff(
+                        lang_shape.Even(var1, var2).formula(),
+                        shortcuts.And(
+                            shortcuts.NotEquals(len12, shortcuts.Int(-1)),
+                            shortcuts.Bool(_size_even(len12))
+                        )
+                    ),
+                )
+                clauses.append(
+                    shortcuts.Iff(
+                        lang_shape.Odd(var1, var2).formula(),
+                        shortcuts.And(
+                            shortcuts.NotEquals(len12, shortcuts.Int(-1)),
+                            shortcuts.Not(shortcuts.Bool(_size_even(len12)))
+                        )
+                    ),
+                )
+                for var3 in self.var:
+                    for var4 in self.var:
+                        len34 = self._var_get_length(var3, var4)
+                        clauses.append(
+                            shortcuts.Iff(
+                                lang_shape.Len(var1, var2, var3, var4).formula(),
+                                shortcuts.And(
+                                    shortcuts.NotEquals(len12, shortcuts.Int(-1)),
+                                    shortcuts.NotEquals(len34, shortcuts.Int(-1)),
+                                    shortcuts.Bool(_size_eq(len12, len34))
+                                )
+                            )
+                        )
 
         return shortcuts.And(*clauses)

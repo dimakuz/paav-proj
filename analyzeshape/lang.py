@@ -174,7 +174,4 @@ class Len(lang.Predicate):
         return f'LEN {self.sym0} {self.sym1} = LEN {self.sym2} {self.sym3}'
 
     def formula(self):
-        return shortcuts.Equals(
-                shortcuts.Symbol(f'LEN-{self.sym0}-{self.sym1}'),
-                shortcuts.Symbol(f'LEN-{self.sym2}-{self.sym3}')
-        )
+        return shortcuts.Symbol(f'LEN {self.sym0} {self.sym1} = LEN {self.sym2} {self.sym3}')

@@ -145,7 +145,7 @@ class ShapeState(abstract.AbstractState):
                                 # old_size = next_st.size[v]
                                 if next_st_copy.sm[v] == MAYBE:
                                     LOG.debug('old v size: %s', str(next_st_copy.size[v]))
-                                    LOG.debug('old v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
+                                    # LOG.debug('old v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
                                     if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
                                         structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
                                         next_st_copy.size[v] = shortcuts.Plus(
@@ -153,8 +153,9 @@ class ShapeState(abstract.AbstractState):
                                                 shortcuts.Minus(st.size[u], next_st_copy.size[v]), arbitrary_visits
                                                 )
                                             )
+                                        next_st_copy.size[v] = shortcuts.simplify(next_st_copy.size[v])
                                     LOG.debug('new v size: %s', str(next_st_copy.size[v]))
-                                    LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
+                                    # LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
                             structures.remove(next_st)
                             structures.append(next_st_copy)
                     break
