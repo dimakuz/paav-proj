@@ -12,6 +12,17 @@ class Edge:
     predecessor: 'Node'
     successor: 'Node'
 
+    def arbitrary_visits(self):
+        if isinstance(self.statement, lang.Assume):
+            if isinstance(self.statement.expr, lang.Truth):
+                return shortcuts.Symbol(str(self.predecessor.name), shortcuts.INT)
+                # return shortcuts.FreshSymbol(shortcuts.INT)
+            else:
+                return None
+                # return shortcuts.Int(1)
+        else:
+            return None
+
     def valid(self):
         if not isinstance(self.statement, lang.Assert):
             return True
@@ -33,6 +44,10 @@ class Node:
     in_edges: typing.List[Edge] = dataclasses.field(default_factory=list)
     state: object = None
     visits: int = 0
+
+    def arbitrary_visits(self):
+        return self.out_edges[0].arbitrary_visits() if self.out_edges else None
+
 
 
 class ControlFlowGraph:

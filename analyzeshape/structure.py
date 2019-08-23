@@ -14,6 +14,46 @@ from enum import IntEnum
 LOG = logging.getLogger(__name__)
 
 
+
+def _size_eq(v_size, u_size):
+
+    v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
+    u_arbitrary_sizes = shortcuts.get_free_variables(u_size)
+
+    constraints = shortcuts.And(
+        shortcuts.And(
+            *(shortcuts.GT(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in v_arbitrary_sizes)),
+        shortcuts.And(
+            *(shortcuts.GT(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in u_arbitrary_sizes))
+        )
+
+    cex = shortcuts.get_model(shortcuts.And(constraints, shortcuts.Equals(v_size, u_size)))
+
+    return cex is not None
+
+
+def _size_always_larger(v_size, u_size):
+
+    v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
+    u_arbitrary_sizes = shortcuts.get_free_variables(u_size)
+
+    constraints = shortcuts.And(
+        shortcuts.And(
+            *(shortcuts.GT(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in v_arbitrary_sizes)),
+        shortcuts.And(
+            *(shortcuts.GT(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in u_arbitrary_sizes))
+        )
+
+    cex = shortcuts.get_model(shortcuts.And(constraints, shortcuts.LT(v_size, u_size)))
+
+    return cex is None
+
+
+def _size_new_name(v_size, name):
+    v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
+    return name not in (arbitrary_size.symbol_name() for arbitrary_size in v_arbitrary_sizes)
+
+
 class ThreeValuedBool(IntEnum):
     TRUE = 2
     MAYBE = 1
@@ -98,7 +138,7 @@ class Structure:
             return False
 
 
-    def get_canonical_map(self, other):
+    def get_canonical_map(self, other, ignore_size=False):
 
         # Different size - different structure
         if len(self.indiv) != len(other.indiv):
@@ -108,7 +148,9 @@ class Structure:
         # two individuals that are canonically equal to each other
         canonical_map = dict()
         for v in self.indiv:
-            u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w]), None)
+            u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and \
+                self.sm[v] == other.sm[w] and \
+                (ignore_size or _size_eq(self.size[v], other.size[w]))), None)
             if u is None:
                 # No canonical individual in other structure - different structure
                 return None
@@ -253,6 +295,9 @@ class Structure:
         sm = ', '.join(f'v{v} = {str(self.sm[v])}' for v in self.indiv)
         lines.append(f'sm: [{sm}]')
 
+        size = ', '.join(f'v{v} = {str(shortcuts.simplify(self.size[v]))}' for v in self.indiv)
+        lines.append(f'size: [{size}]')
+
         n = ', '.join(f'v{v0},v{v1} = {str(self.n[(v0,v1)])}' for v0 in self.indiv for v1 in self.indiv)
         lines.append(f'n: [{n}]')
 
@@ -285,11 +330,7 @@ class Structure:
     # Summarize v into u
     def _v_embed(self, u, v):
         self.indiv.remove(v)
-        for w in self.indiv:
-            if self.n[(w,u)] != self.n[(w,v)]:
-                self.n[(w,u)] = MAYBE
-            if self.n[(u,w)] != self.n[(v,w)]:
-                self.n[(u,w)] = MAYBE
+        self._v_update_embedded(u, v)
         for key in self.var:
             self.var[key].pop(v)
             self.reach[key].pop(v)
@@ -300,10 +341,16 @@ class Structure:
         for w in self.indiv:
             self.n.pop((v,w))
             self.n.pop((w,v))
-        self.sm[u] = MAYBE
-        self.size[u] = shortcuts.Plus(self.size[u], self.size[v])
         self.size.pop(v)
 
+    def _v_update_embedded(self, u, v):
+        for w in self.indiv:
+            if self.n[(w,u)] != self.n[(w,v)]:
+                self.n[(w,u)] = MAYBE
+            if self.n[(u,w)] != self.n[(v,w)]:
+                self.n[(u,w)] = MAYBE        
+        self.sm[u] = MAYBE
+        self.size[u] = shortcuts.Plus(self.size[u],self.size[v])
 
     # Equality taking summary nodes into account
     def _v_eq(self, v1, v2):

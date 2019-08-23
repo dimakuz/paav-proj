@@ -18,25 +18,28 @@ class AbstractState:
     def copy(self):
         return copy.deepcopy(self)
 
-    def transform(self, statement, name=None):
+    def transform(self, statement):
         LOG.debug('Processing statement %s', statement)
         res = self.copy()
-        # LOG.debug('Initial state is:\n %s\n', res)
+        if str(statement) == 'h := tmp' or str(statement) == 'assume(TRUE)':
+            LOG.debug('Initial state is:\n %s\n', res)
         try:
             transformer = self.TRANSFORMERS[type(self)][type(statement)]
         except KeyError:
             LOG.warning(f'No transformer for {statement}')
             return res
 
-        transformer(res, statement, name)
-        # LOG.debug('Transformed state is:\n %s\n', res)
+        transformer(res, statement)
+        if str(statement) == 'h := tmp' or str(statement) == 'assume(TRUE)':
+            LOG.debug('Transformed state is:\n %s\n', res)
         res.post_transform()
-        # LOG.debug('Post Transformed state is:\n %s\n', res)
+        if str(statement) == 'h := tmp' or str(statement) == 'assume(TRUE)':
+            LOG.debug('Post Transformed state is:\n %s\n', res)
         return res
 
     # Augment / Coerce
     def post_transform(self):
         pass
 
-    def join(self, other, loop_top=False, loop_bottom=False):
+    def join(self, other, arbitrary_visits):
         pass

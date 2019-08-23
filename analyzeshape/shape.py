@@ -4,7 +4,7 @@ import logging
 import typing
 import copy
 
-from pysmt import shortcuts
+from pysmt import shortcuts, fnode
 
 from analyzeshape import lang as lang_shape
 from analyzeframework import abstract
@@ -53,8 +53,8 @@ def transforms(stmt_type):
 @dataclasses.dataclass
 class ShapeState(abstract.AbstractState):
     structures: typing.List[structure.Structure]
-    arbitrary_size: shortcuts.Symbol
-    in_loop: bool=False
+    # in_loop: bool
+    # arbitrary_size: fnode.FNode=shortcuts.Int(1)
 
     def focus(self, var):
         workset = self.structures
@@ -76,8 +76,8 @@ class ShapeState(abstract.AbstractState):
                     v = st2.copy_indiv(u)
                     st2.var[var][u] = TRUE
                     st2.var[var][v] = FALSE
-                    st2.size[u] = shortcuts.Minus(st2.size[u], 1)
-                    st2.size[v] = shortcuts.Minus(st2.size[v], 1)
+                    st2.size[u] = shortcuts.Minus(st2.size[u], shortcuts.Int(1))
+                    st2.size[v] = shortcuts.Minus(st2.size[v], shortcuts.Int(1))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus %d\n', len(self.structures))
@@ -104,40 +104,78 @@ class ShapeState(abstract.AbstractState):
                     w = st2.copy_indiv(u)
                     st2.n[(v,u)] = TRUE
                     st2.n[(v,w)] = FALSE
-                    st2.size[u] = shortcuts.Minus(st2.size[u], 1)
-                    st2.size[w] = shortcuts.Minus(st2.size[w], 1)
+                    st2.size[u] = shortcuts.Minus(st2.size[u], shortcuts.Int(1))
+                    st2.size[w] = shortcuts.Minus(st2.size[w], shortcuts.Int(1))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
 
 
-    def join(self, other, loop_top=False, loop_bottom=False):
-
-        if loop_top:
-            in_loop = True
+    def join(self, other, arbitrary_visits):
 
         structures = [st for st in self.structures]
 
+        # LOG.debug('loop top %s', loop_top)
+        # LOG.debug('in loop before %s', other.in_loop)
+        LOG.debug('begin join num of structures self %d num of structures other %d', len(self.structures), len(other.structures))
+
         other.embed()
         for st in other.structures:
+            canonical_map = None
             for next_st in self.structures:
-                canonical_map = st.get_canonical_map(next_st)
+                # If we are at an assume node we have an arbitrary value, so we ignore the sizes of the summary nodes
+                # while comparing, so that we can factor the size with the arbitrary value
+                # Otherwise we compare normally, taking sizes into account
+                ignore_size = arbitrary_visits is not None
+                canonical_map = next_st.get_canonical_map(st, ignore_size)
+                LOG.debug('found canonical map? %s', str(canonical_map is not None))
                 if canonical_map:
-                    if arbitrary_size and in_loop:
-                        # CHANGE NEXT_ST
-                        for v in canonical_map:
-                            # updated_size = st.size[v]
-                            # old_size = next_st.size[v]
-                            next_st.size[v] = shortcuts.Plus(
-                                next_st.size[v], shortcuts.Times(
-                                    shortcuts.Minus(st.size[v], next_st.size[v]), arbitrary_size
-                                    )
-                                )
-                        in_loop = False
-                        arbitrary_size = None
-                else:
-                    structures.append(st) 
+                    # if arbitrary_visits and other.in_loop:
+                    if arbitrary_visits:
 
+                        if any([next_st.sm[v] == MAYBE for v in canonical_map]):
+                            next_st_copy = next_st.copy()
+                            # CHANGE NEXT_ST
+                            # v is in next_st
+                            for v in canonical_map:
+                                # Counterpart in st
+                                u = canonical_map[v]
+                                # LOG.debug('arbitrary size is %s', arbitrary_visits)
+                                # updated_size = st.size[v]
+                                # old_size = next_st.size[v]
+                                if next_st_copy.sm[v] == MAYBE:
+                                    LOG.debug('old v size: %s', str(next_st_copy.size[v]))
+                                    LOG.debug('old v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
+                                    if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
+                                        structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
+                                        next_st_copy.size[v] = shortcuts.Plus(
+                                            next_st_copy.size[v], shortcuts.Times(
+                                                shortcuts.Minus(st.size[u], next_st_copy.size[v]), arbitrary_visits
+                                                )
+                                            )
+                                    LOG.debug('new v size: %s', str(next_st_copy.size[v]))
+                                    LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
+                            structures.remove(next_st)
+                            structures.append(next_st_copy)
+                    break
+
+            if not canonical_map:
+                LOG.debug('did not find canonical map, adding to structures')
+                structures.append(st)
+            elif arbitrary_visits:
+                LOG.debug('found a map, did not add but updated next_st (likely)')
+            else:
+                LOG.debug('found a map, did not add and did not update anything')
+
+        # if arbitrary_visits:
+            # self.in_loop = False
+            # self.arbitrary_size = shortcuts.Int(1)
+
+        # if other.in_loop or loop_top:
+            # self.in_loop = True
+        # LOG.debug('in loop after %s', self.in_loop)
+
+        LOG.debug('end join num of structures %d', len(structures))
         return ShapeState(structures)
 
 
@@ -152,6 +190,7 @@ class ShapeState(abstract.AbstractState):
                         st._v_embed(u, v)
 
     def __str__(self):
+        # meta = f'arb={str(self.arbitrary_size)}, in_loop={self.in_loop}'
         st_str = '\n\n'.join(str(st) for st in self.structures)
         return f'[{st_str}]'
         # if self.structures:
@@ -160,10 +199,11 @@ class ShapeState(abstract.AbstractState):
         #    return f'num of structures: {len(self.structures)}'
 
     @classmethod
-    def initial(cls, sybols):
+    def initial(cls, symbols):
         return cls(
-            structures=[],
-            arbitrary_size=None
+            structures=[]
+            # in_loop=False,
+            # arbitrary_size=shortcuts.Int(1)
         )
 
     def initialize_head(self, symbols):
@@ -220,7 +260,7 @@ def var_new_assignment(state, statement):
         st.cycle[v] = FALSE
         st.shared[v] = FALSE
         st.sm[v] = FALSE
-        st.sm[v] = shortcuts.Int(1)
+        st.size[v] = shortcuts.Int(1)
 
         st.indiv.append(v)
 
@@ -439,12 +479,12 @@ def noop(state, statement):
     pass
 
 @ShapeState.transforms(lang.Assume)
-def assume(state, statement, name):
+def assume(state, statement):
     expr = statement.expr
     if isinstance(expr, lang.Falsehood):
         state.structures = []
     elif isinstance(expr, lang.Truth):
-        state.arbitrary_size = shortcuts.Symbol(name, shortucts.INT)
+        pass
     elif isinstance(expr, lang_shape.EqualsVarVar):
 
         lval = expr.lval
