@@ -15,12 +15,16 @@ LOG = logging.getLogger(__name__)
 
 
 
+# def _size_eq(v_size, u_size):
+
+#     constraints = shortcuts.And(_size_get_constraints(v_size), _size_get_constraints(u_size))
+#     cex = shortcuts.get_model(shortcuts.And(constraints, shortcuts.NotEquals(v_size, u_size)))
+
+#     return cex is None
+
 def _size_eq(v_size, u_size):
-
     constraints = shortcuts.And(_size_get_constraints(v_size), _size_get_constraints(u_size))
-    cex = shortcuts.get_model(shortcuts.And(constraints, shortcuts.NotEquals(v_size, u_size)))
-
-    return cex is None
+    return shortcuts.And(constraints, shortcuts.Equals(v_size, u_size))
 
 def _size_always_larger(v_size, u_size):
 
@@ -195,8 +199,16 @@ class Structure:
         def fix_n_not(st,v1,v2):
             st.n[(v1,v2)] = FALSE
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
+            old_size = st.size[v1]
             st.sm[v1] = FALSE
             st.size[v1] = shortcuts.Int(1)
+            if not st._v_get_copied_in_focus(v1):
+                prev_sm = st._v_get_prev_sm(v1)
+                LOG.debug('FIX get prev_sm for v%d: %s', v1, prev_sm if prev_sm is not None else 'None')
+                LOG.debug(st)
+                st.size[prev_sm] = shortcuts.simplify(shortcuts.Plus(
+                    st.size[prev_sm], shortcuts.Minus(old_size, shortcuts.Int(1))
+                ))
 
         def get_reach_lh(var):
             def reach_lh(st,v):
@@ -260,7 +272,7 @@ class Structure:
                 get_var_not_lh(var), get_var_not_rh(var), get_var_not_fix(var)))
 
             constr.add((f'sm-{var}-not', 2, 
-                get_sm_not_lh(var), lambda st,v1,v2: st._v_eq(v1,v2), fix_sm_not))
+                get_sm_not_lh(var), lambda st,v1,v2: st._v_can_fix_sm(v1,v2), fix_sm_not))
 
         constr.add(('shared', 1, 
             lambda st,v: st._v_shared(v), lambda st,v: st.shared[v], fix_shared))
@@ -281,10 +293,10 @@ class Structure:
             lambda st,v1,v2: st._v_not_n_hs(v1,v2), lambda st,v1,v2: st.n[(v1,v2)]._not(), fix_n_not))
 
         constr.add(('sm-not', 2, 
-            lambda st,v1,v2: st._v_both_n(v1,v2), lambda st,v1,v2: st._v_eq(v1,v2), fix_sm_not))
+            lambda st,v1,v2: st._v_both_n(v1,v2), lambda st,v1,v2: st._v_can_fix_sm(v1,v2), fix_sm_not))
         
         constr.add(('sm-not-shared', 2, 
-            lambda st,v1,v2: st._v_both_n_hs(v1,v2), lambda st,v1,v2: st._v_eq(v1,v2), fix_sm_not))
+            lambda st,v1,v2: st._v_both_n_hs(v1,v2), lambda st,v1,v2: st._v_can_fix_sm(v1,v2), fix_sm_not))
 
         return constr
 
@@ -356,6 +368,10 @@ class Structure:
             self.n.pop((w,v))
         self.size.pop(v)
 
+    def _v_get_copied_in_focus(self, v):
+        copied = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.n[(u,v)] != FALSE), None)
+        return copied is not None
+
     def _v_update_embedded(self, u, v):
         for w in self.indiv:
             if self.n[(w,u)] != self.n[(w,v)]:
@@ -365,12 +381,43 @@ class Structure:
         self.sm[u] = MAYBE
         self.size[u] = shortcuts.simplify(shortcuts.Plus(self.size[u],self.size[v]))
 
+    def _v_can_fix_sm(self, v1, v2):
+        eq = self._v_eq(v1, v2)
+        if eq == MAYBE:
+
+            # Is there a next node which was copied during focus operation?
+            # If not, we hope to find a previous summary node so we can fix node size
+            if not self._v_get_copied_in_focus(v1):
+                prev_sm = self._v_get_prev_sm(v1)
+                LOG.debug('CAN FIX get prev_sm for v%d: %s', v1, prev_sm if prev_sm is not None else 'None')
+                LOG.debug(self)
+
+                # If not, the structure is unrepairable
+                if prev_sm is None:
+                    return FALSE
+
+        return eq
+
+
     # Equality taking summary nodes into account
     def _v_eq(self, v1, v2):
         if (v1 != v2):
             return FALSE
         else:
             return self.sm[v1]._not()
+
+    def _v_get_prev_sm(self, v1):
+        prev_v = next((v for v in self.indiv if self.n[(v,v1)] != FALSE and v1 != v), None)
+        if prev_v is None or self.shared[prev_v] != FALSE:
+            return None
+        # visited = [prev_v]
+        while self.sm[prev_v] == FALSE:
+            prev_v = next((v for v in self.indiv if self.n[(v,prev_v)] != FALSE and prev_v != v), None)
+            # LOG.debug('current v%d', prev_v)
+            if prev_v is None or self.shared[prev_v] != FALSE:
+                return None
+            # visited.append(prev_v)
+        return prev_v
 
     # Is the individual heap shared
     def _v_shared(self, v):
@@ -548,7 +595,7 @@ class Structure:
                         lang_shape.Even(var1, var2).formula(),
                         shortcuts.And(
                             shortcuts.NotEquals(len12, shortcuts.Int(-1)),
-                            shortcuts.Bool(_size_even(len12))
+                            _size_even(len12)
                         )
                     ),
                 )
@@ -557,7 +604,7 @@ class Structure:
                         lang_shape.Odd(var1, var2).formula(),
                         shortcuts.And(
                             shortcuts.NotEquals(len12, shortcuts.Int(-1)),
-                            shortcuts.Not(shortcuts.Bool(_size_even(len12)))
+                            shortcuts.Not(_size_even(len12))
                         )
                     ),
                 )
@@ -570,7 +617,7 @@ class Structure:
                                 shortcuts.And(
                                     shortcuts.NotEquals(len12, shortcuts.Int(-1)),
                                     shortcuts.NotEquals(len34, shortcuts.Int(-1)),
-                                    shortcuts.Bool(_size_eq(len12, len34))
+                                    _size_eq(len12, len34)
                                 )
                             )
                         )

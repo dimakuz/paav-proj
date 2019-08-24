@@ -76,8 +76,8 @@ class ShapeState(abstract.AbstractState):
                     v = st2.copy_indiv(u)
                     st2.var[var][u] = TRUE
                     st2.var[var][v] = FALSE
-                    st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
-                    st2.size[v] = shortcuts.simplify(shortcuts.Minus(st2.size[v], shortcuts.Int(1)))
+                    # st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
+                    # st2.size[v] = shortcuts.simplify(shortcuts.Minus(st2.size[v], shortcuts.Int(1)))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus %d\n', len(self.structures))
@@ -104,8 +104,8 @@ class ShapeState(abstract.AbstractState):
                     w = st2.copy_indiv(u)
                     st2.n[(v,u)] = TRUE
                     st2.n[(v,w)] = FALSE
-                    st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
-                    st2.size[w] = shortcuts.simplify(shortcuts.Minus(st2.size[w], shortcuts.Int(1)))
+                    # st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
+                    # st2.size[w] = shortcuts.simplify(shortcuts.Minus(st2.size[w], shortcuts.Int(1)))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
@@ -117,7 +117,7 @@ class ShapeState(abstract.AbstractState):
 
         # LOG.debug('loop top %s', loop_top)
         # LOG.debug('in loop before %s', other.in_loop)
-        LOG.debug('begin join num of structures self %d num of structures other %d', len(self.structures), len(other.structures))
+        # LOG.debug('begin join num of structures self %d num of structures other %d', len(self.structures), len(other.structures))
 
         other.embed()
 
@@ -189,7 +189,7 @@ class ShapeState(abstract.AbstractState):
             # self.in_loop = True
         # LOG.debug('in loop after %s', self.in_loop)
 
-        LOG.debug('end join num of structures %d', len(structures))
+        # LOG.debug('end join num of structures %d', len(structures))
         return ShapeState(structures)
 
 
