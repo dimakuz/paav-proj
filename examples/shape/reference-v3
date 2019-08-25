@@ -22,6 +22,4 @@ L34 assume(t = NULL) L44
 L34 assume(t != NULL) L35
 L35 zz := p L36
 L36 yy := t L32
-L44 assert (t = NULL p = NULL) L45
-L45 assert (LS y yy LS z zz) L46
-L46 assert (yy != NULL zz != NULL x != NULL y != NULL z != NULL) L47
+L44 assert (LEN y yy = LEN z zz) L45

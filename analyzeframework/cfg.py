@@ -18,8 +18,8 @@ class Edge:
                 return shortcuts.Symbol(str(self.predecessor.name), shortcuts.INT)
                 # return shortcuts.FreshSymbol(shortcuts.INT)
             else:
-                return None
-                # return shortcuts.Int(1)
+                # return None
+                return shortcuts.Int(1)
         else:
             return None
 

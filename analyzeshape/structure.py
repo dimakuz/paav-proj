@@ -204,7 +204,7 @@ class Structure:
             # old_size = st.size[v1]
             st.sm[v1] = FALSE
             st.size[v1] = shortcuts.Int(1)
-            LOG.debug('setting size to 1 to v%d !!', v1)
+            # LOG.debug('setting size to 1 to v%d !!', v1)
             # if not st._v_get_copied_in_focus(v1):
             #     prev_sm = st._v_get_prev_sm(v1)
             #     LOG.debug('FIX get prev_sm for v%d: %s', v1, prev_sm if prev_sm is not None else 'None')
@@ -499,22 +499,21 @@ class Structure:
     def _var_reach(self, var1, var2):
         return self._exists(lambda u : self.var[var2][u]._and(self.reach[var1][u]))
 
-    # Assuming that var2 is reachable from var1
     def _var_get_length(self, var1, var2):
-        v1 = next((u for u in self.indiv if self.var[var1][u] == TRUE), None)
-        v2 = next((u for u in self.indiv if self.var[var2][u] == TRUE), None)
+        v1 = self._var_get_indiv(var1)
+        v2 = self._var_get_indiv(var2)
 
         if v1 is None or v2 is None:
             return shortcuts.Int(-1)
 
         size = shortcuts.Int(0)
 
-        next_v = next((v for v in self.indiv if self.n[(v1,v)] != FALSE), None)
-        while next_v != v2:
-            if next_v is None:
+        v = next((w for w in self.indiv if self.n[(v1,w)] != FALSE and v1 != w), None)
+        while v != v2:
+            if v is None:
                 return shortcuts.Int(-1)
-            size = shortcuts.Plus(size, self.size[next_v])
-            next_v = next((v for v in self.indiv if self.n[(next_v,v)] != FALSE), None)
+            size = shortcuts.Plus(size, self.size[v])
+            v = next((w for w in self.indiv if self.n[(v,w)] != FALSE and v != w), None)
 
         return size
 
@@ -608,12 +607,12 @@ class Structure:
                 u = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
 
 
-                LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
+                # LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
 
                 if u is None:
                     u = self._v_get_prev_sm(v)
 
-                    LOG.debug('is there a prev summary node that fixes? %s', u if u is not None else 'No!')
+                    # LOG.debug('is there a prev summary node that fixes? %s', u if u is not None else 'No!')
                     if u is None:
                         # No previous summary node that can take the size
                         return False
@@ -621,13 +620,13 @@ class Structure:
                         diff = shortcuts.Minus(old_size[v], self.size[v])
                         self.size[u] = shortcuts.simplify(shortcuts.Plus(self.size[u], diff))
 
-                        LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
+                        # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
                 else:
                     self.size[u] = shortcuts.simplify(shortcuts.Minus(self.size[u], shortcuts.Int(1)))
                     # Concretisizing next node too and later join will handle the structure merge 
                     if (str(self.size[u]) == '1'):
                         self.sm[u] = FALSE 
-                    LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
+                    # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
 
         return True
 
@@ -705,9 +704,14 @@ class Structure:
                         )
                     ),
                 )
+                if str(var1) == 'y' and str(var2) == 'yy':
+                    LOG.debug('var1= %s, var2=%s, len=%s', var1, var2, shortcuts.simplify(len12))
                 for var3 in self.var:
                     for var4 in self.var:
                         len34 = self._var_get_length(var3, var4)
+
+                        if str(var3) == 'z' and str(var4) == 'zz':
+                            LOG.debug('var3= %s, var4=%s, len=%s', var3, var4, shortcuts.simplify(len34))
                         clauses.append(
                             shortcuts.Iff(
                                 lang_shape.Len(var1, var2, var3, var4).formula(),

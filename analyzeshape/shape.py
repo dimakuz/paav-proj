@@ -136,11 +136,11 @@ class ShapeState(abstract.AbstractState):
                     # Otherwise we compare normally, taking sizes into account
                     ignore_size = arbitrary_visits is not None
                     canonical_map = next_st.get_canonical_map(st, True)
-                    LOG.debug('found canonical map? %s', str(canonical_map is not None))
+                    # LOG.debug('found canonical map? %s', str(canonical_map is not None))
                     if canonical_map:
                         # if arbitrary_visits and other.in_loop:
 
-                        if any([next_st.sm[v] == MAYBE for v in canonical_map]):
+                        if str(arbitrary_visits) != '1' and any([next_st.sm[v] == MAYBE for v in canonical_map]):
                             replace = False
                             next_st_copy = next_st.copy()
                             # CHANGE NEXT_ST
@@ -184,12 +184,12 @@ class ShapeState(abstract.AbstractState):
                         break
 
                 if not canonical_map:
-                    LOG.debug('did not find canonical map, adding to structures')
+                    # LOG.debug('did not find canonical map, adding to structures')
                     structures.append(st)
-                elif arbitrary_visits:
-                    LOG.debug('found a map, did not add but updated next_st (likely)')
-                else:
-                    LOG.debug('found a map, did not add and did not update anything')
+                # elif arbitrary_visits:
+                #     LOG.debug('found a map, did not add but updated next_st (likely)')
+                # else:
+                #     LOG.debug('found a map, did not add and did not update anything')
 
         # if arbitrary_visits:
             # self.in_loop = False

@@ -21,8 +21,8 @@ class AbstractState:
     def transform(self, statement):
         LOG.debug('Processing statement %s', statement)
         res = self.copy()
-        if str(statement) == 'assume(t = NULL)':
-            LOG.debug('Initial state is:\n %s\n', res)
+        # if str(statement) == 'assume(t = NULL)':
+            # LOG.debug('Initial state is:\n %s\n', res)
         try:
             transformer = self.TRANSFORMERS[type(self)][type(statement)]
         except KeyError:
