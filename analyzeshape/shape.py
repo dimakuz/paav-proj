@@ -140,7 +140,7 @@ class ShapeState(abstract.AbstractState):
                     if canonical_map:
                         # if arbitrary_visits and other.in_loop:
 
-                        if str(arbitrary_visits) != '1' and any([next_st.sm[v] == MAYBE for v in canonical_map]):
+                        if any([next_st.sm[v] == MAYBE for v in canonical_map]):
                             replace = False
                             next_st_copy = next_st.copy()
                             # CHANGE NEXT_ST
@@ -157,7 +157,11 @@ class ShapeState(abstract.AbstractState):
                                     # if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
                                     #     structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
 
-                                    if structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
+                                    if str(arbitrary_visits) == '1':
+                                        next_st_copy.size[v] = copy.deepcopy(st.size[u])
+                                        replace = True
+
+                                    elif structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
 
                                         next_st_copy.size[v] = shortcuts.Plus(
                                             next_st_copy.size[v], shortcuts.Times(
@@ -179,8 +183,9 @@ class ShapeState(abstract.AbstractState):
                                     # LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
 
                             if replace:
-                                structures.remove(next_st)
-                                structures.append(next_st_copy)
+                                if next_st in structures:
+                                    structures.remove(next_st)
+                                    structures.append(next_st_copy)
                         break
 
                 if not canonical_map:
