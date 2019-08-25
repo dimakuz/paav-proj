@@ -102,6 +102,7 @@ class Structure:
     n_plus: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
     size: typing.Mapping[int, fnode.FNode]
+    # length: typing.Mapping[lang.Symbol, typing[int, fnode.FNode]]
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
@@ -111,6 +112,7 @@ class Structure:
         for var in self.var:
             newst.var[var] = copy.deepcopy(self.var[var])
             newst.reach[var] = copy.deepcopy(self.reach[var])
+            # newst.length[var] = copy.deepcopy(self.length[var])
         newst.cycle = copy.deepcopy(self.cycle)
         newst.shared = copy.deepcopy(self.shared)
         newst.sm = copy.deepcopy(self.sm)
@@ -140,14 +142,13 @@ class Structure:
         # two individuals that are canonically equal to each other
         canonical_map = dict()
         for v in self.indiv:
-            # str() - hack to quickly compare size formulas
-            u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and \
-                self.sm[v] == other.sm[w]), None)
+
+            u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w]), None)
 
             if u is not None:
                 if ignore_size:
                     canonical_map[v] = u
-                elif str(self.size[v]) == str(other.size[u]):
+                elif self._v_size_compare(v, other, u):
                     canonical_map[v] = u
                 else:
                     # LOG.debug('self %s, other %s', str(self.size[v]), str(other.size[u]))
@@ -341,10 +342,11 @@ class Structure:
         for key in self.var:
             self.var[key][v] = self.var[key][u]
             self.reach[key][v] = self.reach[key][u]
+            # self.length[key][v] = self.length[key][u].deepcopy()
         self.cycle[v] = self.cycle[u]
         self.shared[v] = self.shared[u]
         self.sm[v] = self.sm[u]
-        self.size[v] = self.size[u]
+        self.size[v] = copy.deepcopy(self.size[u])
         self.n[(v,v)] = self.n[(u,u)]
         for w in self.indiv:
             self.n[(v,w)] = self.n[(u,w)]
@@ -359,6 +361,7 @@ class Structure:
         for key in self.var:
             self.var[key].pop(v)
             self.reach[key].pop(v)
+            # self.length[key].pop(v)
         self.cycle.pop(v)
         self.shared.pop(v)
         self.sm.pop(v)
@@ -368,8 +371,15 @@ class Structure:
             self.n.pop((w,v))
         self.size.pop(v)
 
+    # Hackish but relatively fast way to compare size formula
+    def _v_size_compare(self, u, other, v):
+        return str(self.size[u]) == str(other.size[v])
+
     def _v_get_copied_in_focus(self, v):
-        copied = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.n[(u,v)] != FALSE), None)
+        copied = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
+
+        LOG.debug('found copied for v%d: %s', v, copied if copied is not None else 'None')
+        LOG.debug(self)
         return copied is not None
 
     def _v_update_embedded(self, u, v):
@@ -406,18 +416,18 @@ class Structure:
         else:
             return self.sm[v1]._not()
 
-    def _v_get_prev_sm(self, v1):
-        prev_v = next((v for v in self.indiv if self.n[(v,v1)] != FALSE and v1 != v), None)
-        if prev_v is None or self.shared[prev_v] != FALSE:
+    def _v_get_prev_sm(self, v):
+        u = next((w for w in self.indiv if self.n[(w,v)] != FALSE and v != w), None)
+        if u is None:
             return None
         # visited = [prev_v]
-        while self.sm[prev_v] == FALSE:
-            prev_v = next((v for v in self.indiv if self.n[(v,prev_v)] != FALSE and prev_v != v), None)
+        while self.sm[u] == FALSE:
+            u = next((w for w in self.indiv if self.n[(w,u)] != FALSE and u != w), None)
             # LOG.debug('current v%d', prev_v)
-            if prev_v is None or self.shared[prev_v] != FALSE:
+            if u is None:
                 return None
             # visited.append(prev_v)
-        return prev_v
+        return u
 
     # Is the individual heap shared
     def _v_shared(self, v):
@@ -430,6 +440,22 @@ class Structure:
     # Is the individual reachable from variable
     def _v_reach(self, var, v):
         return self.var[var][v]._or(self._exists(lambda u : self.var[var][u]._and(self.n_plus[(u,v)])))
+
+    # Symbolic length between variable and individual
+    def _v_length(self, var, v):
+
+        u = self._var_get_indiv(var)
+        length = shortcuts.Plus(self.size[u], self.size[v])
+
+        u = next((w for w in self.indiv if self.n[(u,w)] != FALSE and u != w), None)
+        while u != v:
+            if u is None:
+                return shortcuts.Int(-1)
+            length = shortcuts.Plus(length, self.size[u])
+            u = next((w for w in self.indiv if self.n[(u,w)] != FALSE and u != w), None)
+
+        return shortcuts.simplify(length)
+
 
     # Is the individual resides on a cycle
     def _v_cycle(self, v):
@@ -490,14 +516,21 @@ class Structure:
 
         return size
 
+    # def _var_get_length(self, var1, var2):
+    #     u = self._var_get_indiv(var2)
+    #     return shortcuts.Minus(shortcuts.Minus(self.length[var1][u], self.size[var1]), self.size[var2])
+
+    def _var_get_indiv(self, var):
+        return next((u for u in self.indiv if self.var[var][u] != FALSE), None)
+
     # Assuming var1 is not null
-    def _var_get_size(self, var1):
-        v1 = next((u for u in self.indiv if self.var[var1][u] == TRUE), None)
+    # def _var_get_size(self, var1):
+    #     v1 = next((u for u in self.indiv if self.var[var1][u] == TRUE), None)
 
-        if v1 is None or v2 is None:
-            return shortcuts.Int(-1)
+    #     if v1 is None or v2 is None:
+    #         return shortcuts.Int(-1)
 
-        return self.size[v1]
+    #     return self.size[v1]
 
 
     # Transitive closure of n
@@ -558,6 +591,31 @@ class Structure:
                                 # LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                 fix(self,v1,v2)
         return True
+
+
+    # def coerce_length(self):
+
+    #     for var in self.var:
+    #         u = self._var_get_indiv(var)
+
+    #         # Size of node and length from variable to itself don't fit
+    #         if not self._size_eq(self.size[u], self.length[var][u]):
+
+    #             v = next((w for w in self.indiv if self.n[(u,w)] != FALSE and u != w), None)
+
+    #             if v is None:
+    #                 #TODO must fix previous
+
+    #             length_to_next = shortcuts.simplify(shortcuts.Plus(self.size[u], self.size[v]))
+    #             if not self._size_eq(length_to_next, self.length[var][v]):
+    #                 #TODO must fix previous
+
+    #             # Can easy fix
+    #             diff = shortcuts.Minus(self.length[var][u], self.size[u])
+    #             for var2 in self.var:
+    #                 if self.reach[var2][u] != FALSE:
+    #                     self.length[var2][u] = shortcuts.simplify(shortcuts.Minus(self.length[var2][u], diff))
+
 
 
     def formula(self):

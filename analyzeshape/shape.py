@@ -76,8 +76,8 @@ class ShapeState(abstract.AbstractState):
                     v = st2.copy_indiv(u)
                     st2.var[var][u] = TRUE
                     st2.var[var][v] = FALSE
-                    # st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
-                    # st2.size[v] = shortcuts.simplify(shortcuts.Minus(st2.size[v], shortcuts.Int(1)))
+                    st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
+                    st2.size[v] = shortcuts.simplify(shortcuts.Minus(st2.size[v], shortcuts.Int(1)))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus %d\n', len(self.structures))
@@ -104,8 +104,8 @@ class ShapeState(abstract.AbstractState):
                     w = st2.copy_indiv(u)
                     st2.n[(v,u)] = TRUE
                     st2.n[(v,w)] = FALSE
-                    # st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
-                    # st2.size[w] = shortcuts.simplify(shortcuts.Minus(st2.size[w], shortcuts.Int(1)))
+                    st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
+                    st2.size[w] = shortcuts.simplify(shortcuts.Minus(st2.size[w], shortcuts.Int(1)))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
@@ -163,6 +163,14 @@ class ShapeState(abstract.AbstractState):
                                                 )
                                             )
                                         next_st_copy.size[v] = shortcuts.simplify(next_st_copy.size[v])
+
+                                        # # Update length
+                                        # for key in next_st_copy.var:
+                                        #     if next_st_copy.reach[key][v]:
+                                        #         for u in next_st_copy.indiv:
+                                        #             if next_st_copy.reach[key][u]:
+                                        #                 next_st_copy.length[key][u] = next_st_copy._v_length(key, u)
+                            
                                         replace = True
 
                                     LOG.debug('new v size: %s', str(next_st_copy.size[v]))
@@ -249,6 +257,8 @@ def var_var_assignment(state, statement):
             st.var[lval][v] = st.var[rval][v]
             st.reach[lval][v] = st.reach[rval][v]
 
+            # st.length[lval][v] = st.length[lval][v]
+
 
 @ShapeState.transforms(lang_shape.VarNewAssignment)
 def var_new_assignment(state, statement):
@@ -263,6 +273,8 @@ def var_new_assignment(state, statement):
             st.n[(u,v)] = FALSE
             st.n[(v,u)] = FALSE
 
+            # st.length[lval][u] = shortcuts.Int(-1)
+
         for key in st.var:
             st.var[key][v] = FALSE
             st.reach[key][v] = FALSE
@@ -270,6 +282,8 @@ def var_new_assignment(state, statement):
         st.var[lval][v] = TRUE
         st.reach[lval][v] = TRUE
         st.n[(v,v)] = FALSE
+
+        # st.length[lval][v] = shortcuts.Int(1)
 
         st.cycle[v] = FALSE
         st.shared[v] = FALSE
@@ -298,9 +312,20 @@ def var_next_assignment(state, statement):
             valid_st.remove(st)
             continue
 
+        u = st._var_get_indiv(rval)
         for v in st.indiv:
             st.var[lval][v] = exists(lambda u : st.var[rval][u]._and(st.n[(u, v)]))
             st.reach[lval][v] = st.reach[rval][v]._and(st.cycle[v]._or(st.var[rval][v]._not()))
+
+        #     if st.reach[rval][v] == FALSE:
+        #         st.length[lval][v] = shortcuts.Int(-1)
+        #     else:
+        #         st.length[lval][v] = shortcuts.simplify(shortcuts.Minus(st.length[rval][v], st.size[u]))
+
+        # if st.cycle[u] == FALSE:
+        #     st.length[lval][v] = shortcuts.Int(-1)
+
+
 
     state.structures = valid_st
 
@@ -314,6 +339,8 @@ def var_null_assignment(state, statement):
         for u in st.indiv:
             st.var[lval][u] = FALSE
             st.reach[lval][u] = FALSE
+
+            # st.length[lval][u] = shortcuts.Int(-1)
 
 
 @ShapeState.transforms(lang_shape.NextVarAssignment)
@@ -344,6 +371,7 @@ def next_var_assignment(state, statement):
             valid_st.remove(st)
             continue
 
+        u = st._var_get_indiv(lval)
         for v in st.indiv:
 
             for w in st.indiv:
@@ -368,6 +396,9 @@ def next_var_assignment(state, statement):
                     reach[key][v]._or(
                         exists(lambda u : reach[key][u]._and(var[lval][u]))._and(reach[rval][v])
                     )
+
+                # if st.reach[key][u] and st.reach[rval][v]:
+                #     st.length[key][v] = shortcuts.simplify(shortcuts.Plus(st.length[key][u], st.length[rval][v]))
 
             st.cycle[v] = \
                 cycle[v]._or(
@@ -459,6 +490,10 @@ def next_null_assignment(state, statement):
                             )
                         )
                     )
+
+                # if st.reach[key][v] == FALSE:
+                #     st.length[key][v] = shortcuts.Int(-1)
+
 
             st.cycle[v] = \
                 cycle[v]._and(
