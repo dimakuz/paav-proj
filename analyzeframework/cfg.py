@@ -15,11 +15,11 @@ class Edge:
     def arbitrary_visits(self):
         if isinstance(self.statement, lang.Assume):
             if isinstance(self.statement.expr, lang.Truth):
-                return shortcuts.Symbol(str(self.predecessor.name), shortcuts.INT)
-                # return shortcuts.FreshSymbol(shortcuts.INT)
+                # return shortcuts.Symbol(f'ARB_{self.predecessor.name}', shortcuts.INT)
+                return shortcuts.Symbol(self.predecessor.name, shortcuts.INT)
             else:
-                # return None
                 return shortcuts.Int(1)
+                # return shortcuts.Symbol(f'CONST_{self.predecessor.name}', shortcuts.INT)
         else:
             return None
 

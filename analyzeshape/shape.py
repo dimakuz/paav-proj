@@ -27,21 +27,6 @@ FALSE = structure.ThreeValuedBool.FALSE
 MAYBE = structure.ThreeValuedBool.MAYBE
 
 
-def _get_val_parity(val):
-    if val % 2 == 1:
-        return ODD
-    else:
-        return EVEN
-
-
-def _parity_name(val):
-    return {
-        ODD: 'O',
-        EVEN: 'E',
-        TOP: '⊤',
-        BOTTOM: '⊥',
-    }[val]
-
 
 def transforms(stmt_type):
     def decorator(func):
@@ -130,7 +115,7 @@ class ShapeState(abstract.AbstractState):
         else:
             for st in other.structures:
                 canonical_map = None
-                for next_st in self.structures:
+                for next_st in structures:
                     # If we are at an assume node we have an arbitrary value, so we ignore the sizes of the summary nodes
                     # while comparing, so that we can factor the size with the arbitrary value
                     # Otherwise we compare normally, taking sizes into account
@@ -161,7 +146,10 @@ class ShapeState(abstract.AbstractState):
                                         next_st_copy.size[v] = copy.deepcopy(st.size[u])
                                         replace = True
 
-                                    elif structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
+                                    # elif structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
+                                        # structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
+                                    elif structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()) and \
+                                        str(st.size[u]) != str(next_st_copy.size[v]):
 
                                         next_st_copy.size[v] = shortcuts.Plus(
                                             next_st_copy.size[v], shortcuts.Times(
@@ -183,9 +171,9 @@ class ShapeState(abstract.AbstractState):
                                     # LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
 
                             if replace:
-                                if next_st in structures:
-                                    structures.remove(next_st)
-                                    structures.append(next_st_copy)
+                                # if next_st in structures:
+                                structures.remove(next_st)
+                                structures.append(next_st_copy)
                         break
 
                 if not canonical_map:
@@ -205,7 +193,11 @@ class ShapeState(abstract.AbstractState):
         # LOG.debug('in loop after %s', self.in_loop)
 
         # LOG.debug('end join num of structures %d', len(structures))
-        return ShapeState(structures)
+        state = ShapeState(structures)
+        if ignore_size:
+            LOG.debug('state in the end %s', state)
+        return state
+        # return ShapeState(structures)
 
 
     # Embed operation from paper where we look for summarizable nodes

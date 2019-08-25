@@ -36,6 +36,11 @@ def _size_always_larger(v_size, u_size):
 def _size_get_constraints(v_size):
     v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
     return shortcuts.And(*(shortcuts.GE(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in v_arbitrary_sizes))
+    # arb = shortcuts.And(*(shortcuts.GE(arbitrary_size, shortcuts.Int(0)) \
+    #     for arbitrary_size in v_arbitrary_sizes if "ARB" in arbitrary_size.symbol_name()))
+    # const = shortcuts.And(*(shortcuts.Equals(arbitrary_size, shortcuts.Int(1)) \
+    #     for arbitrary_size in v_arbitrary_sizes if "CONST" in arbitrary_size.symbol_name()))
+    # return shortcuts.And(arb, const)
 
 
 def _size_new_name(v_size, name):
@@ -323,7 +328,7 @@ class Structure:
         sm = ', '.join(f'v{v} = {str(self.sm[v])}' for v in self.indiv)
         lines.append(f'sm: [{sm}]')
 
-        size = ', '.join(f'v{v} = {str(self.size[v])}' for v in self.indiv)
+        size = ', '.join(f'v{v} = {shortcuts.serialize(self.size[v])}' for v in self.indiv)
         lines.append(f'size: [{size}]')
 
         n = ', '.join(f'v{v0},v{v1} = {str(self.n[(v0,v1)])}' for v0 in self.indiv for v1 in self.indiv)
