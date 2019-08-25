@@ -1,21 +1,179 @@
 \section*{Parity analysis}
+\subsection*{Overview}
+In our analysis we implemented an abstract state that tracks parity properties of the variables. Our analysis tries to enable deduction in the following cases:
+\begin{itemize}
+	\item When a constant was assigned to a specific variable (so we know the exact parity)
+	\item When a variable was assigned to another variable (so we know they are of same parity)
+	\item When a variable plus/minus one was assigned to another variable (so we know they are of opposite parity)
+\end{itemize}
+The above gives us links between variables and themselves, and between variables and their values. To construct the big picture a model is constructed that imposes the above information as constraints.
+\subsubsection*{Example}
+Consider 3 variables $x,y,z$. Give following information: $x$ is even, $x,y$ are of same parity, $y,z$ are of opposite parity, we can construct the following model:
+\begin{equation*}
+	[x_{even} \wedge (x_{even} \rightarrow y_{even}) \wedge (y_{even} \rightarrow \neg z_{even})]
+\end{equation*}
+The above model can be used, in conjunction with \texttt{assert} conditions to check if there is an assignment satisfying the model yet violating the asserted condition.
+
 \subsection*{Abstract Domain}
-In this analysis we define abstract domain as the collection of all available states. Our state is defined as a 3-tuple $(Modulo,SamePar,AntiPar)$.
+Our abstract state is defined as a 3-tuple of the from $(M,S,A)$. Where:
 
 \begin{itemize}
-	\item $Modulo: Symbols \rightarrow \{\bot, ODD, EVEN, \top\}$ - a mapping that tracks parity of symbols in the program. Each of the symbols is mapped to one of the values:
+	\item $M: Symbols \rightarrow 2^{\{O, E\}}$ - a mapping that tracks parity of symbols in the program. Each of the symbols is mapped to one of the values:
 	\begin{itemize}
-		\item $\bot$ - if no info about symbol parity is known.
-		\item $ODD$ - if symbol is known to be odd-valued.
-		\item $EVEN$ - if symbol is known to be even-value.
-		\item $\top$ - if symbol can be either odd or even.
+		\item $\emptyset=\bot$ - if no info about symbol parity is known.
+		\item $\{O\}$ - if symbol is known to be odd-valued.
+		\item $\{E\}$ - if symbol is known to be even-value.
+		\item $\{O,E\}=\top$ - if symbol can be either odd or even.
 	\end{itemize}
-	\item $SamePar: Symbols \rightarrow 2^{Symbols}$ - a mapping of symbols to symbol set of similar parity.
+	\item $S: Symbols \rightarrow 2^{Symbols}$ - a mapping of symbols to symbol set of potentially similar parity.
 	
-	For example, given $x, y$, if we know that $x$ is now equal to $y$, $y$ will be added to $SamePar[x]$.
+	For example, given $x, y$, if we know that $x$ is now equal to $y$, after the assignment we'll change the state so that we'll have $y \in S[x]$.
 	
-	\item $AntiPar: Symbols \rightarrow 2^{Symbols}$ - a mapping of symbols to symbol set of opposing parity (i.e. for two given symbols, one is odd and other is even).
+	Furthermore, when  deducing parity of $x$, given that $S[x] = {y,z}$, we can deduce that $x$ is even iff both $y$ and $z$ are even.
+	I.e. $[(y_{even} \wedge z_{even})\rightarrow x_{even}]\vee[(y_{odd} \wedge z_{odd})\rightarrow x_{odd}]$
 	
-	For example, given $x, y$, if we know that $x$ is now equal to $y + 1$, $y$ will be added to $AnitPar[x]$.
+	\item $A: Symbols \rightarrow 2^{Symbols}$ - a mapping of symbols to symbol set of potentially opposing parity (i.e. for two given symbols, one is odd and other is even). Similar deduction logic can be applied here.
+
 \end{itemize}
 Our abstract domain is then all possible assignments to the 3-tuple.
+	
+The join operation is defined as following: given $\alpha_1=(M_1,S_1,A_1)$ and $\alpha_2=(M_2,S_2,A_2)$ abstract states:
+\begin{align*}
+&\alpha_1\sqcup\alpha_2=(M_1\sqcup M_2, S_1 \sqcup S_2, A_1 \sqcup A_2) \\
+\forall s \in Symbols&:  \\
+&(M_1\sqcup M_2)[s] =M_1[s] \cup M_2[s] \\
+&(S_1\sqcup S_2)[s] =S_1[s] \cup S_2[s] \\
+&(A_1\sqcup A_2)[s] =A_1[s] \cup A_2[s]
+\end{align*}
+
+\subsection*{Abstract Transformers}
+We'll now define the transformers we used. All nodes are initialized with the $\alpha_\bot$ state, defined as:
+\begin{align*}
+	&\alpha_\bot=(M_\bot, S_\bot, A_\bot) \\
+	\forall s \in Symbols&:
+	M_\bot[s] =\emptyset  \quad
+	S_\bot[s] =\emptyset \quad
+	A_\bot[s] =\emptyset
+\end{align*}
+For any statement we'll denote the tagged mappings as mappings after the transformation:
+\begin{equation*}
+	\atrans{stmt}((M, S, A)) = (M^\prime,S^\prime,A^\prime)
+\end{equation*}
+For \texttt{skip} statement:
+\begin{equation*}
+	M^\prime = M, \quad S^\prime = S, \quad A^\prime = A
+\end{equation*}
+For \texttt{i := ?} statement:
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		M[x], & x\ne i \\
+		\top, & x = i
+	\end{cases}
+\right\}\\
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x] \setminus \{i\}, & x\ne i \\
+		\emptyset, & x = i
+	\end{cases}
+\right\}\\
+A^\prime[x] = & \left.
+\begin{cases}
+	A[x] \setminus \{i\}, & x\ne i \\
+	\emptyset, & x = i
+\end{cases}
+\right\}
+\end{align*}
+For \texttt{i := K} statement:
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		M[x], & x\ne i \\
+		\{E\}, & x = i \wedge K \text{ is even} \\
+		\{O\}, & x = i \wedge K \text{ is odd}
+	\end{cases}
+\right\}\\
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x] \setminus \{i\}, & x\ne i \\
+		\emptyset, & x = i
+	\end{cases}
+\right\}\\
+A^\prime[x] = & \left.
+\begin{cases}
+	A[x] \setminus \{i\}, & x\ne i \\
+	\emptyset, & x = i
+\end{cases}
+\right\}
+\end{align*}
+For \texttt{i := j} statement:
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		M[x], & x\ne i \\
+		M[j], & x = i
+	\end{cases}
+\right\}\\
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x] \setminus \{i\}, & x\ne i \\
+		\{j\}, & x = i
+	\end{cases}
+\right\}\\
+A^\prime[x] = & \left.
+\begin{cases}
+	A[x] \setminus \{i\}, & x\ne i \\
+	\emptyset, & x = i
+\end{cases}
+\right\}
+\end{align*}
+For \texttt{i := j + 1} and \texttt{i := j - 1} statements:
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		M[x], & x\ne i \\
+		\top, & x = i \wedge M[j] = \top \\
+		\bot, & x = i \wedge M[j] = \bot \\
+		\{O, E\} \setminus M[j], & \text{otherwise}
+	\end{cases}
+\right\}\\
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x] \setminus \{i\}, & x\ne i \\
+		\emptyset, & x = i \wedge i \ne j \\
+		A[x], & x = i \wedge i = j
+	\end{cases}
+\right\}\\
+A^\prime[x] = & \left.
+\begin{cases}
+	A[x] \setminus \{i\}, & x\ne i \\
+	\{j\}, & x = i \wedge i \ne j \\
+	S[x], & x = i \wedge i = j
+\end{cases}
+\right\}
+\end{align*}
+For \texttt{assume TRUE} statements:
+
+FIXME
+
+For \texttt{assume FALSE} statements:
+
+FIXME
+
+For \texttt{assume i = j} statements:
+
+FIXME
+
+For \texttt{assume i != j} statements:
+
+FIXME
+
+For \texttt{assume i = K} statements:
+
+FIXME
+
+For \texttt{assume i != K} statements:
+
+FIXME
+
+Finally, for \texttt{assert pred} statements, transformer is similar to \texttt{skip}, state is not transformed.

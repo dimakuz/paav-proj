@@ -58,6 +58,7 @@ def dump_shape(cfgnode):
     for i, st in enumerate(state.structures):
         with dot.subgraph(name=f'cluster_{i}') as c:
             c.attr(color='black')
+            c.attr(label=f'Structure {i}')
             for sym, mapping in st.var.items():
                 c.node(
                     _stnode_name(i, sym.name),
