@@ -601,10 +601,10 @@ class Structure:
     def coerce_size(self, old_size):
 
         for v in self.indiv:
-            LOG.debug('comparing sizes %s and %s for v%d', self.size[v], old_size[v], v)
-            if not str(self.size[v]) == str(old_size[v]):
+            # LOG.debug('comparing sizes %s and %s for v%d', self.size[v], old_size[v], v)
+            if self.sm[v] == FALSE and str(old_size[v]) != '1':
 
-                LOG.debug('node v%d is not equal: new size is %s, old size is %s', v, self.size[v], old_size[v])
+                # LOG.debug('node v%d is not equal: new size is %s, old size is %s', v, self.size[v], old_size[v])
                 u = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
 
 
