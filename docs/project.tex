@@ -10,6 +10,9 @@
 \usepackage{hyperref}
 \usepackage{mathabx}
 \usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
 \hypersetup{%
 	colorlinks=false,
 	linkbordercolor=white
@@ -24,6 +27,24 @@
 
 \newcommand{\trans}[1]{[\![\texttt{#1}]\!]}
 \newcommand{\atrans}[1]{\trans{#1}^\sharp}
+\lstset{basicstyle=\small}
+\newcommand{\example}[2]{
+\input{#1/examples/example#2.tex}
+\begin{figure}[h]
+\centering
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[scale=0.3]{#1/examples/example#2-cfg}
+  \caption{Control flow graph}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \lstset{basicstyle=\small}
+  \lstinputlisting{#1/examples/example#2.code}
+  \caption{Code}
+\end{subfigure}
+\end{figure}
+}
 
 \pagestyle{fancyplain}
 \headheight 35pt  

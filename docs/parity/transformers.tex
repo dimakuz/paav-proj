@@ -1,0 +1,131 @@
+\section*{Abstract Transformers}
+We'll now define the transformers we used. All nodes are initialized with the $\alpha_\bot$ state, defined as:
+\begin{align*}
+	&\alpha_\bot=(M_\bot, S_\bot, A_\bot) \\
+	\forall s \in Symbols&:
+	M_\bot[s] =\emptyset  \quad
+	S_\bot[s] =\emptyset \quad
+	A_\bot[s] =\emptyset
+\end{align*}
+For any statement we'll denote the tagged mappings as mappings after the transformation:
+\begin{equation*}
+	\atrans{stmt}((M, S, A)) = (M^\prime,S^\prime,A^\prime)
+\end{equation*}
+For \texttt{skip} statement:
+\begin{equation*}
+	M^\prime = M, \quad S^\prime = S, \quad A^\prime = A
+\end{equation*}
+For \texttt{i := ?} statement:
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		M[x], & x\ne i \\
+		\top, & x = i
+	\end{cases}
+\right\}\\
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x] \setminus \{i\}, & x\ne i \\
+		\emptyset, & x = i
+	\end{cases}
+\right\}\\
+A^\prime[x] = & \left.
+\begin{cases}
+	A[x] \setminus \{i\}, & x\ne i \\
+	\emptyset, & x = i
+\end{cases}
+\right\}
+\end{align*}
+For \texttt{i := K} statement:
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		M[x], & x\ne i \\
+		\{E\}, & x = i \wedge K \text{ is even} \\
+		\{O\}, & x = i \wedge K \text{ is odd}
+	\end{cases}
+\right\}\\
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x] \setminus \{i\}, & x\ne i \\
+		\emptyset, & x = i
+	\end{cases}
+\right\}\\
+A^\prime[x] = & \left.
+\begin{cases}
+	A[x] \setminus \{i\}, & x\ne i \\
+	\emptyset, & x = i
+\end{cases}
+\right\}
+\end{align*}
+For \texttt{i := j} statement:
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		M[x], & x\ne i \\
+		M[j], & x = i
+	\end{cases}
+\right\}\\
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x] \setminus \{i\}, & x\ne i \\
+		\{j\}, & x = i
+	\end{cases}
+\right\}\\
+A^\prime[x] = & \left.
+\begin{cases}
+	A[x] \setminus \{i\}, & x\ne i \\
+	\emptyset, & x = i
+\end{cases}
+\right\}
+\end{align*}
+For \texttt{i := j + 1} and \texttt{i := j - 1} statements:
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		M[x], & x\ne i \\
+		\top, & x = i \wedge M[j] = \top \\
+		\bot, & x = i \wedge M[j] = \bot \\
+		\{O, E\} \setminus M[j], & \text{otherwise}
+	\end{cases}
+\right\}\\
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x] \setminus \{i\}, & x\ne i \\
+		\emptyset, & x = i \wedge i \ne j \\
+		A[x], & x = i \wedge i = j
+	\end{cases}
+\right\}\\
+A^\prime[x] = & \left.
+\begin{cases}
+	A[x] \setminus \{i\}, & x\ne i \\
+	\{j\}, & x = i \wedge i \ne j \\
+	S[x], & x = i \wedge i = j
+\end{cases}
+\right\}
+\end{align*}
+For \texttt{assume TRUE} statements:
+
+FIXME
+
+For \texttt{assume FALSE} statements:
+
+FIXME
+
+For \texttt{assume i = j} statements:
+
+FIXME
+
+For \texttt{assume i != j} statements:
+
+FIXME
+
+For \texttt{assume i = K} statements:
+
+FIXME
+
+For \texttt{assume i != K} statements:
+
+FIXME
+
+Finally, for \texttt{assert pred} statements, transformer is similar to \texttt{skip}, state is not transformed.
