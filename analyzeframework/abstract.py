@@ -21,7 +21,7 @@ class AbstractState:
     def transform(self, statement):
         LOG.debug('Processing statement %s', statement)
         res = self.copy()
-        # if str(statement) == 'h := tmp' or str(statement) == 'assume(TRUE)':
+        # if str(statement) == 'assume(TRUE)':
             # LOG.debug('Initial state is:\n %s\n', res)
         try:
             transformer = self.TRANSFORMERS[type(self)][type(statement)]
@@ -30,10 +30,10 @@ class AbstractState:
             return res
 
         transformer(res, statement)
-        # if str(statement) == 'h := tmp' or str(statement) == 'assume(TRUE)':
+        # if str(statement) == 'assume(TRUE)':
             # LOG.debug('Transformed state is:\n %s\n', res)
         res.post_transform()
-        # if str(statement) == 'h := tmp' or str(statement) == 'assume(TRUE)':
+        # if str(statement) == 'assume(TRUE)':
             # LOG.debug('Post Transformed state is:\n %s\n', res)
         return res
 

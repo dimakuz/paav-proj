@@ -76,8 +76,8 @@ class ShapeState(abstract.AbstractState):
                     v = st2.copy_indiv(u)
                     st2.var[var][u] = TRUE
                     st2.var[var][v] = FALSE
-                    st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
-                    st2.size[v] = shortcuts.simplify(shortcuts.Minus(st2.size[v], shortcuts.Int(1)))
+                    # st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
+                    # st2.size[v] = shortcuts.simplify(shortcuts.Minus(st2.size[v], shortcuts.Int(1)))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus %d\n', len(self.structures))
@@ -104,8 +104,8 @@ class ShapeState(abstract.AbstractState):
                     w = st2.copy_indiv(u)
                     st2.n[(v,u)] = TRUE
                     st2.n[(v,w)] = FALSE
-                    st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
-                    st2.size[w] = shortcuts.simplify(shortcuts.Minus(st2.size[w], shortcuts.Int(1)))
+                    # st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
+                    # st2.size[w] = shortcuts.simplify(shortcuts.Minus(st2.size[w], shortcuts.Int(1)))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
@@ -154,8 +154,10 @@ class ShapeState(abstract.AbstractState):
                                 if next_st_copy.sm[v] == MAYBE:
                                     LOG.debug('old v size: %s', str(next_st_copy.size[v]))
                                     # LOG.debug('old v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
-                                    if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
-                                        structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
+                                    # if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
+                                    #     structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
+
+                                    if structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
 
                                         next_st_copy.size[v] = shortcuts.Plus(
                                             next_st_copy.size[v], shortcuts.Times(

@@ -102,6 +102,7 @@ class Structure:
     n_plus: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
     size: typing.Mapping[int, fnode.FNode]
+    # old_size: typing.Mapping[int, fnode.FNode]
     # length: typing.Mapping[lang.Symbol, typing[int, fnode.FNode]]
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
@@ -148,7 +149,7 @@ class Structure:
             if u is not None:
                 if ignore_size:
                     canonical_map[v] = u
-                elif self._v_size_compare(v, other, u):
+                elif self._v_size_eq(v, other, u):
                     canonical_map[v] = u
                 else:
                     # LOG.debug('self %s, other %s', str(self.size[v]), str(other.size[u]))
@@ -200,16 +201,17 @@ class Structure:
         def fix_n_not(st,v1,v2):
             st.n[(v1,v2)] = FALSE
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
-            old_size = st.size[v1]
+            # old_size = st.size[v1]
             st.sm[v1] = FALSE
             st.size[v1] = shortcuts.Int(1)
-            if not st._v_get_copied_in_focus(v1):
-                prev_sm = st._v_get_prev_sm(v1)
-                LOG.debug('FIX get prev_sm for v%d: %s', v1, prev_sm if prev_sm is not None else 'None')
-                LOG.debug(st)
-                st.size[prev_sm] = shortcuts.simplify(shortcuts.Plus(
-                    st.size[prev_sm], shortcuts.Minus(old_size, shortcuts.Int(1))
-                ))
+            LOG.debug('setting size to 1 to v%d !!', v1)
+            # if not st._v_get_copied_in_focus(v1):
+            #     prev_sm = st._v_get_prev_sm(v1)
+            #     LOG.debug('FIX get prev_sm for v%d: %s', v1, prev_sm if prev_sm is not None else 'None')
+            #     LOG.debug(st)
+            #     st.size[prev_sm] = shortcuts.simplify(shortcuts.Plus(
+            #         st.size[prev_sm], shortcuts.Minus(old_size, shortcuts.Int(1))
+            #     ))
 
         def get_reach_lh(var):
             def reach_lh(st,v):
@@ -372,15 +374,15 @@ class Structure:
         self.size.pop(v)
 
     # Hackish but relatively fast way to compare size formula
-    def _v_size_compare(self, u, other, v):
+    def _v_size_eq(self, u, other, v):
         return str(self.size[u]) == str(other.size[v])
 
-    def _v_get_copied_in_focus(self, v):
-        copied = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
+    # def _v_get_copied_in_focus(self, v):
+    #     copied = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
 
-        LOG.debug('found copied for v%d: %s', v, copied if copied is not None else 'None')
-        LOG.debug(self)
-        return copied is not None
+    #     LOG.debug('found copied for v%d: %s', v, copied if copied is not None else 'None')
+    #     # LOG.debug(self)
+    #     return copied is not None
 
     def _v_update_embedded(self, u, v):
         for w in self.indiv:
@@ -393,18 +395,18 @@ class Structure:
 
     def _v_can_fix_sm(self, v1, v2):
         eq = self._v_eq(v1, v2)
-        if eq == MAYBE:
+        # if eq == MAYBE:
 
-            # Is there a next node which was copied during focus operation?
-            # If not, we hope to find a previous summary node so we can fix node size
-            if not self._v_get_copied_in_focus(v1):
-                prev_sm = self._v_get_prev_sm(v1)
-                LOG.debug('CAN FIX get prev_sm for v%d: %s', v1, prev_sm if prev_sm is not None else 'None')
-                LOG.debug(self)
+        #     # Is there a next node which was copied during focus operation?
+        #     # If not, we hope to find a previous summary node so we can fix node size
+        #     if not self._v_get_copied_in_focus(v1):
+        #         prev_sm = self._v_get_prev_sm(v1)
+        #         LOG.debug('CAN FIX get prev_sm for v%d: %s', v1, prev_sm if prev_sm is not None else 'None')
+        #         LOG.debug(self)
 
-                # If not, the structure is unrepairable
-                if prev_sm is None:
-                    return FALSE
+        #         # If not, the structure is unrepairable
+        #         if prev_sm is None:
+        #             return FALSE
 
         return eq
 
@@ -566,6 +568,7 @@ class Structure:
     def coerce(self):
 
         self.update_n_plus()
+        old_size = copy.deepcopy(self.size)
 
         for constraint in self.constr:
             (name, par_num, lh, rh, fix) = constraint
@@ -590,6 +593,42 @@ class Structure:
                             elif res == MAYBE:
                                 # LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                 fix(self,v1,v2)
+
+
+        return self.coerce_size(old_size)
+
+
+    def coerce_size(self, old_size):
+
+        for v in self.indiv:
+            LOG.debug('comparing sizes %s and %s for v%d', self.size[v], old_size[v], v)
+            if not str(self.size[v]) == str(old_size[v]):
+
+                LOG.debug('node v%d is not equal: new size is %s, old size is %s', v, self.size[v], old_size[v])
+                u = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
+
+
+                LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
+
+                if u is None:
+                    u = self._v_get_prev_sm(v)
+
+                    LOG.debug('is there a prev summary node that fixes? %s', u if u is not None else 'No!')
+                    if u is None:
+                        # No previous summary node that can take the size
+                        return False
+                    else:
+                        diff = shortcuts.Minus(old_size[v], self.size[v])
+                        self.size[u] = shortcuts.simplify(shortcuts.Plus(self.size[u], diff))
+
+                        LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
+                else:
+                    self.size[u] = shortcuts.simplify(shortcuts.Minus(self.size[u], shortcuts.Int(1)))
+                    # Concretisizing next node too and later join will handle the structure merge 
+                    if (str(self.size[u]) == '1'):
+                        self.sm[u] = FALSE 
+                    LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
+
         return True
 
 
