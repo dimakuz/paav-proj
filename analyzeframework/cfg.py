@@ -15,11 +15,12 @@ class Edge:
     def arbitrary_term(self):
         if isinstance(self.statement, lang.Assume):
             if isinstance(self.statement.expr, lang.Truth):
-                return f'ARB_{self.predecessor.name}'
+                return f'{self.predecessor.name}'
                 # return shortcuts.Symbol(self.predecessor.name, shortcuts.INT)
             else:
                 # return shortcuts.Int(1)
-                return f'CONST_{self.predecessor.name}'
+                return f'CONST{self.predecessor.name}'
+                # return '1'
         else:
             return None
 

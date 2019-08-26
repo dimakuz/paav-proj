@@ -92,21 +92,29 @@ class AbstractSize():
     def even(self):
         return all(factor % 2 == 0 for variable, factor in self.terms.items())
 
+    def variables_eq(self, other):
+        return set(self.terms.keys()) == set(other.terms.keys())
+
     def __eq__(self, other):
         return self.terms == other.terms
 
     def __str__(self):
 
         def pretty_print(factor, variable):
-            if variable == '1':
-                return str(factor)
+            prefix = ''
+            if factor < 0:
+                prefix = '- '
             else:
-                if factor == 1:
-                    return variable
+                prefix = '+ '
+            if variable == '1':
+                return prefix + str(factor)
+            else:
+                if abs(factor) == 1:
+                    return prefix + variable
                 else:
-                    return f'{factor}*{variable}'
+                    return f'{prefix}{abs(factor)}*{variable}'
 
-        return ' + '.join(pretty_print(factor, variable) for variable, factor in self.terms.items())
+        return ' '.join(pretty_print(factor, variable) for variable, factor in self.terms.items())
 
     def __init__(self, new_terms):
         self.terms = new_terms
@@ -174,7 +182,7 @@ class Structure:
 
     size: typing.Mapping[int, AbstractSize]
 
-    loop: typing.List[str]
+    # arbitrary_terms: typing.List[str]
 
     # old_size: typing.Mapping[int, fnode.FNode]
     # length: typing.Mapping[lang.Symbol, typing[int, fnode.FNode]]
@@ -194,7 +202,7 @@ class Structure:
         newst.n = copy.deepcopy(self.n)
 
         newst.size = copy.deepcopy(self.size)
-        newst.loop = copy.deepcopy(self.loop)
+        # newst.arbitrary_terms = copy.deepcopy(self.arbitrary_terms)
         return newst
 
 
@@ -208,7 +216,7 @@ class Structure:
             return False
 
 
-    def get_canonical_map(self, other, ignore_size):
+    def get_canonical_map(self, other, ignore_arbitrary_sizes):
 
         # Different size - different structure
         if len(self.indiv) != len(other.indiv):
@@ -219,10 +227,11 @@ class Structure:
         canonical_map = {}
         for v in self.indiv:
 
-            u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w]), None)
+            u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w] and \
+                self.size[v].variables_eq(other.size[w])), None)
 
             if u is not None:
-                if ignore_size:
+                if ignore_arbitrary_sizes:
                     canonical_map[v] = u
                 elif self.size[v] == other.size[u]:
                     canonical_map[v] = u
@@ -636,7 +645,7 @@ class Structure:
             n=dict(),
             n_plus=dict(),
             size=dict(),
-            loop=[],
+            # arbitrary_terms=[],
             constr=cls.init_constr(symbols)
         )
 
@@ -679,16 +688,16 @@ class Structure:
             # LOG.debug('comparing sizes %s and %s for v%d', self.size[v], old_size[v], v)
             if self.sm[v] == FALSE and old_size[v] != SIZE_ONE:
 
-                LOG.debug('node v%d is not equal: new size is %s, old size is %s', v, self.size[v], old_size[v])
+                # LOG.debug('node v%d is not equal: new size is %s, old size is %s', v, self.size[v], old_size[v])
                 u = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
 
 
-                LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
+                # LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
 
                 if u is None:
                     u = self._v_get_prev_sm(v)
 
-                    LOG.debug('is there a prev summary node that fixes? %s', u if u is not None else 'No!')
+                    # LOG.debug('is there a prev summary node that fixes? %s', u if u is not None else 'No!')
                     if u is None:
                         # No previous summary node that can take the size
                         return False
@@ -696,13 +705,13 @@ class Structure:
                         old_size[v].substract(self.size[v])
                         self.size[u].add(old_size[v])
 
-                        LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
+                        # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
                 else:
                     self.size[u].substract(SIZE_ONE)
                     # Concretisizing next node too and later join will handle the structure merge 
                     if (self.size[u] == SIZE_ONE):
                         self.sm[u] = FALSE 
-                    LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
+                    # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
 
         return True
 
@@ -776,7 +785,7 @@ class Structure:
                         lang_shape.Odd(var1, var2).formula(),
                         shortcuts.And(
                             shortcuts.Bool(len12 != INVALID),
-                            shortcuts.Bool(not len12.even())
+                            shortcuts.Bool(len12.even() == False)
                         )
                     ),
                 )

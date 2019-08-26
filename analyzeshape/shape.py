@@ -98,11 +98,14 @@ class ShapeState(abstract.AbstractState):
 
     def join(self, other, arbitrary_term):
 
+        # for st in self.structures:
+            # LOG.debug('begin is arb in array? %s', arbitrary_term in st.arbitrary_terms)
+
         structures = [st for st in self.structures]
 
         # LOG.debug('loop top %s', loop_top)
         # LOG.debug('in loop before %s', other.in_loop)
-        # LOG.debug('begin join num of structures self %d num of structures other %d', len(self.structures), len(other.structures))
+        LOG.debug('begin join num of structures self %d num of structures other %d', len(self.structures), len(other.structures))
 
         other.embed()
 
@@ -117,7 +120,6 @@ class ShapeState(abstract.AbstractState):
                     structures.append(st)
         else:
             for st in other.structures:
-                st.loop.append(arbitrary_term)
                 canonical_map = None
                 for next_st in structures:
 
@@ -127,9 +129,14 @@ class ShapeState(abstract.AbstractState):
                     if canonical_map:
                         # if arbitrary_visits and other.in_loop:
 
+                        if 'CONST' in arbitrary_term:
+                            break
+
+                        # LOG.debug('we are about to add a new structure')
+
                         summary_nodes = [v for v in canonical_map if next_st.sm[v] == MAYBE]
                         if summary_nodes:
-                            replace = False
+                            add = False
                             next_st_copy = next_st.copy()
                             # CHANGE NEXT_ST
                             # v is in next_st
@@ -141,24 +148,27 @@ class ShapeState(abstract.AbstractState):
                                 # old_size = next_st.size[v]
                                 # if next_st_copy.sm[v] == MAYBE:
 
-                                LOG.debug('old v size: %s', str(next_st_copy.size[v]))
+                                
                                 # LOG.debug('old v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
                                  #if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
                                 #     structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
 
-                                # if arbitrary_term == '1':
-                                #     next_st_copy.size[v] = copy.deepcopy(st.size[u])
-                                #     replace = True
-
                                 # elif structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
                                     # structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
-                                if not next_st_copy.size[v].has_term(arbitrary_term) and st.size[u] != next_st_copy.size[v]:
+                                # if not next_st_copy.size[v].has_term(arbitrary_term) and st.size[u] != next_st_copy.size[v]:
+                                if st.size[u] != next_st_copy.size[v]:
+
+                                    LOG.debug('old v size: %s', str(next_st_copy.size[v]))
 
                                     new_size = structure.AbstractSize(st.size[u].terms)
-                                    new_size.substract(next_st_copy.size[v])
+                                    # if 'CONST' in arbitrary_term:
+                                    #     next_st_copy.size[v] = new_size
 
-                                    if new_size.is_const():
-                                        new_size.multiply(arbitrary_term)
+                                    # else:
+                                    new_size.substract(next_st_copy.size[v])
+                                    new_size.multiply(arbitrary_term)
+                                    # if new_size.is_const():
+                                        # new_size.multiply(arbitrary_term)
                                     next_st_copy.size[v].add(new_size)
 
                                     # next_st_copy.size[v] = shortcuts.simplify(next_st_copy.size[v])
@@ -170,14 +180,20 @@ class ShapeState(abstract.AbstractState):
                                     #             if next_st_copy.reach[key][u]:
                                     #                 next_st_copy.length[key][u] = next_st_copy._v_length(key, u)
                         
-                                    replace = True
 
-                                LOG.debug('new v size: %s', str(next_st_copy.size[v]))
+                                    LOG.debug('new v size: %s', str(next_st_copy.size[v]))
+
+                                    add = True
+
+
+                                
                                 # LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
 
-                            if replace:
+                            if add:
+                                # LOG.debug('and we are doing it!')
+                                # next_st_copy.arbitrary_terms.append(arbitrary_term)
                                 # if next_st in structures:
-                                structures.remove(next_st)
+                                # structures.remove(next_st)
                                 structures.append(next_st_copy)
                         break
 
@@ -198,7 +214,9 @@ class ShapeState(abstract.AbstractState):
             # self.in_loop = True
         # LOG.debug('in loop after %s', self.in_loop)
 
-        # LOG.debug('end join num of structures %d', len(structures))
+        LOG.debug('end join num of structures %d', len(structures))
+        # for st in structures:
+            # LOG.debug('end is arb in array? %s', arbitrary_term in st.arbitrary_terms)
         state = ShapeState(structures)
         if arbitrary_term is not None:
             LOG.debug('state in the end %s', state)
