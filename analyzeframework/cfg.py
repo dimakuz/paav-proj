@@ -12,14 +12,14 @@ class Edge:
     predecessor: 'Node'
     successor: 'Node'
 
-    def arbitrary_visits(self):
+    def arbitrary_term(self):
         if isinstance(self.statement, lang.Assume):
             if isinstance(self.statement.expr, lang.Truth):
-                # return shortcuts.Symbol(f'ARB_{self.predecessor.name}', shortcuts.INT)
-                return shortcuts.Symbol(self.predecessor.name, shortcuts.INT)
+                return f'ARB_{self.predecessor.name}'
+                # return shortcuts.Symbol(self.predecessor.name, shortcuts.INT)
             else:
-                return shortcuts.Int(1)
-                # return shortcuts.Symbol(f'CONST_{self.predecessor.name}', shortcuts.INT)
+                # return shortcuts.Int(1)
+                return f'CONST_{self.predecessor.name}'
         else:
             return None
 
@@ -45,8 +45,8 @@ class Node:
     state: object = None
     visits: int = 0
 
-    def arbitrary_visits(self):
-        return self.out_edges[0].arbitrary_visits() if self.out_edges else None
+    def arbitrary_term(self):
+        return self.out_edges[0].arbitrary_term() if self.out_edges else None
 
 
 

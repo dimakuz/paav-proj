@@ -47,8 +47,74 @@ def _size_new_name(v_size, name):
     v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
     return name not in (arbitrary_size.symbol_name() for arbitrary_size in v_arbitrary_sizes)
 
-def _size_even(v_size):
-    return shortcuts.Equals(v_size, shortcuts.Times(shortcuts.FreshSymbol(shortcuts.INT), shortcuts.Int(2)))
+# def _size_even(v_size):
+    # return shortcuts.Equals(v_size, shortcuts.Times(shortcuts.FreshSymbol(shortcuts.INT), shortcuts.Int(2)))
+
+
+
+class AbstractSize():
+
+    terms: {}
+
+    def add(self, other):
+        for variable in self.terms:
+            if variable in other.terms:
+                self.terms[variable] += other.terms[variable]
+        for variable in other.terms:
+            if variable not in self.terms:
+                self.terms[variable] = +other.terms[variable]
+
+        self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0}
+        return self
+
+    def substract(self, other):
+        for variable in self.terms:
+            if variable in other.terms:
+                self.terms[variable] -= other.terms[variable]
+        for variable in other.terms:
+            if variable not in self.terms:
+                self.terms[variable] = -other.terms[variable]
+
+        self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0}
+        return self
+
+    def multiply(self, term):
+        self.terms[term] = self.terms['1']
+        self.terms.pop('1')
+        return self
+
+    def has_term(self, term):
+        return term in self.terms
+
+    def is_const(self):
+        return len(self.terms) == 1 and '1' in self.terms
+
+    def even(self):
+        return all(factor % 2 == 0 for variable, factor in self.terms.items())
+
+    def __eq__(self, other):
+        return self.terms == other.terms
+
+    def __str__(self):
+
+        def pretty_print(factor, variable):
+            if variable == '1':
+                return str(factor)
+            else:
+                if factor == 1:
+                    return variable
+                else:
+                    return f'{factor}*{variable}'
+
+        return ' + '.join(pretty_print(factor, variable) for variable, factor in self.terms.items())
+
+    def __init__(self, new_terms):
+        self.terms = new_terms
+
+SIZE_ONE = AbstractSize({'1':1})
+INVALID = AbstractSize({'1':-1})
+SIZE_ZERO = AbstractSize({})
+
 
 
 class ThreeValuedBool(IntEnum):
@@ -106,7 +172,10 @@ class Structure:
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
     n_plus: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
 
-    size: typing.Mapping[int, fnode.FNode]
+    size: typing.Mapping[int, AbstractSize]
+
+    loop: typing.List[str]
+
     # old_size: typing.Mapping[int, fnode.FNode]
     # length: typing.Mapping[lang.Symbol, typing[int, fnode.FNode]]
 
@@ -125,6 +194,7 @@ class Structure:
         newst.n = copy.deepcopy(self.n)
 
         newst.size = copy.deepcopy(self.size)
+        newst.loop = copy.deepcopy(self.loop)
         return newst
 
 
@@ -146,7 +216,7 @@ class Structure:
 
         # We asume that the structures are after the embed operation and there are no
         # two individuals that are canonically equal to each other
-        canonical_map = dict()
+        canonical_map = {}
         for v in self.indiv:
 
             u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w]), None)
@@ -154,7 +224,7 @@ class Structure:
             if u is not None:
                 if ignore_size:
                     canonical_map[v] = u
-                elif self._v_size_eq(v, other, u):
+                elif self.size[v] == other.size[u]:
                     canonical_map[v] = u
                 else:
                     # LOG.debug('self %s, other %s', str(self.size[v]), str(other.size[u]))
@@ -208,7 +278,7 @@ class Structure:
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
             # old_size = st.size[v1]
             st.sm[v1] = FALSE
-            st.size[v1] = shortcuts.Int(1)
+            st.size[v1] = SIZE_ONE
             # LOG.debug('setting size to 1 to v%d !!', v1)
             # if not st._v_get_copied_in_focus(v1):
             #     prev_sm = st._v_get_prev_sm(v1)
@@ -328,7 +398,7 @@ class Structure:
         sm = ', '.join(f'v{v} = {str(self.sm[v])}' for v in self.indiv)
         lines.append(f'sm: [{sm}]')
 
-        size = ', '.join(f'v{v} = {shortcuts.serialize(self.size[v])}' for v in self.indiv)
+        size = ', '.join(f'v{v} = {str(self.size[v])}' for v in self.indiv)
         lines.append(f'size: [{size}]')
 
         n = ', '.join(f'v{v0},v{v1} = {str(self.n[(v0,v1)])}' for v0 in self.indiv for v1 in self.indiv)
@@ -380,7 +450,7 @@ class Structure:
 
     # Hackish but relatively fast way to compare size formula
     def _v_size_eq(self, u, other, v):
-        return str(self.size[u]) == str(other.size[v])
+        return self.size[u] == other.size[v]
 
     # def _v_get_copied_in_focus(self, v):
     #     copied = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
@@ -396,7 +466,7 @@ class Structure:
             if self.n[(u,w)] != self.n[(v,w)]:
                 self.n[(u,w)] = MAYBE        
         self.sm[u] = MAYBE
-        self.size[u] = shortcuts.simplify(shortcuts.Plus(self.size[u],self.size[v]))
+        self.size[u].add(self.size[v])
 
     def _v_can_fix_sm(self, v1, v2):
         eq = self._v_eq(v1, v2)
@@ -449,19 +519,19 @@ class Structure:
         return self.var[var][v]._or(self._exists(lambda u : self.var[var][u]._and(self.n_plus[(u,v)])))
 
     # Symbolic length between variable and individual
-    def _v_length(self, var, v):
+    # def _v_length(self, var, v):
 
-        u = self._var_get_indiv(var)
-        length = shortcuts.Plus(self.size[u], self.size[v])
+    #     u = self._var_get_indiv(var)
+    #     length = self.size[u].add(self.size[v])
 
-        u = next((w for w in self.indiv if self.n[(u,w)] != FALSE and u != w), None)
-        while u != v:
-            if u is None:
-                return shortcuts.Int(-1)
-            length = shortcuts.Plus(length, self.size[u])
-            u = next((w for w in self.indiv if self.n[(u,w)] != FALSE and u != w), None)
+    #     u = next((w for w in self.indiv if self.n[(u,w)] != FALSE and u != w), None)
+    #     while u != v:
+    #         if u is None:
+    #             return INVALID
+    #         length = length.add(self.size[u])
+    #         u = next((w for w in self.indiv if self.n[(u,w)] != FALSE and u != w), None)
 
-        return shortcuts.simplify(length)
+    #     return length
 
 
     # Is the individual resides on a cycle
@@ -509,15 +579,15 @@ class Structure:
         v2 = self._var_get_indiv(var2)
 
         if v1 is None or v2 is None:
-            return shortcuts.Int(-1)
+            return INVALID
 
-        size = shortcuts.Int(0)
+        size = SIZE_ZERO
 
         v = next((w for w in self.indiv if self.n[(v1,w)] != FALSE and v1 != w), None)
         while v != v2:
             if v is None:
-                return shortcuts.Int(-1)
-            size = shortcuts.Plus(size, self.size[v])
+                return INVALID
+            size.add(self.size[v])
             v = next((w for w in self.indiv if self.n[(v,w)] != FALSE and v != w), None)
 
         return size
@@ -566,6 +636,7 @@ class Structure:
             n=dict(),
             n_plus=dict(),
             size=dict(),
+            loop=[],
             constr=cls.init_constr(symbols)
         )
 
@@ -606,32 +677,32 @@ class Structure:
 
         for v in self.indiv:
             # LOG.debug('comparing sizes %s and %s for v%d', self.size[v], old_size[v], v)
-            if self.sm[v] == FALSE and str(old_size[v]) != '1':
+            if self.sm[v] == FALSE and old_size[v] != SIZE_ONE:
 
-                # LOG.debug('node v%d is not equal: new size is %s, old size is %s', v, self.size[v], old_size[v])
+                LOG.debug('node v%d is not equal: new size is %s, old size is %s', v, self.size[v], old_size[v])
                 u = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
 
 
-                # LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
+                LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
 
                 if u is None:
                     u = self._v_get_prev_sm(v)
 
-                    # LOG.debug('is there a prev summary node that fixes? %s', u if u is not None else 'No!')
+                    LOG.debug('is there a prev summary node that fixes? %s', u if u is not None else 'No!')
                     if u is None:
                         # No previous summary node that can take the size
                         return False
                     else:
-                        diff = shortcuts.Minus(old_size[v], self.size[v])
-                        self.size[u] = shortcuts.simplify(shortcuts.Plus(self.size[u], diff))
+                        old_size[v].substract(self.size[v])
+                        self.size[u].add(old_size[v])
 
-                        # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
+                        LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
                 else:
-                    self.size[u] = shortcuts.simplify(shortcuts.Minus(self.size[u], shortcuts.Int(1)))
+                    self.size[u].substract(SIZE_ONE)
                     # Concretisizing next node too and later join will handle the structure merge 
-                    if (str(self.size[u]) == '1'):
+                    if (self.size[u] == SIZE_ONE):
                         self.sm[u] = FALSE 
-                    # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
+                    LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
 
         return True
 
@@ -695,8 +766,8 @@ class Structure:
                     shortcuts.Iff(
                         lang_shape.Even(var1, var2).formula(),
                         shortcuts.And(
-                            shortcuts.NotEquals(len12, shortcuts.Int(-1)),
-                            _size_even(len12)
+                            shortcuts.Bool(len12 != INVALID),
+                            shortcuts.Bool(len12.even())
                         )
                     ),
                 )
@@ -704,26 +775,26 @@ class Structure:
                     shortcuts.Iff(
                         lang_shape.Odd(var1, var2).formula(),
                         shortcuts.And(
-                            shortcuts.NotEquals(len12, shortcuts.Int(-1)),
-                            shortcuts.Not(_size_even(len12))
+                            shortcuts.Bool(len12 != INVALID),
+                            shortcuts.Bool(not len12.even())
                         )
                     ),
                 )
                 if str(var1) == 'y' and str(var2) == 'yy':
-                    LOG.debug('var1= %s, var2=%s, len=%s', var1, var2, shortcuts.simplify(len12))
+                    LOG.debug('var1= %s, var2=%s, len=%s', var1, var2, len12)
                 for var3 in self.var:
                     for var4 in self.var:
                         len34 = self._var_get_length(var3, var4)
 
                         if str(var3) == 'z' and str(var4) == 'zz':
-                            LOG.debug('var3= %s, var4=%s, len=%s', var3, var4, shortcuts.simplify(len34))
+                            LOG.debug('var3= %s, var4=%s, len=%s', var3, var4, len34)
                         clauses.append(
                             shortcuts.Iff(
                                 lang_shape.Len(var1, var2, var3, var4).formula(),
                                 shortcuts.And(
-                                    shortcuts.NotEquals(len12, shortcuts.Int(-1)),
-                                    shortcuts.NotEquals(len34, shortcuts.Int(-1)),
-                                    _size_eq(len12, len34)
+                                    shortcuts.Bool(len12 != INVALID),
+                                    shortcuts.Bool(len34 != INVALID),
+                                    shortcuts.Bool(len12 == len34)
                                 )
                             )
                         )

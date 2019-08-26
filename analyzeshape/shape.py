@@ -96,7 +96,7 @@ class ShapeState(abstract.AbstractState):
         # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
 
 
-    def join(self, other, arbitrary_visits):
+    def join(self, other, arbitrary_term):
 
         structures = [st for st in self.structures]
 
@@ -109,18 +109,20 @@ class ShapeState(abstract.AbstractState):
         # If we are at an assume node we have an arbitrary value, so we ignore the sizes of the summary nodes
         # while comparing, so that we can factor the size with the arbitrary value
         # Otherwise we compare normally, taking sizes into account
-        ignore_size = arbitrary_visits is not None
+        # ignore_size = arbitrary_term is not None
 
-        if not ignore_size:
+        if arbitrary_term is None:
             for st in other.structures:
                 if st not in self.structures:
                     structures.append(st)
         else:
             for st in other.structures:
+                st.loop.append(arbitrary_term)
                 canonical_map = None
                 for next_st in structures:
 
                     canonical_map = next_st.get_canonical_map(st, True)
+
                     # LOG.debug('found canonical map? %s', str(canonical_map is not None))
                     if canonical_map:
                         # if arbitrary_visits and other.in_loop:
@@ -144,21 +146,22 @@ class ShapeState(abstract.AbstractState):
                                  #if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
                                 #     structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
 
-                                if str(arbitrary_visits) == '1':
-                                    next_st_copy.size[v] = copy.deepcopy(st.size[u])
-                                    replace = True
+                                # if arbitrary_term == '1':
+                                #     next_st_copy.size[v] = copy.deepcopy(st.size[u])
+                                #     replace = True
 
                                 # elif structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
                                     # structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
-                                elif structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()) and \
-                                    str(st.size[u]) != str(next_st_copy.size[v]):
+                                if not next_st_copy.size[v].has_term(arbitrary_term) and st.size[u] != next_st_copy.size[v]:
 
-                                    next_st_copy.size[v] = shortcuts.Plus(
-                                        next_st_copy.size[v], shortcuts.Times(
-                                            shortcuts.Minus(st.size[u], next_st_copy.size[v]), arbitrary_visits
-                                            )
-                                        )
-                                    next_st_copy.size[v] = shortcuts.simplify(next_st_copy.size[v])
+                                    new_size = structure.AbstractSize(st.size[u].terms)
+                                    new_size.substract(next_st_copy.size[v])
+
+                                    if new_size.is_const():
+                                        new_size.multiply(arbitrary_term)
+                                    next_st_copy.size[v].add(new_size)
+
+                                    # next_st_copy.size[v] = shortcuts.simplify(next_st_copy.size[v])
 
                                     # # Update length
                                     # for key in next_st_copy.var:
@@ -197,7 +200,7 @@ class ShapeState(abstract.AbstractState):
 
         # LOG.debug('end join num of structures %d', len(structures))
         state = ShapeState(structures)
-        if ignore_size:
+        if arbitrary_term is not None:
             LOG.debug('state in the end %s', state)
         return state
         # return ShapeState(structures)
@@ -290,7 +293,7 @@ def var_new_assignment(state, statement):
         st.cycle[v] = FALSE
         st.shared[v] = FALSE
         st.sm[v] = FALSE
-        st.size[v] = shortcuts.Int(1)
+        st.size[v] = structure.SIZE_ONE
 
         st.indiv.append(v)
 
