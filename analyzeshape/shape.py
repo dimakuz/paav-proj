@@ -106,6 +106,9 @@ class ShapeState(abstract.AbstractState):
 
         other.embed()
 
+        # If we are at an assume node we have an arbitrary value, so we ignore the sizes of the summary nodes
+        # while comparing, so that we can factor the size with the arbitrary value
+        # Otherwise we compare normally, taking sizes into account
         ignore_size = arbitrary_visits is not None
 
         if not ignore_size:
@@ -116,59 +119,58 @@ class ShapeState(abstract.AbstractState):
             for st in other.structures:
                 canonical_map = None
                 for next_st in structures:
-                    # If we are at an assume node we have an arbitrary value, so we ignore the sizes of the summary nodes
-                    # while comparing, so that we can factor the size with the arbitrary value
-                    # Otherwise we compare normally, taking sizes into account
-                    ignore_size = arbitrary_visits is not None
+
                     canonical_map = next_st.get_canonical_map(st, True)
                     # LOG.debug('found canonical map? %s', str(canonical_map is not None))
                     if canonical_map:
                         # if arbitrary_visits and other.in_loop:
 
-                        if any([next_st.sm[v] == MAYBE for v in canonical_map]):
+                        summary_nodes = [v for v in canonical_map if next_st.sm[v] == MAYBE]
+                        if summary_nodes:
                             replace = False
                             next_st_copy = next_st.copy()
                             # CHANGE NEXT_ST
                             # v is in next_st
-                            for v in canonical_map:
+                            for v in summary_nodes:
                                 # Counterpart in st
                                 u = canonical_map[v]
                                 # LOG.debug('arbitrary size is %s', arbitrary_visits)
                                 # updated_size = st.size[v]
                                 # old_size = next_st.size[v]
-                                if next_st_copy.sm[v] == MAYBE:
-                                    LOG.debug('old v size: %s', str(next_st_copy.size[v]))
-                                    # LOG.debug('old v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
-                                    # if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
-                                    #     structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
+                                # if next_st_copy.sm[v] == MAYBE:
 
-                                    if str(arbitrary_visits) == '1':
-                                        next_st_copy.size[v] = copy.deepcopy(st.size[u])
-                                        replace = True
+                                LOG.debug('old v size: %s', str(next_st_copy.size[v]))
+                                # LOG.debug('old v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
+                                 #if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
+                                #     structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
 
-                                    # elif structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
-                                        # structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
-                                    elif structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()) and \
-                                        str(st.size[u]) != str(next_st_copy.size[v]):
+                                if str(arbitrary_visits) == '1':
+                                    next_st_copy.size[v] = copy.deepcopy(st.size[u])
+                                    replace = True
 
-                                        next_st_copy.size[v] = shortcuts.Plus(
-                                            next_st_copy.size[v], shortcuts.Times(
-                                                shortcuts.Minus(st.size[u], next_st_copy.size[v]), arbitrary_visits
-                                                )
+                                # elif structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
+                                    # structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
+                                elif structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()) and \
+                                    str(st.size[u]) != str(next_st_copy.size[v]):
+
+                                    next_st_copy.size[v] = shortcuts.Plus(
+                                        next_st_copy.size[v], shortcuts.Times(
+                                            shortcuts.Minus(st.size[u], next_st_copy.size[v]), arbitrary_visits
                                             )
-                                        next_st_copy.size[v] = shortcuts.simplify(next_st_copy.size[v])
+                                        )
+                                    next_st_copy.size[v] = shortcuts.simplify(next_st_copy.size[v])
 
-                                        # # Update length
-                                        # for key in next_st_copy.var:
-                                        #     if next_st_copy.reach[key][v]:
-                                        #         for u in next_st_copy.indiv:
-                                        #             if next_st_copy.reach[key][u]:
-                                        #                 next_st_copy.length[key][u] = next_st_copy._v_length(key, u)
-                            
-                                        replace = True
+                                    # # Update length
+                                    # for key in next_st_copy.var:
+                                    #     if next_st_copy.reach[key][v]:
+                                    #         for u in next_st_copy.indiv:
+                                    #             if next_st_copy.reach[key][u]:
+                                    #                 next_st_copy.length[key][u] = next_st_copy._v_length(key, u)
+                        
+                                    replace = True
 
-                                    LOG.debug('new v size: %s', str(next_st_copy.size[v]))
-                                    # LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
+                                LOG.debug('new v size: %s', str(next_st_copy.size[v]))
+                                # LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
 
                             if replace:
                                 # if next_st in structures:
@@ -176,6 +178,7 @@ class ShapeState(abstract.AbstractState):
                                 structures.append(next_st_copy)
                         break
 
+                # New structure, add to list of structures
                 if not canonical_map:
                     # LOG.debug('did not find canonical map, adding to structures')
                     structures.append(st)
