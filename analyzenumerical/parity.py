@@ -50,7 +50,7 @@ class ParityState(abstract.AbstractState):
     samepar: typing.Mapping[lang.Symbol, typing.Set[lang.Symbol]]
     antipar: typing.Mapping[lang.Symbol, typing.Set[lang.Symbol]]
 
-    def join(self, other):
+    def join(self, other, arbitrary_term=None):
         modulo = {}
         for symbol in self.modulo:
             modulo[symbol] = self.modulo[symbol].union(other.modulo[symbol])

@@ -130,7 +130,7 @@ class SumState(abstract.AbstractState):
     def initialize_head(self, vars):
         pass
 
-    def join(self, other):
+    def join(self, other, arbitrary_term=None):
         return SumState(
             const={
                 sym: _const_join(
