@@ -95,6 +95,10 @@ class AbstractSize():
     def variables_eq(self, other):
         return set(self.terms.keys()) == set(other.terms.keys())
 
+    def set_to_one(self):
+        self.terms = {'1':1}
+        return self
+
     def __eq__(self, other):
         return self.terms == other.terms
 
@@ -119,9 +123,8 @@ class AbstractSize():
     def __init__(self, new_terms):
         self.terms = new_terms
 
-SIZE_ONE = AbstractSize({'1':1})
 INVALID = AbstractSize({'1':-1})
-SIZE_ZERO = AbstractSize({})
+SIZE_ONE = AbstractSize({'1':1})
 
 
 
@@ -287,7 +290,7 @@ class Structure:
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
             # old_size = st.size[v1]
             st.sm[v1] = FALSE
-            st.size[v1] = SIZE_ONE
+            st.size[v1] = st.size[v1].set_to_one()
             # LOG.debug('setting size to 1 to v%d !!', v1)
             # if not st._v_get_copied_in_focus(v1):
             #     prev_sm = st._v_get_prev_sm(v1)
@@ -590,7 +593,7 @@ class Structure:
         if v1 is None or v2 is None:
             return INVALID
 
-        size = SIZE_ZERO
+        size = AbstractSize({})
 
         v = next((w for w in self.indiv if self.n[(v1,w)] != FALSE and v1 != w), None)
         while v != v2:
@@ -795,8 +798,8 @@ class Structure:
                     for var4 in self.var:
                         len34 = self._var_get_length(var3, var4)
 
-                        if str(var3) == 'z' and str(var4) == 'zz':
-                            LOG.debug('var3= %s, var4=%s, len=%s', var3, var4, len34)
+                        # if str(var3) == 'z' and str(var4) == 'zz':
+                            # LOG.debug('var3= %s, var4=%s, len=%s', var3, var4, len34)
                         clauses.append(
                             shortcuts.Iff(
                                 lang_shape.Len(var1, var2, var3, var4).formula(),

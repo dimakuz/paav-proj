@@ -311,7 +311,7 @@ def var_new_assignment(state, statement):
         st.cycle[v] = FALSE
         st.shared[v] = FALSE
         st.sm[v] = FALSE
-        st.size[v] = structure.SIZE_ONE
+        st.size[v] = structure.AbstractSize({'1':1})
 
         st.indiv.append(v)
 
