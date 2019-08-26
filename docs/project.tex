@@ -46,6 +46,12 @@
 \end{figure}
 }
 
+\lstset{
+frame = single, 
+breaklines=true,
+framexleftmargin=1pt}
+
+
 \pagestyle{fancyplain}
 \headheight 35pt  
 \lhead{\namea\\\nameb}
@@ -81,6 +87,14 @@ The general method of operation for all of the analysis implementations is as fo
 Finally, the results are displayed on the console as a DOT graph with a link for easy visualization.
 
 \section*{Installing and Running}
-FIXME
+Development of the analysis was done on Linux (Fedora/Ubuntu). To set up a Python environment, run \texttt{pipenv install} in the root directory of the project. This will initialize a new virtual environment and pull required packages. Additionally several system packages will be required, namely:
+\begin{itemize}
+	\item \texttt{graphviz}
+	\item \texttt{z3solver}
+\end{itemize}
+
+Invocation of analysis is done through \texttt{pipenv run analyze}:
+\lstinputlisting{analyze.usage}
+
 \input{parity}
 \end{document}
