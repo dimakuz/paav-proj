@@ -1,0 +1,14 @@
+\section*{Overview}
+In our analysis we implemented an abstract state that tracks parity properties of the variables. Our analysis tries to enable deduction in the following cases:
+\begin{itemize}
+	\item When a constant was assigned to a specific variable (so we know the exact parity)
+	\item When a variable was assigned to another variable (so we know they are of same parity)
+	\item When a variable plus/minus one was assigned to another variable (so we know they are of opposite parity)
+\end{itemize}
+The above gives us links between variables and themselves, and between variables and their values. To construct the big picture a model is constructed that imposes the above information as constraints.
+\subsection*{Example}
+Consider 3 variables $x,y,z$. Give following information: $x$ is even, $x,y$ are of same parity, $y,z$ are of opposite parity, we can construct the following model:
+\begin{equation*}
+	[x_{even} \wedge (x_{even} \rightarrow y_{even}) \wedge (y_{even} \rightarrow \neg z_{even})]
+\end{equation*}
+The above model can be used, in conjunction with \texttt{assert} conditions to check if there is an assignment satisfying the model yet violating the asserted condition.

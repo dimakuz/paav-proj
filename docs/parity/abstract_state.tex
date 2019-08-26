@@ -1,0 +1,31 @@
+\section*{Abstract Domain}
+Our abstract state is defined as a 3-tuple of the from $(M,S,A)$. Where:
+
+\begin{itemize}
+	\item $M: Symbols \rightarrow 2^{\{O, E\}}$ - a mapping that tracks parity of symbols in the program. Each of the symbols is mapped to one of the values:
+	\begin{itemize}
+		\item $\emptyset=\bot$ - if no info about symbol parity is known.
+		\item $\{O\}$ - if symbol is known to be odd-valued.
+		\item $\{E\}$ - if symbol is known to be even-value.
+		\item $\{O,E\}=\top$ - if symbol can be either odd or even.
+	\end{itemize}
+	\item $S: Symbols \rightarrow 2^{Symbols}$ - a mapping of symbols to symbol set of potentially similar parity.
+	
+	For example, given $x, y$, if we know that $x$ is now equal to $y$, after the assignment we'll change the state so that we'll have $y \in S[x]$.
+	
+	Furthermore, when  deducing parity of $x$, given that $S[x] = {y,z}$, we can deduce that $x$ is even iff both $y$ and $z$ are even.
+	I.e. $[(y_{even} \wedge z_{even})\rightarrow x_{even}]\vee[(y_{odd} \wedge z_{odd})\rightarrow x_{odd}]$
+	
+	\item $A: Symbols \rightarrow 2^{Symbols}$ - a mapping of symbols to symbol set of potentially opposing parity (i.e. for two given symbols, one is odd and other is even). Similar deduction logic can be applied here.
+
+\end{itemize}
+Our abstract domain is then all possible assignments to the 3-tuple.
+	
+The join operation is defined as following: given $\alpha_1=(M_1,S_1,A_1)$ and $\alpha_2=(M_2,S_2,A_2)$ abstract states:
+\begin{align*}
+&\alpha_1\sqcup\alpha_2=(M_1\sqcup M_2, S_1 \sqcup S_2, A_1 \sqcup A_2) \\
+\forall s \in Symbols&:  \\
+&(M_1\sqcup M_2)[s] =M_1[s] \cup M_2[s] \\
+&(S_1\sqcup S_2)[s] =S_1[s] \cup S_2[s] \\
+&(A_1\sqcup A_2)[s] =A_1[s] \cup A_2[s]
+\end{align*}

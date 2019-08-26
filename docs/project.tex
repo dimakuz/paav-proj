@@ -10,6 +10,9 @@
 \usepackage{hyperref}
 \usepackage{mathabx}
 \usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
 \hypersetup{%
 	colorlinks=false,
 	linkbordercolor=white
@@ -24,6 +27,30 @@
 
 \newcommand{\trans}[1]{[\![\texttt{#1}]\!]}
 \newcommand{\atrans}[1]{\trans{#1}^\sharp}
+\lstset{basicstyle=\small}
+\newcommand{\example}[2]{
+\input{#1/examples/example#2.tex}
+\begin{figure}[h]
+\centering
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[scale=0.3]{#1/examples/example#2-cfg}
+  \caption{Control flow graph}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \lstset{basicstyle=\small}
+  \lstinputlisting{#1/examples/example#2.code}
+  \caption{Code}
+\end{subfigure}
+\end{figure}
+}
+
+\lstset{
+frame = single, 
+breaklines=true,
+framexleftmargin=1pt}
+
 
 \pagestyle{fancyplain}
 \headheight 35pt  
@@ -60,6 +87,14 @@ The general method of operation for all of the analysis implementations is as fo
 Finally, the results are displayed on the console as a DOT graph with a link for easy visualization.
 
 \section*{Installing and Running}
-FIXME
+Development of the analysis was done on Linux (Fedora/Ubuntu). To set up a Python environment, run \texttt{pipenv install} in the root directory of the project. This will initialize a new virtual environment and pull required packages. Additionally several system packages will be required, namely:
+\begin{itemize}
+	\item \texttt{graphviz}
+	\item \texttt{z3solver}
+\end{itemize}
+
+Invocation of analysis is done through \texttt{pipenv run analyze}:
+\lstinputlisting{analyze.usage}
+
 \input{parity}
 \end{document}

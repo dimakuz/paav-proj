@@ -1,9 +1,9 @@
 n i
 L0 n := 0 L01
-L01 n := n + 1 L1
-L1 i := ? L3
+L01 i := n + 1 L1
+L1 n := ? L3
 L3 assume(i = n) L6
 L3 assume(i != n) L4
-L4 i := i - 1 L3
+L4 n := n - 1 L3
 L6 skip L7
 L7 assert (ODD n ODD i) L8

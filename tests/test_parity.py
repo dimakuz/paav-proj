@@ -11,6 +11,9 @@ from analyzenumerical import parity
     ('input_path, asserts'),
     (
         ('examples/reference', ()),
+        ('examples/parity/count-down',
+         (('L7', 'L8', True),),
+        ),
         ('examples/parity/reference', (('L6', 'L7', True),)),
         ('examples/parity/reference-extra',
          (
@@ -19,6 +22,11 @@ from analyzenumerical import parity
             ('L8', 'L9', True),
          ),
         ),
+        ('examples/parity/reference-weird',
+         (('L6', 'L7', False),
+          ('L7', 'L8', True)),
+        ),
+        ('examples/parity/reference-extra', (('L6', 'L7', True),)),
     ),
 )
 def test_parity_analysis(input_path, asserts):

@@ -1,0 +1,9 @@
+usage: analyze.py [-h] --type {parity,sum,shape} path
+
+positional arguments:
+  path                  Path to source
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --type {parity,sum,shape}
+                        Type of analysis to perform
