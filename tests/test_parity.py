@@ -42,6 +42,8 @@ from analyzenumerical import parity
         (
             'examples/parity/example5',
             (
+                ('L32', 'L5', True),
+                ('L42', 'L5', True),
                 ('L5', 'L6', False),
                 ('L5', 'L7', False),
             ),

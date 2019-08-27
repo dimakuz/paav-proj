@@ -143,6 +143,15 @@ class ParityState(abstract.AbstractState):
 
         return shortcuts.And(*clauses)
 
+    def post_transform(self):
+        # Remove elements both in samepar and antipar
+        for symbol in self.modulo.keys():
+            samepar = self.samepar[symbol]
+            antipar = self.antipar[symbol]
+            common = samepar.intersection(antipar)
+            samepar.difference_update(common)
+            antipar.difference_update(common)
+
 
 @ParityState.transforms(lang_num.VarAssignment)
 def var_assignment(state, statement):
