@@ -1,4 +1,3 @@
-import copy
 import dataclasses
 import logging
 import typing
@@ -155,6 +154,9 @@ class ParityState(abstract.AbstractState):
 
 @ParityState.transforms(lang_num.VarAssignment)
 def var_assignment(state, statement):
+    if statement.lval == statement.rval:
+        return
+
     state.modulo[statement.lval] = state.modulo[statement.rval]
 
     for key in state.samepar:
@@ -201,17 +203,25 @@ def incdec_assignment(state, statement):
         p = TOP.difference(rval_modulo)
     state.modulo[statement.lval] = p
 
-    for key in state.samepar:
-        state.samepar[key].discard(statement.lval)
-        state.antipar[key].discard(statement.lval)
-
     if statement.rval != statement.lval:
         state.samepar[statement.lval].clear()
         state.antipar[statement.lval] = {statement.rval}
+
+        for key in state.samepar:
+            state.samepar[key].discard(statement.lval)
+            state.antipar[key].discard(statement.lval)
     else:
         tmp = state.samepar[statement.lval]
         state.samepar[statement.lval] = state.antipar[statement.lval]
         state.antipar[statement.lval] = tmp
+
+        for key in state.samepar:
+            if statement.lval in state.samepar[key]:
+                state.samepar[key].remove(statement.lval)
+                state.antipar[key].add(statement.lval)
+            if statement.lval in state.antipar[key]:
+                state.antipar[key].remove(statement.lval)
+                state.samepar[key].add(statement.lval)
 
 
 @ParityState.transforms(lang.Skip)

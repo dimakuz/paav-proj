@@ -11,11 +11,11 @@ For any statement we'll denote the tagged mappings as mappings after the transfo
 \begin{equation*}
 	\atrans{stmt}((M, S, A)) = (M^\prime,S^\prime,A^\prime)
 \end{equation*}
-For \texttt{skip} statement:
+For \texttt{skip} statement, the state is not modified:
 \begin{equation*}
 	M^\prime = M, \quad S^\prime = S, \quad A^\prime = A
 \end{equation*}
-For \texttt{i := ?} statement:
+For \texttt{i := ?} statement, all information regarding $i$ is removed. Both concrete parity info of the variable, and it's parity with regart to other variables:
 \begin{align*}
 M^\prime[x] = & \left.
 	\begin{cases}
@@ -36,7 +36,7 @@ A^\prime[x] = & \left.
 \end{cases}
 \right\}
 \end{align*}
-For \texttt{i := K} statement:
+For \texttt{i := K} statement, concrete parity of $i$ is stored, and it's relation to other variables is removed:
 \begin{align*}
 M^\prime[x] = & \left.
 	\begin{cases}
@@ -58,7 +58,9 @@ A^\prime[x] = & \left.
 \end{cases}
 \right\}
 \end{align*}
-For \texttt{i := j} statement:
+For \texttt{i := i} the state is not transformed.
+
+For \texttt{i := j} statement, parity info is copied over from $j$ to $i$, and a relation that $i$ is of same parity as $j$ is added to the state:
 \begin{align*}
 M^\prime[x] = & \left.
 	\begin{cases}
@@ -79,53 +81,88 @@ A^\prime[x] = & \left.
 \end{cases}
 \right\}
 \end{align*}
-For \texttt{i := j + 1} and \texttt{i := j - 1} statements:
+For \texttt{i := i + 1} and \texttt{i := i - 1} statements, concrete parity of $i$ is flipped if known, plus, $i$'s relations to other variables is reversed:
 \begin{align*}
 M^\prime[x] = & \left.
 	\begin{cases}
 		M[x], & x\ne i \\
-		\top, & x = i \wedge M[j] = \top \\
-		\bot, & x = i \wedge M[j] = \bot \\
-		\{O, E\} \setminus M[j], & \text{otherwise}
+		\{E, O\} \setminus M[i], & x = i \wedge M[i] \in \{E, O\} \\
+		M[i], & \text{otherwise}
+	\end{cases}
+\right\}\\
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x], & x\ne i \wedge i \notin A[x]\\
+		S[x] \cup \{i\}, & x\ne i \wedge i \in A[x]\\
+		A[x], & x = i
+	\end{cases}
+\right\}\\
+A^\prime[x] = & \left.
+	\begin{cases}
+		A[x], & x\ne i \wedge i \notin S[x]\\
+		A[x] \cup \{i\}, & x\ne i \wedge i \in S[x]\\
+		S[i], & x = i
+	\end{cases}
+\right\}
+\end{align*}
+
+
+For \texttt{i := j + 1} and \texttt{i := j - 1} statements, state is transformed in a similar way to straight assignment, except the opposite parity is used.
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		M[x], & x\ne i \\
+		\{E, O\} \setminus M[j], & x = i \wedge M[j] \in \{E, O\} \\
+		M[i], & \text{otherwise}
 	\end{cases}
 \right\}\\
 S^\prime[x] = & \left.
 	\begin{cases}
 		S[x] \setminus \{i\}, & x\ne i \\
-		\emptyset, & x = i \wedge i \ne j \\
-		A[x], & x = i \wedge i = j
+		\emptyset, & x = i 
 	\end{cases}
 \right\}\\
 A^\prime[x] = & \left.
 \begin{cases}
 	A[x] \setminus \{i\}, & x\ne i \\
-	\{j\}, & x = i \wedge i \ne j \\
-	S[x], & x = i \wedge i = j
+	\{j\}, & x = i
 \end{cases}
 \right\}
 \end{align*}
-For \texttt{assume TRUE} statements:
+For \texttt{assume TRUE} statements the state is not altered, for \texttt{assume FALSE} statements, state is transformed into bottom state ($\sqcup$ - neutral) so chaotic iteration will treat it as a dead end.
 
-FIXME
+For \texttt{assume i = j} statements, if $i$ and $j$ are known to be of opposite parities, statement is treated as \texttt{assume FALSE}, otherwise, state is transformed to create relation of similar parity between the variables, and both are set to most concrete parity known about either of them:
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		M[i]\cap M[j], & x \in \{i,j\} \\
+		M[x], & \text{ otherwise}
+	\end{cases}
+\right\}\\
+S^\prime[x] = & \left.
+\begin{cases}
+	S[x] \cup \{j\}, & x = i \\
+	S[x] \cup \{i\}, & x = j \\
+	S[x], & \text{ otherwise}
+\end{cases}
+\right\}\\
+A^\prime[x] = & A
+\end{align*}
 
-For \texttt{assume FALSE} statements:
+For \texttt{assume i != j} and \texttt{assume i != K} statements state is not transformed.
 
-FIXME
+For \texttt{assume i = K} statements, state is checked for conflict against parity of $i$. If there's a conflict, statement is treated as  \texttt{assume FALSE}, otherwise parity information is augmented with constant's parity:
+\begin{align*}
+M^\prime[x] = & \left.
+	\begin{cases}
+		{E}, & x = i \wedge K \equiv_{2} 0 \\
+		{O}, & x = i \wedge K \equiv_{2} 1 \\
+		M[x], & \text{ otherwise}
+	\end{cases}
+\right\}\\
+S^\prime[x] = & S \qquad
+A^\prime[x] =  A
+\end{align*}
 
-For \texttt{assume i = j} statements:
-
-FIXME
-
-For \texttt{assume i != j} statements:
-
-FIXME
-
-For \texttt{assume i = K} statements:
-
-FIXME
-
-For \texttt{assume i != K} statements:
-
-FIXME
 
 Finally, for \texttt{assert pred} statements, transformer is similar to \texttt{skip}, state is not transformed.

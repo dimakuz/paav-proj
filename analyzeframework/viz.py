@@ -34,11 +34,11 @@ def dump_cfg(cfg):
     dot.node(cfg.head.name, shape='doublecircle')
 
     print(dot.source)
-    # print(
-    #     tinyurl.shorten(
-    #         f'{_URL_BASE}{urllib.parse.quote(dot.source, safe="")}',
-    #     ),
-    # )
+    print(
+        tinyurl.shorten(
+            f'{_URL_BASE}{urllib.parse.quote(dot.source, safe="")}',
+        ),
+    )
 
 
 def _stnode_name(i, j):
