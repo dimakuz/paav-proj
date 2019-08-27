@@ -101,7 +101,6 @@ class ShapeState(abstract.AbstractState):
         # If we are at an assume node we have an arbitrary value, so we ignore the sizes of the summary nodes
         # while comparing, so that we can factor the size with the arbitrary value
         # Otherwise we compare normally, taking sizes into account
-        # ignore_size = arbitrary_term is not None
 
         if arbitrary_term is None:
             for st in other.structures:
@@ -119,8 +118,6 @@ class ShapeState(abstract.AbstractState):
 
                         # if 'TEMP_' in arbitrary_term:
                         #     break
-
-                        # LOG.debug('we are about to add a new structure')
 
                         summary_nodes = [v for v in canonical_map if next_st.sm[v] == MAYBE]
                         if summary_nodes:
@@ -145,10 +142,7 @@ class ShapeState(abstract.AbstractState):
                                     LOG.debug('st size is %s', st.size[u])
 
                                     new_size = structure.AbstractSize(st.size[u].terms)
-                                    # if 'CONST' in arbitrary_term:
-                                    #     next_st_copy.size[v] = new_size
 
-                                    # else:
                                     new_size.substract(next_st_copy.size[v])
                                     # LOG.debug('after subsctract st - old %s', new_size)
                                     new_size.multiply(arbitrary_term)
@@ -281,7 +275,6 @@ def var_next_assignment(state, statement):
             valid_st.remove(st)
             continue
 
-        u = st._var_get_indiv(rval)
         for v in st.indiv:
             st.var[lval][v] = exists(lambda u : st.var[rval][u]._and(st.n[(u, v)]))
             st.reach[lval][v] = st.reach[rval][v]._and(st.cycle[v]._or(st.var[rval][v]._not()))
@@ -328,7 +321,6 @@ def next_var_assignment(state, statement):
             valid_st.remove(st)
             continue
 
-        u = st._var_get_indiv(lval)
         for v in st.indiv:
 
             for w in st.indiv:
@@ -444,7 +436,6 @@ def next_null_assignment(state, statement):
                             )
                         )
                     )
-
 
             st.cycle[v] = \
                 cycle[v]._and(

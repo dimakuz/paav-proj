@@ -6,7 +6,7 @@ import types
 import copy
 import itertools
 
-from pysmt import shortcuts, fnode
+from pysmt import shortcuts
 from analyzeshape import lang as lang_shape
 from analyzeframework import lang
 from enum import IntEnum
@@ -144,10 +144,7 @@ class Structure:
     sm: typing.Mapping[int, ThreeValuedBool]
     n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
     n_plus: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
-
     size: typing.Mapping[int, AbstractSize]
-
-    # length: typing.Mapping[lang.Symbol, typing[int, fnode.FNode]]
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
@@ -157,14 +154,11 @@ class Structure:
         for var in self.var:
             newst.var[var] = copy.deepcopy(self.var[var])
             newst.reach[var] = copy.deepcopy(self.reach[var])
-            # newst.length[var] = copy.deepcopy(self.length[var])
         newst.cycle = copy.deepcopy(self.cycle)
         newst.shared = copy.deepcopy(self.shared)
         newst.sm = copy.deepcopy(self.sm)
         newst.n = copy.deepcopy(self.n)
-
         newst.size = copy.deepcopy(self.size)
-        # newst.arbitrary_terms = copy.deepcopy(self.arbitrary_terms)
         return newst
 
 
@@ -387,7 +381,7 @@ class Structure:
             if self.n[(w,u)] != self.n[(w,v)]:
                 self.n[(w,u)] = MAYBE
             if self.n[(u,w)] != self.n[(v,w)]:
-                self.n[(u,w)] = MAYBE        
+                self.n[(u,w)] = MAYBE
         self.sm[u] = MAYBE
         self.size[u].add(self.size[v])
         for key in self.var:
@@ -402,15 +396,6 @@ class Structure:
             self.n.pop((v,w))
             self.n.pop((w,v))
         self.size.pop(v)
-
-    # def _v_update_embedded(self, u, v):
-    #     for w in self.indiv:
-    #         if self.n[(w,u)] != self.n[(w,v)]:
-    #             self.n[(w,u)] = MAYBE
-    #         if self.n[(u,w)] != self.n[(v,w)]:
-    #             self.n[(u,w)] = MAYBE        
-    #     self.sm[u] = MAYBE
-    #     self.size[u].add(self.size[v])
 
 
     # Equality taking summary nodes into account
@@ -444,7 +429,6 @@ class Structure:
     # Is the individual reachable from variable
     def _v_reach(self, var, v):
         return self.var[var][v]._or(self._exists(lambda u : self.var[var][u]._and(self.n_plus[(u,v)])))
-
 
     # Is the individual resides on a cycle
     def _v_cycle(self, v):
@@ -621,7 +605,6 @@ class Structure:
                 break
 
         return True
-
 
 
     def formula(self):
