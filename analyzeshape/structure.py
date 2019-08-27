@@ -14,44 +14,6 @@ from enum import IntEnum
 LOG = logging.getLogger(__name__)
 
 
-
-# def _size_eq(v_size, u_size):
-
-#     constraints = shortcuts.And(_size_get_constraints(v_size), _size_get_constraints(u_size))
-#     cex = shortcuts.get_model(shortcuts.And(constraints, shortcuts.NotEquals(v_size, u_size)))
-
-#     return cex is None
-
-def _size_eq(v_size, u_size):
-    constraints = shortcuts.And(_size_get_constraints(v_size), _size_get_constraints(u_size))
-    return shortcuts.And(constraints, shortcuts.Equals(v_size, u_size))
-
-def _size_always_larger(v_size, u_size):
-
-    constraints = shortcuts.And(_size_get_constraints(v_size), _size_get_constraints(u_size))
-    cex = shortcuts.get_model(shortcuts.And(constraints, shortcuts.LE(v_size, u_size)))
-
-    return cex is None
-
-def _size_get_constraints(v_size):
-    v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
-    return shortcuts.And(*(shortcuts.GE(arbitrary_size, shortcuts.Int(0)) for arbitrary_size in v_arbitrary_sizes))
-    # arb = shortcuts.And(*(shortcuts.GE(arbitrary_size, shortcuts.Int(0)) \
-    #     for arbitrary_size in v_arbitrary_sizes if "ARB" in arbitrary_size.symbol_name()))
-    # const = shortcuts.And(*(shortcuts.Equals(arbitrary_size, shortcuts.Int(1)) \
-    #     for arbitrary_size in v_arbitrary_sizes if "CONST" in arbitrary_size.symbol_name()))
-    # return shortcuts.And(arb, const)
-
-
-def _size_new_name(v_size, name):
-    v_arbitrary_sizes = shortcuts.get_free_variables(v_size)
-    return name not in (arbitrary_size.symbol_name() for arbitrary_size in v_arbitrary_sizes)
-
-# def _size_even(v_size):
-    # return shortcuts.Equals(v_size, shortcuts.Times(shortcuts.FreshSymbol(shortcuts.INT), shortcuts.Int(2)))
-
-
-
 class AbstractSize():
 
     terms: {}
@@ -185,9 +147,6 @@ class Structure:
 
     size: typing.Mapping[int, AbstractSize]
 
-    # arbitrary_terms: typing.List[str]
-
-    # old_size: typing.Mapping[int, fnode.FNode]
     # length: typing.Mapping[lang.Symbol, typing[int, fnode.FNode]]
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
@@ -239,26 +198,8 @@ class Structure:
                 elif self.size[v] == other.size[u]:
                     canonical_map[v] = u
                 else:
-                    # LOG.debug('self %s, other %s', str(self.size[v]), str(other.size[u]))
-                    # if _size_eq(self.size[v], other.size[u]):
-                    #     LOG.debug('they were equal after all...')
-                    #     canonical_map[v] = u
-                    # else:
                     return None
             else:
-                # No canonical individual in other structure - different structure
-
-                # u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and \
-                #     self.sm[v] == other.sm[w]), None)
-                # if u is None:
-                #     LOG.debug('really a different indiv!')
-                # else:
-                #     LOG.debug('there is a matching u=v%s !', u)
-                #     LOG.debug('self size %s', self.size[v])
-                #     LOG.debug('other size of u %s', other.size[u])
-                #     LOG.debug('are sizes equal? %s', str(self.size[v])==str(other.size[u]))
-                #     for w in other.indiv:
-                #         LOG.debug('other size %s', other.size[w])
                 return None
             # canonical_map[v] = u
 
@@ -288,17 +229,8 @@ class Structure:
         def fix_n_not(st,v1,v2):
             st.n[(v1,v2)] = FALSE
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
-            # old_size = st.size[v1]
             st.sm[v1] = FALSE
             st.size[v1] = st.size[v1].set_to_one()
-            # LOG.debug('setting size to 1 to v%d !!', v1)
-            # if not st._v_get_copied_in_focus(v1):
-            #     prev_sm = st._v_get_prev_sm(v1)
-            #     LOG.debug('FIX get prev_sm for v%d: %s', v1, prev_sm if prev_sm is not None else 'None')
-            #     LOG.debug(st)
-            #     st.size[prev_sm] = shortcuts.simplify(shortcuts.Plus(
-            #         st.size[prev_sm], shortcuts.Minus(old_size, shortcuts.Int(1))
-            #     ))
 
         def get_reach_lh(var):
             def reach_lh(st,v):
@@ -362,7 +294,7 @@ class Structure:
                 get_var_not_lh(var), get_var_not_rh(var), get_var_not_fix(var)))
 
             constr.add((f'sm-{var}-not', 2, 
-                get_sm_not_lh(var), lambda st,v1,v2: st._v_can_fix_sm(v1,v2), fix_sm_not))
+                get_sm_not_lh(var), lambda st,v1,v2: st._v_eq(v1,v2), fix_sm_not))
 
         constr.add(('shared', 1, 
             lambda st,v: st._v_shared(v), lambda st,v: st.shared[v], fix_shared))
@@ -383,10 +315,10 @@ class Structure:
             lambda st,v1,v2: st._v_not_n_hs(v1,v2), lambda st,v1,v2: st.n[(v1,v2)]._not(), fix_n_not))
 
         constr.add(('sm-not', 2, 
-            lambda st,v1,v2: st._v_both_n(v1,v2), lambda st,v1,v2: st._v_can_fix_sm(v1,v2), fix_sm_not))
+            lambda st,v1,v2: st._v_both_n(v1,v2), lambda st,v1,v2: st._v_eq(v1,v2), fix_sm_not))
         
         constr.add(('sm-not-shared', 2, 
-            lambda st,v1,v2: st._v_both_n_hs(v1,v2), lambda st,v1,v2: st._v_can_fix_sm(v1,v2), fix_sm_not))
+            lambda st,v1,v2: st._v_both_n_hs(v1,v2), lambda st,v1,v2: st._v_eq(v1,v2), fix_sm_not))
 
         return constr
 
@@ -451,7 +383,13 @@ class Structure:
     # Summarize v into u
     def _v_embed(self, u, v):
         self.indiv.remove(v)
-        self._v_update_embedded(u, v)
+        for w in self.indiv:
+            if self.n[(w,u)] != self.n[(w,v)]:
+                self.n[(w,u)] = MAYBE
+            if self.n[(u,w)] != self.n[(v,w)]:
+                self.n[(u,w)] = MAYBE        
+        self.sm[u] = MAYBE
+        self.size[u].add(self.size[v])
         for key in self.var:
             self.var[key].pop(v)
             self.reach[key].pop(v)
@@ -465,42 +403,14 @@ class Structure:
             self.n.pop((w,v))
         self.size.pop(v)
 
-    # Hackish but relatively fast way to compare size formula
-    def _v_size_eq(self, u, other, v):
-        return self.size[u] == other.size[v]
-
-    # def _v_get_copied_in_focus(self, v):
-    #     copied = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
-
-    #     LOG.debug('found copied for v%d: %s', v, copied if copied is not None else 'None')
-    #     # LOG.debug(self)
-    #     return copied is not None
-
-    def _v_update_embedded(self, u, v):
-        for w in self.indiv:
-            if self.n[(w,u)] != self.n[(w,v)]:
-                self.n[(w,u)] = MAYBE
-            if self.n[(u,w)] != self.n[(v,w)]:
-                self.n[(u,w)] = MAYBE        
-        self.sm[u] = MAYBE
-        self.size[u].add(self.size[v])
-
-    def _v_can_fix_sm(self, v1, v2):
-        eq = self._v_eq(v1, v2)
-        # if eq == MAYBE:
-
-        #     # Is there a next node which was copied during focus operation?
-        #     # If not, we hope to find a previous summary node so we can fix node size
-        #     if not self._v_get_copied_in_focus(v1):
-        #         prev_sm = self._v_get_prev_sm(v1)
-        #         LOG.debug('CAN FIX get prev_sm for v%d: %s', v1, prev_sm if prev_sm is not None else 'None')
-        #         LOG.debug(self)
-
-        #         # If not, the structure is unrepairable
-        #         if prev_sm is None:
-        #             return FALSE
-
-        return eq
+    # def _v_update_embedded(self, u, v):
+    #     for w in self.indiv:
+    #         if self.n[(w,u)] != self.n[(w,v)]:
+    #             self.n[(w,u)] = MAYBE
+    #         if self.n[(u,w)] != self.n[(v,w)]:
+    #             self.n[(u,w)] = MAYBE        
+    #     self.sm[u] = MAYBE
+    #     self.size[u].add(self.size[v])
 
 
     # Equality taking summary nodes into account
@@ -534,21 +444,6 @@ class Structure:
     # Is the individual reachable from variable
     def _v_reach(self, var, v):
         return self.var[var][v]._or(self._exists(lambda u : self.var[var][u]._and(self.n_plus[(u,v)])))
-
-    # Symbolic length between variable and individual
-    # def _v_length(self, var, v):
-
-    #     u = self._var_get_indiv(var)
-    #     length = self.size[u].add(self.size[v])
-
-    #     u = next((w for w in self.indiv if self.n[(u,w)] != FALSE and u != w), None)
-    #     while u != v:
-    #         if u is None:
-    #             return INVALID
-    #         length = length.add(self.size[u])
-    #         u = next((w for w in self.indiv if self.n[(u,w)] != FALSE and u != w), None)
-
-    #     return length
 
 
     # Is the individual resides on a cycle
@@ -591,6 +486,7 @@ class Structure:
     def _var_reach(self, var1, var2):
         return self._exists(lambda u : self.var[var2][u]._and(self.reach[var1][u]))
 
+
     def _var_get_length(self, var1, var2):
         v1 = self._var_get_indiv(var1)
         v2 = self._var_get_indiv(var2)
@@ -598,7 +494,7 @@ class Structure:
         if v1 is None or v2 is None:
             return INVALID
 
-        size = AbstractSize({})
+        size = AbstractSize({'1':0})
 
         v = next((w for w in self.indiv if self.n[(v1,w)] != FALSE and v1 != w), None)
         while v != v2:
@@ -609,21 +505,8 @@ class Structure:
 
         return size
 
-    # def _var_get_length(self, var1, var2):
-    #     u = self._var_get_indiv(var2)
-    #     return shortcuts.Minus(shortcuts.Minus(self.length[var1][u], self.size[var1]), self.size[var2])
-
     def _var_get_indiv(self, var):
         return next((u for u in self.indiv if self.var[var][u] != FALSE), None)
-
-    # Assuming var1 is not null
-    # def _var_get_size(self, var1):
-    #     v1 = next((u for u in self.indiv if self.var[var1][u] == TRUE), None)
-
-    #     if v1 is None or v2 is None:
-    #         return shortcuts.Int(-1)
-
-    #     return self.size[v1]
 
 
     # Transitive closure of n
@@ -653,7 +536,6 @@ class Structure:
             n=dict(),
             n_plus=dict(),
             size=dict(),
-            # arbitrary_terms=[],
             constr=cls.init_constr(symbols)
         )
 
@@ -741,30 +623,6 @@ class Structure:
         return True
 
 
-    # def coerce_length(self):
-
-    #     for var in self.var:
-    #         u = self._var_get_indiv(var)
-
-    #         # Size of node and length from variable to itself don't fit
-    #         if not self._size_eq(self.size[u], self.length[var][u]):
-
-    #             v = next((w for w in self.indiv if self.n[(u,w)] != FALSE and u != w), None)
-
-    #             if v is None:
-    #                 #TODO must fix previous
-
-    #             length_to_next = shortcuts.simplify(shortcuts.Plus(self.size[u], self.size[v]))
-    #             if not self._size_eq(length_to_next, self.length[var][v]):
-    #                 #TODO must fix previous
-
-    #             # Can easy fix
-    #             diff = shortcuts.Minus(self.length[var][u], self.size[u])
-    #             for var2 in self.var:
-    #                 if self.reach[var2][u] != FALSE:
-    #                     self.length[var2][u] = shortcuts.simplify(shortcuts.Minus(self.length[var2][u], diff))
-
-
 
     def formula(self):
         clauses = []
@@ -834,14 +692,9 @@ class Structure:
                         lang_shape.Odd(var1, var2).formula()
                     ),
                 )
-                if str(var1) == 'y' and str(var2) == 'yy':
-                    LOG.debug('var1= %s, var2=%s, len=%s', var1, var2, len12)
                 for var3 in self.var:
                     for var4 in self.var:
                         len34 = self._var_get_length(var3, var4)
-
-                        # if str(var3) == 'z' and str(var4) == 'zz':
-                            # LOG.debug('var3= %s, var4=%s, len=%s', var3, var4, len34)
                         clauses.append(
                             shortcuts.Implies(
                                 shortcuts.And(

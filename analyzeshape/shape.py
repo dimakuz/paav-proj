@@ -4,7 +4,7 @@ import logging
 import typing
 import copy
 
-from pysmt import shortcuts, fnode
+from pysmt import shortcuts
 
 from analyzeshape import lang as lang_shape
 from analyzeframework import abstract
@@ -38,8 +38,6 @@ def transforms(stmt_type):
 @dataclasses.dataclass
 class ShapeState(abstract.AbstractState):
     structures: typing.List[structure.Structure]
-    # in_loop: bool
-    # arbitrary_size: fnode.FNode=shortcuts.Int(1)
 
     def focus(self, var):
         workset = self.structures
@@ -61,8 +59,6 @@ class ShapeState(abstract.AbstractState):
                     v = st2.copy_indiv(u)
                     st2.var[var][u] = TRUE
                     st2.var[var][v] = FALSE
-                    # st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
-                    # st2.size[v] = shortcuts.simplify(shortcuts.Minus(st2.size[v], shortcuts.Int(1)))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus %d\n', len(self.structures))
@@ -89,8 +85,6 @@ class ShapeState(abstract.AbstractState):
                     w = st2.copy_indiv(u)
                     st2.n[(v,u)] = TRUE
                     st2.n[(v,w)] = FALSE
-                    # st2.size[u] = shortcuts.simplify(shortcuts.Minus(st2.size[u], shortcuts.Int(1)))
-                    # st2.size[w] = shortcuts.simplify(shortcuts.Minus(st2.size[w], shortcuts.Int(1)))
                     workset.append(st2)
         self.structures = answerset
         # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
@@ -100,9 +94,6 @@ class ShapeState(abstract.AbstractState):
 
 
         structures = [st for st in self.structures]
-
-        # LOG.debug('loop top %s', loop_top)
-        # LOG.debug('in loop before %s', other.in_loop)
         LOG.debug('begin join num of structures self %d num of structures other %d', len(self.structures), len(other.structures))
 
         other.embed()
@@ -161,22 +152,14 @@ class ShapeState(abstract.AbstractState):
                                     new_size.substract(next_st_copy.size[v])
                                     # LOG.debug('after subsctract st - old %s', new_size)
                                     new_size.multiply(arbitrary_term)
-                                    # if new_size.is_const():
-                                        # new_size.multiply(arbitrary_term)
+
                                     next_st_copy.size[v].add(new_size)
                         
-
                                     LOG.debug('new v size: %s', str(next_st_copy.size[v]))
-
                                     add = True
-
-
-                                
-                                # LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
 
                             if add and next_st_copy not in structures:
                                 # LOG.debug('and we are doing it!')
-                                # next_st_copy.arbitrary_terms.append(arbitrary_term)
                                 # if next_st in structures:
                                 # structures.remove(next_st)
                                 structures.append(next_st_copy)
@@ -186,10 +169,6 @@ class ShapeState(abstract.AbstractState):
                 if not canonical_map:
                     # LOG.debug('did not find canonical map, adding to structures')
                     structures.append(st)
-                # elif arbitrary_visits:
-                #     LOG.debug('found a map, did not add but updated next_st (likely)')
-                # else:
-                #     LOG.debug('found a map, did not add and did not update anything')
 
         LOG.debug('end join num of structures %d', len(structures))
         # for st in structures:
@@ -208,11 +187,9 @@ class ShapeState(abstract.AbstractState):
             for u in indiv_copy:
                 for v in indiv_copy:
                     if u in st.indiv and v in st.indiv and u < v and st._v_canonical_eq(u, st, v):
-                        # LOG.debug('something is summarizable!!! %s %s',u,v)
                         st._v_embed(u, v)
 
     def __str__(self):
-        # meta = f'arb={str(self.arbitrary_size)}, in_loop={self.in_loop}'
         st_str = '\n\n'.join(str(st) for st in self.structures)
         return f'[{st_str}]'
         # if self.structures:
@@ -224,8 +201,6 @@ class ShapeState(abstract.AbstractState):
     def initial(cls, symbols):
         return cls(
             structures=[]
-            # in_loop=False,
-            # arbitrary_size=shortcuts.Int(1)
         )
 
     def initialize_head(self, symbols):
@@ -257,8 +232,6 @@ def var_var_assignment(state, statement):
             st.var[lval][v] = st.var[rval][v]
             st.reach[lval][v] = st.reach[rval][v]
 
-            # st.length[lval][v] = st.length[lval][v]
-
 
 @ShapeState.transforms(lang_shape.VarNewAssignment)
 def var_new_assignment(state, statement):
@@ -273,8 +246,6 @@ def var_new_assignment(state, statement):
             st.n[(u,v)] = FALSE
             st.n[(v,u)] = FALSE
 
-            # st.length[lval][u] = shortcuts.Int(-1)
-
         for key in st.var:
             st.var[key][v] = FALSE
             st.reach[key][v] = FALSE
@@ -282,8 +253,6 @@ def var_new_assignment(state, statement):
         st.var[lval][v] = TRUE
         st.reach[lval][v] = TRUE
         st.n[(v,v)] = FALSE
-
-        # st.length[lval][v] = shortcuts.Int(1)
 
         st.cycle[v] = FALSE
         st.shared[v] = FALSE
@@ -317,16 +286,6 @@ def var_next_assignment(state, statement):
             st.var[lval][v] = exists(lambda u : st.var[rval][u]._and(st.n[(u, v)]))
             st.reach[lval][v] = st.reach[rval][v]._and(st.cycle[v]._or(st.var[rval][v]._not()))
 
-        #     if st.reach[rval][v] == FALSE:
-        #         st.length[lval][v] = shortcuts.Int(-1)
-        #     else:
-        #         st.length[lval][v] = shortcuts.simplify(shortcuts.Minus(st.length[rval][v], st.size[u]))
-
-        # if st.cycle[u] == FALSE:
-        #     st.length[lval][v] = shortcuts.Int(-1)
-
-
-
     state.structures = valid_st
 
 
@@ -339,8 +298,6 @@ def var_null_assignment(state, statement):
         for u in st.indiv:
             st.var[lval][u] = FALSE
             st.reach[lval][u] = FALSE
-
-            # st.length[lval][u] = shortcuts.Int(-1)
 
 
 @ShapeState.transforms(lang_shape.NextVarAssignment)
@@ -396,9 +353,6 @@ def next_var_assignment(state, statement):
                     reach[key][v]._or(
                         exists(lambda u : reach[key][u]._and(var[lval][u]))._and(reach[rval][v])
                     )
-
-                # if st.reach[key][u] and st.reach[rval][v]:
-                #     st.length[key][v] = shortcuts.simplify(shortcuts.Plus(st.length[key][u], st.length[rval][v]))
 
             st.cycle[v] = \
                 cycle[v]._or(
@@ -490,9 +444,6 @@ def next_null_assignment(state, statement):
                             )
                         )
                     )
-
-                # if st.reach[key][v] == FALSE:
-                #     st.length[key][v] = shortcuts.Int(-1)
 
 
             st.cycle[v] = \
