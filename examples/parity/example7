@@ -1,0 +1,6 @@
+w u x
+L1 w := ? L2
+L2 u := w + 1 L3
+L3 assert (ODD w EVEN u) (EVEN w ODD u) L4
+L4 w := w + 1 L5
+L5 assert (ODD w ODD w) (EVEN w EVEN u) L6

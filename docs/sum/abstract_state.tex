@@ -1,0 +1,36 @@
+\section*{Abstract Domain}
+Our abstract state is defined as a 2-tuple of the from $(C,D)$. Where:
+\begin{itemize}
+	\item $C: Symbols \rightarrow \mathbb{Z}\cup \{\bot, \top\}$ - a mapping that tracks constant values of variables.
+	\item $D: (Symbols \times Symbols )\rightarrow \mathbb{Z}\cup \{\bot, \top\}$ - a matrix that tracks difference between values of variables.
+	
+	For example, if $x$ is known to be greater than $y$ by 2, then $D[x,y] = 2$ and $D[y,x] = -2$.
+
+\end{itemize}
+Our abstract domain is then all possible assignments to the 2-tuple.
+
+We'll define a $\sqcup$ operation between an integers and $\{\bot, \top\}$:
+\begin{itemize}
+	\item $K \sqcup \bot = K$
+	\item $K \sqcup \top = \top$
+	\item $K \sqcup K = K$
+	\item $K \sqcup K^\prime = \top$
+	\item $\bot \sqcup \top = \top$
+\end{itemize}
+We'll also define the above $\sqcup$ commutative, meaning that $a\sqcup b \equiv b \sqcup a$.
+
+The join operation is defined as following: given $\alpha_1=(C_1, D_1)$ and $\alpha_2=(C_2,D_2)$ abstract states:
+\begin{align*}
+&\alpha_1\sqcup\alpha_2=(C_1\sqcup C_2, D_1 \sqcup D_2) \\
+\forall s \in Symbols&:  \\
+&(C_1\sqcup C_2)[s] = \left.
+	\begin{cases}
+		C_1[s]\sqcup C_2[s], & s \in Symbols
+	\end{cases}
+\right\} \\
+&(D_1\sqcup D_2)[s_1, s_2] = \left.
+	\begin{cases}
+		D_1[s_1, s_2]\sqcup D_2[s_1, s_2], & s \in Symbols
+	\end{cases}
+\right\}
+\end{align*}

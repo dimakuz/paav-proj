@@ -1,0 +1,8 @@
+x y z
+L1 y := ? L2
+L2 x := y + 1 L3
+L3 z := x + 1 L4
+L4 assert (ODD x EVEN y) (EVEN x ODD y) L5
+L5 assert (ODD x ODD y) (EVEN x EVEN y) L6
+L4 assert (ODD y ODD z) (EVEN z EVEN y) L7
+L7 assert (ODD z EVEN y) (EVEN z ODD y) L8

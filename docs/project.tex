@@ -30,7 +30,7 @@
 \lstset{basicstyle=\small}
 \newcommand{\example}[2]{
 \input{#1/examples/example#2.tex}
-\begin{figure}[h]
+\begin{figure}[h!]
 \centering
 \begin{subfigure}{.5\textwidth}
   \centering
@@ -43,6 +43,7 @@
   \lstinputlisting{#1/examples/example#2.code}
   \caption{Code}
 \end{subfigure}
+\caption*{Example #2}
 \end{figure}
 }
 
@@ -97,4 +98,5 @@ Invocation of analysis is done through \texttt{pipenv run analyze}:
 \lstinputlisting{analyze.usage}
 
 \input{parity}
+\input{sum}
 \end{document}

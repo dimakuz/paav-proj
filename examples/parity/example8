@@ -1,0 +1,9 @@
+x y
+L1 x := ? L2
+L2 y := x + 1 L3
+L3 x := x L4
+L4 assert (ODD x EVEN y) (EVEN x ODD y) L5
+L5 x := 1 L6
+L6 y := x L7
+L7 x := 3 L8
+L8 assert (ODD y) L9

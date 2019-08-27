@@ -1,3 +1,12 @@
-This example is similar to previous one, except for the final assertion. In second example analysis was able to deduce that $i$ and $j$ are of similar parity. Here, we demonstrate that we're also able to deduce that parity of $j$ is similar to parity of $n$. 
+This example demonstrates that analysis is also able to track opposite
+parity relation between variables. Here, since $x$ is assigned $y + 1$,
+do don't know its parity but we know it is the opposite of y. We're able
+to assert that exactly one of $x,y$ has to be odd (assertion on
+$L4\rightarrow L5$ edge) and that is impossible for $x$ and $y$ to be of
+similar parity ($L5\rightarrow L6$ edge).
 
- Here, our abstract state at assert node contains information that $i$ and $n$ are of same parity, additionally, $i$ is of same parity as $j$. SMT solver is able to deduce that $j$ is of same parity as $n$.
+Additionaly, we're able to assert that $y$ and $z$ are of similar parity
+by using knowledge available about relation of $x$ and $y$.
+
+Disclaimer, in this example code branches without \texttt{assume} nodes,
+they are removed for brevity, and would have not affected the analysis.

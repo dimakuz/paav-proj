@@ -1,0 +1,10 @@
+x z
+L0 x := 1 L1
+L1 assume (TRUE) L31
+L1 assume (TRUE) L41
+L31 z := x L32
+L32 assert (ODD z) L5
+L41 z := x + 1 L42
+L42 assert (EVEN z) L5
+L5 assert (EVEN z) L6
+L5 assert (ODD z) L7

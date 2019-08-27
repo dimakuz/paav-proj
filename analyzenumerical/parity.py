@@ -1,4 +1,3 @@
-import copy
 import dataclasses
 import logging
 import typing
@@ -115,15 +114,18 @@ class ParityState(abstract.AbstractState):
                 continue
             clauses.append(formula)
 
-        # Encode similar parity:
-        for symbol, value in self.samepar.items():
-            if not value:
+        for symbol in self.modulo.keys():
+            samepar = self.samepar[symbol]
+            antipar = self.antipar[symbol]
+
+            if not samepar and not antipar:
                 continue
 
             clauses.append(
                 shortcuts.Implies(
                     shortcuts.And(
-                        *(lang_num.Even(o).formula() for o in value),
+                        *(lang_num.Even(o).formula() for o in samepar),
+                        *(lang_num.Odd(o).formula() for o in antipar),
                     ),
                     lang_num.Even(symbol).formula(),
                 ),
@@ -131,39 +133,30 @@ class ParityState(abstract.AbstractState):
             clauses.append(
                 shortcuts.Implies(
                     shortcuts.And(
-                        *(lang_num.Odd(o).formula() for o in value),
+                        *(lang_num.Odd(o).formula() for o in samepar),
+                        *(lang_num.Even(o).formula() for o in antipar),
                     ),
                     lang_num.Odd(symbol).formula(),
-                ),
-            )
-
-        # Encode anti parity:
-        for symbol, value in self.antipar.items():
-            if not value:
-                continue
-
-            clauses.append(
-                shortcuts.Implies(
-                    shortcuts.And(
-                        *(lang_num.Even(o).formula() for o in value),
-                    ),
-                    lang_num.Odd(symbol).formula(),
-                ),
-            )
-            clauses.append(
-                shortcuts.Implies(
-                    shortcuts.And(
-                        *(lang_num.Odd(o).formula() for o in value),
-                    ),
-                    lang_num.Even(symbol).formula(),
                 ),
             )
 
         return shortcuts.And(*clauses)
 
+    def post_transform(self):
+        # Remove elements both in samepar and antipar
+        for symbol in self.modulo.keys():
+            samepar = self.samepar[symbol]
+            antipar = self.antipar[symbol]
+            common = samepar.intersection(antipar)
+            samepar.difference_update(common)
+            antipar.difference_update(common)
+
 
 @ParityState.transforms(lang_num.VarAssignment)
 def var_assignment(state, statement):
+    if statement.lval == statement.rval:
+        return
+
     state.modulo[statement.lval] = state.modulo[statement.rval]
 
     for key in state.samepar:
@@ -210,17 +203,25 @@ def incdec_assignment(state, statement):
         p = TOP.difference(rval_modulo)
     state.modulo[statement.lval] = p
 
-    for key in state.samepar:
-        state.samepar[key].discard(statement.lval)
-        state.antipar[key].discard(statement.lval)
-
     if statement.rval != statement.lval:
         state.samepar[statement.lval].clear()
         state.antipar[statement.lval] = {statement.rval}
+
+        for key in state.samepar:
+            state.samepar[key].discard(statement.lval)
+            state.antipar[key].discard(statement.lval)
     else:
         tmp = state.samepar[statement.lval]
         state.samepar[statement.lval] = state.antipar[statement.lval]
         state.antipar[statement.lval] = tmp
+
+        for key in state.samepar:
+            if statement.lval in state.samepar[key]:
+                state.samepar[key].remove(statement.lval)
+                state.antipar[key].add(statement.lval)
+            if statement.lval in state.antipar[key]:
+                state.antipar[key].remove(statement.lval)
+                state.samepar[key].add(statement.lval)
 
 
 @ParityState.transforms(lang.Skip)
