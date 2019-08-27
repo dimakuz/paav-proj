@@ -64,7 +64,7 @@ class AbstractSize():
             if variable not in self.terms:
                 self.terms[variable] = +other.terms[variable]
 
-        self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0}
+        self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0 or variable == '1'}
         return self
 
     def substract(self, other):
@@ -75,12 +75,12 @@ class AbstractSize():
             if variable not in self.terms:
                 self.terms[variable] = -other.terms[variable]
 
-        self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0}
+        self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0 or variable == '1'}
         return self
 
     def multiply(self, term):
         self.terms[term] = self.terms['1']
-        self.terms.pop('1')
+        self.terms['1'] = 0
         return self
 
     def has_term(self, term):
@@ -712,6 +712,8 @@ class Structure:
                         # No previous summary node that can take the size
                         return False
                     else:
+
+                        # LOG.debug('have to fix v%d that have size %s and v%d that have size %s', v, old_size[v], u, self.size[u])
                         old_size[v].substract(self.size[v])
                         self.size[u].add(old_size[v])
 
@@ -721,6 +723,8 @@ class Structure:
                     # Concretisizing next node too and later join will handle the structure merge 
                     if (self.size[u] == SIZE_ONE):
                         self.sm[u] = FALSE
+                        self.n[(u,u)] = FALSE
+                        self.n[(v,u)] = TRUE
 
                     # Possible shared node that shouldn't have been
                     # Also, the length between the nodes is not preserved anyway
@@ -730,6 +734,9 @@ class Structure:
                         self.n[(v,w)] = FALSE
 
                     # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
+
+                # TODO: check if this fix is good enough!!
+                break
 
         return True
 

@@ -98,8 +98,6 @@ class ShapeState(abstract.AbstractState):
 
     def join(self, other, arbitrary_term):
 
-        # for st in self.structures:
-            # LOG.debug('begin is arb in array? %s', arbitrary_term in st.arbitrary_terms)
 
         structures = [st for st in self.structures]
 
@@ -127,10 +125,9 @@ class ShapeState(abstract.AbstractState):
 
                     # LOG.debug('found canonical map? %s', str(canonical_map is not None))
                     if canonical_map:
-                        # if arbitrary_visits and other.in_loop:
 
-                        if 'CONST' in arbitrary_term:
-                            break
+                        # if 'TEMP_' in arbitrary_term:
+                        #     break
 
                         # LOG.debug('we are about to add a new structure')
 
@@ -143,22 +140,18 @@ class ShapeState(abstract.AbstractState):
                             for v in summary_nodes:
                                 # Counterpart in st
                                 u = canonical_map[v]
-                                # LOG.debug('arbitrary size is %s', arbitrary_visits)
-                                # updated_size = st.size[v]
-                                # old_size = next_st.size[v]
-                                # if next_st_copy.sm[v] == MAYBE:
 
-                                
-                                # LOG.debug('old v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
-                                 #if structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
-                                #     structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
 
-                                # elif structure._size_always_larger(st.size[u], next_st_copy.size[v]) and \
-                                    # structure._size_new_name(next_st_copy.size[v], arbitrary_visits.symbol_name()):
                                 # if not next_st_copy.size[v].has_term(arbitrary_term) and st.size[u] != next_st_copy.size[v]:
-                                if st.size[u] != next_st_copy.size[v]:
+                                # if st.size[u] != next_st_copy.size[v]:
+                                if not next_st_copy.size[v].has_term(arbitrary_term) and st.size[u] != next_st_copy.size[v]:
+
+                                    LOG.debug('old structure:\n %s', st)
+                                    LOG.debug('new structure:\n %s', next_st)
 
                                     LOG.debug('old v size: %s', str(next_st_copy.size[v]))
+
+                                    LOG.debug('st size is %s', st.size[u])
 
                                     new_size = structure.AbstractSize(st.size[u].terms)
                                     # if 'CONST' in arbitrary_term:
@@ -166,19 +159,11 @@ class ShapeState(abstract.AbstractState):
 
                                     # else:
                                     new_size.substract(next_st_copy.size[v])
+                                    # LOG.debug('after subsctract st - old %s', new_size)
                                     new_size.multiply(arbitrary_term)
                                     # if new_size.is_const():
                                         # new_size.multiply(arbitrary_term)
                                     next_st_copy.size[v].add(new_size)
-
-                                    # next_st_copy.size[v] = shortcuts.simplify(next_st_copy.size[v])
-
-                                    # # Update length
-                                    # for key in next_st_copy.var:
-                                    #     if next_st_copy.reach[key][v]:
-                                    #         for u in next_st_copy.indiv:
-                                    #             if next_st_copy.reach[key][u]:
-                                    #                 next_st_copy.length[key][u] = next_st_copy._v_length(key, u)
                         
 
                                     LOG.debug('new v size: %s', str(next_st_copy.size[v]))
@@ -189,7 +174,7 @@ class ShapeState(abstract.AbstractState):
                                 
                                 # LOG.debug('new v size: %s', str(shortcuts.simplify(next_st_copy.size[v])))
 
-                            if add:
+                            if add and next_st_copy not in structures:
                                 # LOG.debug('and we are doing it!')
                                 # next_st_copy.arbitrary_terms.append(arbitrary_term)
                                 # if next_st in structures:
@@ -206,20 +191,12 @@ class ShapeState(abstract.AbstractState):
                 # else:
                 #     LOG.debug('found a map, did not add and did not update anything')
 
-        # if arbitrary_visits:
-            # self.in_loop = False
-            # self.arbitrary_size = shortcuts.Int(1)
-
-        # if other.in_loop or loop_top:
-            # self.in_loop = True
-        # LOG.debug('in loop after %s', self.in_loop)
-
         LOG.debug('end join num of structures %d', len(structures))
         # for st in structures:
             # LOG.debug('end is arb in array? %s', arbitrary_term in st.arbitrary_terms)
         state = ShapeState(structures)
-        # if arbitrary_term is not None:
-            # LOG.debug('state in the end %s', state)
+        if arbitrary_term is not None and 'TEMP' in arbitrary_term:
+            LOG.debug('state in the end %s', state)
         return state
         # return ShapeState(structures)
 
