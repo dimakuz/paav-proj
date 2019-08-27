@@ -115,15 +115,18 @@ class ParityState(abstract.AbstractState):
                 continue
             clauses.append(formula)
 
-        # Encode similar parity:
-        for symbol, value in self.samepar.items():
-            if not value:
+        for symbol in self.modulo.keys():
+            samepar = self.samepar[symbol]
+            antipar = self.antipar[symbol]
+
+            if not samepar and not antipar:
                 continue
 
             clauses.append(
                 shortcuts.Implies(
                     shortcuts.And(
-                        *(lang_num.Even(o).formula() for o in value),
+                        *(lang_num.Even(o).formula() for o in samepar),
+                        *(lang_num.Odd(o).formula() for o in antipar),
                     ),
                     lang_num.Even(symbol).formula(),
                 ),
@@ -131,31 +134,10 @@ class ParityState(abstract.AbstractState):
             clauses.append(
                 shortcuts.Implies(
                     shortcuts.And(
-                        *(lang_num.Odd(o).formula() for o in value),
+                        *(lang_num.Odd(o).formula() for o in samepar),
+                        *(lang_num.Even(o).formula() for o in antipar),
                     ),
                     lang_num.Odd(symbol).formula(),
-                ),
-            )
-
-        # Encode anti parity:
-        for symbol, value in self.antipar.items():
-            if not value:
-                continue
-
-            clauses.append(
-                shortcuts.Implies(
-                    shortcuts.And(
-                        *(lang_num.Even(o).formula() for o in value),
-                    ),
-                    lang_num.Odd(symbol).formula(),
-                ),
-            )
-            clauses.append(
-                shortcuts.Implies(
-                    shortcuts.And(
-                        *(lang_num.Odd(o).formula() for o in value),
-                    ),
-                    lang_num.Even(symbol).formula(),
                 ),
             )
 

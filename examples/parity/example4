@@ -1,0 +1,7 @@
+w u x y z
+L1 w := ? L2
+L2 u := w L3
+L3 x := u + 1 L4
+L4 y := x L5
+L5 z := y - 1 L6
+L6 assert (ODD z ODD w) (EVEN w EVEN z) L7

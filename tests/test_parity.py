@@ -15,18 +15,37 @@ from analyzenumerical import parity
          (('L7', 'L8', True),),
         ),
         ('examples/parity/reference', (('L6', 'L7', True),)),
-        ('examples/parity/reference-extra',
-         (
-            ('L6', 'L7', True),
-            ('L7', 'L8', False),
-            ('L8', 'L9', True),
-         ),
-        ),
+        # ('examples/parity/reference-extra',
+        #  (
+        #     ('L6', 'L7', True),
+        #     ('L7', 'L8', False),
+        #     ('L8', 'L9', True),
+        #  ),
+        # ),
         ('examples/parity/reference-weird',
          (('L6', 'L7', False),
           ('L7', 'L8', True)),
         ),
         ('examples/parity/reference-extra', (('L6', 'L7', True),)),
+        ('examples/parity/example1', (('L3', 'L4', True),)),
+        ('examples/parity/example2', (('L3', 'L4', True),)),
+        (
+            'examples/parity/example3',
+            (
+                ('L4', 'L5', True),
+                ('L5', 'L6', False),
+                ('L4', 'L7', True),
+                ('L7', 'L8', False),
+            ),
+        ),
+        ('examples/parity/example4', (('L6', 'L7', True),)),
+        (
+            'examples/parity/example5',
+            (
+                ('L5', 'L6', False),
+                ('L5', 'L7', False),
+            ),
+        ),
     ),
 )
 def test_parity_analysis(input_path, asserts):

@@ -1,0 +1,9 @@
+x y z
+L1 assume (TRUE) L31
+L1 assume (TRUE) L41
+L31 x := ? L32
+L32 y := x + 1 L5
+L41 y := ? L42
+L42 x := y + 1 L5
+L5 assert (EVEN x ODD y) (EVEN y ODD x) L6
+L5 assert (ODD x ODD y) (EVEN x EVEN y) L7

@@ -1,0 +1,4 @@
+x y
+L1 x := 1 L2
+L2 assume (y = 2) L3
+L3 assert (ODD x EVEN y) L4
