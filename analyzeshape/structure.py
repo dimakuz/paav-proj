@@ -426,6 +426,11 @@ class Structure:
                     self.cycle[u] == other.cycle[v] and \
                     self.shared[u] == other.shared[v]
 
+    def _v_after_focus_eq(self, u, other, v):
+        return all(self.reach[key][u] == other.reach[key][v] for key in self.var) and \
+                    self.cycle[u] == other.cycle[v] and \
+                    self.shared[u] == other.shared[v]
+
     def copy_indiv(self, u):
         v = max(self.indiv) + 1
         for key in self.var:
@@ -579,7 +584,7 @@ class Structure:
     def _var_next_eq(self, var1, var2):
         return self._exists(lambda u1 : \
             self._exists(lambda u2: \
-                self.var[var1][u1]._and(self.var[var2][u2])._and(self.n[(u1,u2)])
+                self.var[var1][u1]._and(self.var[var2][u2])._and(self.n[(u2,u1)])
                 )
             )
 
@@ -657,6 +662,7 @@ class Structure:
         self.update_n_plus()
         old_size = copy.deepcopy(self.size)
 
+        # LOG.debug('begining coerce session')
         for constraint in self.constr:
             (name, par_num, lh, rh, fix) = constraint
             if par_num == 1:
@@ -692,7 +698,8 @@ class Structure:
             if self.sm[v] == FALSE and old_size[v] != SIZE_ONE:
 
                 # LOG.debug('node v%d is not equal: new size is %s, old size is %s', v, self.size[v], old_size[v])
-                u = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v and self.sm[u] == MAYBE), None)
+                u = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v \
+                    and self._v_after_focus_eq(u, self, v) and self.sm[u] == MAYBE), None)
 
 
                 # LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
@@ -713,7 +720,15 @@ class Structure:
                     self.size[u].substract(SIZE_ONE)
                     # Concretisizing next node too and later join will handle the structure merge 
                     if (self.size[u] == SIZE_ONE):
-                        self.sm[u] = FALSE 
+                        self.sm[u] = FALSE
+
+                    # Possible shared node that shouldn't have been
+                    # Also, the length between the nodes is not preserved anyway
+                    w = next((w for w in self.indiv if self.n[(v,w)] != FALSE and self.n[(u,w)] != FALSE and w != v and w != u), None)
+                    if w is not None:
+                        # LOG.debug('found v%d that fits into the description (v%d and v%d)', w, u, v)
+                        self.n[(v,w)] = FALSE
+
                     # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
 
         return True
@@ -749,47 +764,67 @@ class Structure:
 
         for var1 in self.var:
             clauses.append(
-                shortcuts.Iff(
-                    lang_shape.EqualsVarNull(var1).formula(),
-                    shortcuts.Bool(self._var_not_null(var1) == FALSE)
+                shortcuts.Implies(
+                    shortcuts.Bool(self._var_not_null(var1) == FALSE),
+                    lang_shape.EqualsVarNull(var1).formula()
+                ),
+            )
+            clauses.append(
+                shortcuts.Implies(
+                    shortcuts.Bool(self._var_not_null(var1) == TRUE),
+                    lang_shape.NotEqualsVarNull(var1).formula()
                 ),
             )
             for var2 in self.var:
                 clauses.append(
-                    shortcuts.Iff(
-                        lang_shape.EqualsVarVar(var1, var2).formula(),
-                        shortcuts.Bool(self._var_eq(var1, var2) == TRUE)
+                    shortcuts.Implies(
+                        shortcuts.Bool(self._var_eq(var1, var2) == TRUE),
+                        lang_shape.EqualsVarVar(var1, var2).formula()
                     ),
                 )
                 clauses.append(
-                    shortcuts.Iff(
-                        lang_shape.EqualsVarNext(var1, var2).formula(),
-                        shortcuts.Bool(self._var_next_eq(var1, var2) == TRUE)
+                    shortcuts.Implies(
+                        shortcuts.Bool(self._var_eq(var1, var2) == FALSE),
+                        lang_shape.NotEqualsVarVar(var1, var2).formula()
                     ),
                 )
                 clauses.append(
-                    shortcuts.Iff(
+                    shortcuts.Implies(
+                        shortcuts.Bool(self._var_next_eq(var1, var2) == TRUE),
+                        lang_shape.EqualsVarNext(var1, var2).formula()
+                    ),
+                )
+                clauses.append(
+                    shortcuts.Implies(
+                        shortcuts.Bool(self._var_next_eq(var1, var2) == FALSE),
+                        lang_shape.NotEqualsVarNext(var1, var2).formula()
+                    ),
+                )
+                clauses.append(
+                    shortcuts.Implies(
+                        shortcuts.Bool(self._var_reach(var1, var2) == TRUE),
                         lang_shape.Ls(var1, var2).formula(),
-                        shortcuts.Bool(self._var_reach(var1, var2) == TRUE)
                     ),
                 )
                 len12 = self._var_get_length(var1, var2)
+                if str(var1) == 'y' and str(var2) == 'yy':
+                    LOG.debug('var1= %s, var2=%s, len=%s', var1, var2, len12)
                 clauses.append(
-                    shortcuts.Iff(
-                        lang_shape.Even(var1, var2).formula(),
+                    shortcuts.Implies(
                         shortcuts.And(
                             shortcuts.Bool(len12 != INVALID),
                             shortcuts.Bool(len12.even())
-                        )
+                        ),
+                        lang_shape.Even(var1, var2).formula()
                     ),
                 )
                 clauses.append(
-                    shortcuts.Iff(
-                        lang_shape.Odd(var1, var2).formula(),
+                    shortcuts.Implies(
                         shortcuts.And(
                             shortcuts.Bool(len12 != INVALID),
                             shortcuts.Bool(len12.even() == False)
-                        )
+                        ),
+                        lang_shape.Odd(var1, var2).formula()
                     ),
                 )
                 if str(var1) == 'y' and str(var2) == 'yy':
@@ -801,13 +836,13 @@ class Structure:
                         # if str(var3) == 'z' and str(var4) == 'zz':
                             # LOG.debug('var3= %s, var4=%s, len=%s', var3, var4, len34)
                         clauses.append(
-                            shortcuts.Iff(
-                                lang_shape.Len(var1, var2, var3, var4).formula(),
+                            shortcuts.Implies(
                                 shortcuts.And(
                                     shortcuts.Bool(len12 != INVALID),
                                     shortcuts.Bool(len34 != INVALID),
                                     shortcuts.Bool(len12 == len34)
-                                )
+                                ),
+                                lang_shape.Len(var1, var2, var3, var4).formula()
                             )
                         )
 

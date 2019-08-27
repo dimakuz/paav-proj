@@ -78,7 +78,7 @@ class NotEqualsVarVar(lang.Predicate):
         return f'{self.lval} != {self.rval}'
 
     def formula(self):
-        return shortcuts.Not(shortcuts.Symbol(f'EQ-{self.lval}-{self.rval}'))
+        return shortcuts.Symbol(f'NOTEQ-{self.lval}-{self.rval}')
 
 
 @dataclasses.dataclass
@@ -102,7 +102,7 @@ class NotEqualsVarNext(lang.Predicate):
         return f'{self.lval} != {self.rval}.n'
 
     def formula(self):
-        return shortcuts.Not(shortcuts.Symbol(f'EQNEXT-{self.lval}-{self.rval}'))
+        return shortcuts.Symbol(f'NOTEQNEXT-{self.lval}-{self.rval}')
 
 
 @dataclasses.dataclass
@@ -124,7 +124,7 @@ class NotEqualsVarNull(lang.Predicate):
         return f'{self.lval} != NULL'
 
     def formula(self):
-        return shortcuts.Not(shortcuts.Symbol(f'NULL-{self.lval}'))
+        return shortcuts.Symbol(f'NOTNULL-{self.lval}')
 
 
 @dataclasses.dataclass

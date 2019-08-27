@@ -218,8 +218,8 @@ class ShapeState(abstract.AbstractState):
         # for st in structures:
             # LOG.debug('end is arb in array? %s', arbitrary_term in st.arbitrary_terms)
         state = ShapeState(structures)
-        if arbitrary_term is not None:
-            LOG.debug('state in the end %s', state)
+        # if arbitrary_term is not None:
+            # LOG.debug('state in the end %s', state)
         return state
         # return ShapeState(structures)
 
@@ -256,7 +256,7 @@ class ShapeState(abstract.AbstractState):
 
     def formula(self):
         formulas = [st.formula() for st in self.structures]
-        return shortcuts.And(*formulas)
+        return shortcuts.Or(*formulas)
 
     def post_transform(self):
         new_structures = []
