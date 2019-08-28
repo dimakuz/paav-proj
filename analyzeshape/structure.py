@@ -5,6 +5,7 @@ import logging
 import types
 import copy
 import itertools
+import collections
 
 from pysmt import shortcuts
 from analyzeshape import lang as lang_shape
@@ -16,7 +17,7 @@ LOG = logging.getLogger(__name__)
 
 class AbstractSize():
 
-    terms: {}
+    terms: collections.OrderedDict()
 
     def add(self, other):
         for variable in self.terms:
@@ -26,7 +27,11 @@ class AbstractSize():
             if variable not in self.terms:
                 self.terms[variable] = +other.terms[variable]
 
-        self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0 or variable == '1'}
+        # self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0 or variable == '1'}
+        for variable, factor in list(self.terms.items()):
+            if factor == 0 and variable != '1':
+                self.terms.pop(variable)
+
         return self
 
     def substract(self, other):
@@ -37,19 +42,23 @@ class AbstractSize():
             if variable not in self.terms:
                 self.terms[variable] = -other.terms[variable]
 
-        self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0 or variable == '1'}
+        # self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0 or variable == '1'}
+        for variable, factor in list(self.terms.items()):
+            if factor == 0 and variable != '1':
+                self.terms.pop(variable)
+
         return self
 
-    def multiply(self, term):
-        self.terms[term] = self.terms['1']
+    def multiply(self, variable):
+        self.terms[variable] = self.terms['1']
         self.terms['1'] = 0
         return self
 
     def has_term(self, term):
-        return term in self.terms
+        return term in self.terms.keys()
 
-    def is_const(self):
-        return len(self.terms) == 1 and '1' in self.terms
+    def is_negative(self):
+        return any((var, fac) for (var, fac) in self.terms.items() if 'PERM' in var and fac < 0)
 
     def even(self):
         return all(factor % 2 == 0 for variable, factor in self.terms.items())
@@ -57,9 +66,28 @@ class AbstractSize():
     def variables_eq(self, other):
         return set(self.terms.keys()) == set(other.terms.keys())
 
-    def set_to_one(self):
-        self.terms = {'1':1}
-        return self
+    def get_last_term(self):
+        return next(reversed(self.terms))
+
+    def extract_variable(self, variable):
+        factor = self.terms[variable]
+        size = AbstractSize(self.terms)
+        size.terms.pop(variable)
+        for var, fac in size.terms.items():
+            if fac % factor == 0:
+                size.terms[var] /= -factor
+            else:
+                return INVALID
+        return size
+
+    def substitute(self, variable, size):
+        if variable in self.terms.keys():
+            factor = self.terms[variable]
+            self.terms.pop(variable)
+            temp_size = AbstractSize(size.terms)
+            for var, fac in temp_size.terms.items():
+                temp_size.terms[var] *= factor
+            self.add(temp_size)
 
     def __eq__(self, other):
         return self.terms == other.terms
@@ -82,12 +110,12 @@ class AbstractSize():
 
         return ' '.join(pretty_print(factor, variable) for variable, factor in self.terms.items())
 
-    def __init__(self, new_terms):
-        self.terms = new_terms
+    def __init__(self, newterms):
+        self.terms = copy.deepcopy(newterms)
 
-INVALID = AbstractSize({'1':-1})
-SIZE_ONE = AbstractSize({'1':1})
-
+INVALID = AbstractSize(collections.OrderedDict([('1', -1)]))
+SIZE_ONE = AbstractSize(collections.OrderedDict([('1', 1)]))
+SIZE_ZERO = AbstractSize(collections.OrderedDict([('1', 0)]))
 
 
 class ThreeValuedBool(IntEnum):
@@ -224,7 +252,7 @@ class Structure:
             st.n[(v1,v2)] = FALSE
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
             st.sm[v1] = FALSE
-            st.size[v1] = st.size[v1].set_to_one()
+            st.size[v1] = AbstractSize(collections.OrderedDict([('1', 1)]))
 
         def get_reach_lh(var):
             def reach_lh(st,v):
@@ -362,7 +390,6 @@ class Structure:
         for key in self.var:
             self.var[key][v] = self.var[key][u]
             self.reach[key][v] = self.reach[key][u]
-            # self.length[key][v] = self.length[key][u].deepcopy()
         self.cycle[v] = self.cycle[u]
         self.shared[v] = self.shared[u]
         self.sm[v] = self.sm[u]
@@ -376,7 +403,6 @@ class Structure:
 
     # Summarize v into u
     def _v_embed(self, u, v):
-        self.indiv.remove(v)
         for w in self.indiv:
             if self.n[(w,u)] != self.n[(w,v)]:
                 self.n[(w,u)] = MAYBE
@@ -384,10 +410,13 @@ class Structure:
                 self.n[(u,w)] = MAYBE
         self.sm[u] = MAYBE
         self.size[u].add(self.size[v])
+        self._v_remove(v)
+
+    def _v_remove(self, v):
+        self.indiv.remove(v)
         for key in self.var:
             self.var[key].pop(v)
             self.reach[key].pop(v)
-            # self.length[key].pop(v)
         self.cycle.pop(v)
         self.shared.pop(v)
         self.sm.pop(v)
@@ -396,7 +425,6 @@ class Structure:
             self.n.pop((v,w))
             self.n.pop((w,v))
         self.size.pop(v)
-
 
     # Equality taking summary nodes into account
     def _v_eq(self, v1, v2):
@@ -478,7 +506,7 @@ class Structure:
         if v1 is None or v2 is None:
             return INVALID
 
-        size = AbstractSize({'1':0})
+        size = AbstractSize(collections.OrderedDict([('1', 0)]))
 
         v = next((w for w in self.indiv if self.n[(v1,w)] != FALSE and v1 != w), None)
         while v != v2:
@@ -571,26 +599,56 @@ class Structure:
                 # LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
 
                 if u is None:
-                    u = self._v_get_prev_sm(v)
+                    # u = self._v_get_prev_sm(v)
 
-                    # LOG.debug('is there a prev summary node that fixes? %s', u if u is not None else 'No!')
-                    if u is None:
-                        # No previous summary node that can take the size
+                    # # LOG.debug('is there a prev summary node that fixes? %s', u if u is not None else 'No!')
+                    # if u is None:
+                    #     # No previous summary node that can take the size
+                    #     return False
+                    # else:
+
+                        
+                    # LOG.debug('have to fix v%d that have size %s and v%d that have size %s', v, old_size[v], u, self.size[u])
+                    # old_size[v].substract(self.size[v])
+                    old_size[v].substract(SIZE_ONE) # Diff to add to prev node
+                    
+                    # LOG.debug('old size is: %s, last factor %s',old_size[v],isinstance(old_size[v].get_last_term(), str))
+                    volatile_variable = old_size[v].get_last_term()
+
+                    if 'TEMP' not in volatile_variable:
+                        LOG.debug('a size is not symbolic!! %s', old_size[v])
+                        # assert False
                         return False
-                    else:
 
-                        # LOG.debug('have to fix v%d that have size %s and v%d that have size %s', v, old_size[v], u, self.size[u])
-                        old_size[v].substract(self.size[v])
-                        self.size[u].add(old_size[v])
 
-                        # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
+                    volatile_size = old_size[v].extract_variable(volatile_variable)
+
+                    if volatile_size == INVALID:
+                        LOG.debug('a size is not an integer!! %s', old_size[v])
+                        assert False
+                        return False
+
+                    # Substitute
+                    for w in self.indiv:
+                        self.size[w].substitute(volatile_variable, volatile_size)
+                        if self.size[w] == SIZE_ONE:
+                            self._v_concretisize(w)
+                        elif self.size[w] == SIZE_ZERO:
+                            self._v_remove(w)
+                        elif self.size[w].is_negative():
+                            LOG.debug('a size was found to be negative!!!! %s', self.size[w])
+                            assert False
+                            return False
+
+                    # else:
+                    #     self.size[u].add(old_size[v])
+
+                    # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
                 else:
                     self.size[u].substract(SIZE_ONE)
                     # Concretisizing next node too and later join will handle the structure merge 
                     if (self.size[u] == SIZE_ONE):
-                        self.sm[u] = FALSE
-                        self.n[(u,u)] = FALSE
-                        self.n[(v,u)] = TRUE
+                        self._v_concretisize(u)
 
                     # Possible shared node that shouldn't have been
                     # Also, the length between the nodes is not preserved anyway
@@ -605,6 +663,17 @@ class Structure:
                 break
 
         return True
+
+    def _v_concretisize(self, v):
+        self.sm[v] = FALSE
+        self.n[(v,v)] = FALSE
+        for u in self.indiv:
+            if self.sm[u] == FALSE:
+                if self.n[(u,v)] == MAYBE:
+                    self.n[(u,v)] = TRUE
+                if self.n[(v,u)] == MAYBE:
+                    self.n[(v,u)] = TRUE
+
 
 
     def formula(self):

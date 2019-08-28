@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import typing
 import copy
+import collections
 
 from pysmt import shortcuts
 
@@ -129,8 +130,6 @@ class ShapeState(abstract.AbstractState):
                                 # Counterpart in st
                                 u = canonical_map[v]
 
-
-                                # if not next_st_copy.size[v].has_term(arbitrary_term) and st.size[u] != next_st_copy.size[v]:
                                 # if st.size[u] != next_st_copy.size[v]:
                                 if not next_st_copy.size[v].has_term(arbitrary_term) and st.size[u] != next_st_copy.size[v]:
 
@@ -251,7 +250,7 @@ def var_new_assignment(state, statement):
         st.cycle[v] = FALSE
         st.shared[v] = FALSE
         st.sm[v] = FALSE
-        st.size[v] = structure.AbstractSize({'1':1})
+        st.size[v] = structure.AbstractSize(collections.OrderedDict([('1', 1)]))
 
         st.indiv.append(v)
 
