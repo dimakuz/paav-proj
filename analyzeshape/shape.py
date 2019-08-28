@@ -133,8 +133,8 @@ class ShapeState(abstract.AbstractState):
                                 # if st.size[u] != next_st_copy.size[v]:
                                 if not next_st_copy.size[v].has_term(arbitrary_term) and st.size[u] != next_st_copy.size[v]:
 
-                                    LOG.debug('old structure:\n %s', st)
-                                    LOG.debug('new structure:\n %s', next_st)
+                                    # LOG.debug('old structure:\n %s', st)
+                                    # LOG.debug('new structure:\n %s', next_st)
 
                                     LOG.debug('old v size: %s', str(next_st_copy.size[v]))
 
@@ -266,8 +266,13 @@ def var_next_assignment(state, statement):
 
     for st in state.structures:
 
-        exists = st._exists
-        not_null = st._var_not_null
+        stcopy = st.copy()
+        var = stcopy.var
+        reach = stcopy.reach
+        n = stcopy.n
+        cycle = stcopy.cycle
+        exists = stcopy._exists
+        not_null = stcopy._var_not_null
 
         # Possible null pointer reference detected
         if not_null(rval) == FALSE:
@@ -275,8 +280,8 @@ def var_next_assignment(state, statement):
             continue
 
         for v in st.indiv:
-            st.var[lval][v] = exists(lambda u : st.var[rval][u]._and(st.n[(u, v)]))
-            st.reach[lval][v] = st.reach[rval][v]._and(st.cycle[v]._or(st.var[rval][v]._not()))
+            st.var[lval][v] = exists(lambda u : var[rval][u]._and(n[(u, v)]))
+            st.reach[lval][v] = reach[rval][v]._and(cycle[v]._or(var[rval][v]._not()))
 
     state.structures = valid_st
 

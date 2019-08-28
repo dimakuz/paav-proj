@@ -7,9 +7,9 @@ L11 x := t L6
 L6 assume(TRUE) L8
 L6 assume(TRUE) L20
 L20 xx := x L21
-L21 t := xx.n L22
-L22 assume(t = NULL) L44
-L22 assume(t != NULL) L23
-L23 xx := t L21
+L21 xx := xx.n L22
+L22 assume(xx = NULL) L44
+L22 assume(xx != NULL) L23
+L23 t := xx L21
 L44 assert (t = NULL) L45
 L45 assert (LS x xx) L46

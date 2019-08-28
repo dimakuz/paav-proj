@@ -636,7 +636,7 @@ class Structure:
                             self._v_remove(w)
                         elif self.size[w].is_negative():
                             LOG.debug('a size was found to be negative!!!! %s', self.size[w])
-                            assert False
+                            # assert False
                             return False
 
                     # else:
