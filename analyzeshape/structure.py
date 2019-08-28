@@ -433,18 +433,18 @@ class Structure:
         else:
             return self.sm[v1]._not()
 
-    def _v_get_prev_sm(self, v):
-        u = next((w for w in self.indiv if self.n[(w,v)] != FALSE and v != w), None)
-        if u is None:
-            return None
-        # visited = [prev_v]
-        while self.sm[u] == FALSE:
-            u = next((w for w in self.indiv if self.n[(w,u)] != FALSE and u != w), None)
-            # LOG.debug('current v%d', prev_v)
-            if u is None:
-                return None
-            # visited.append(prev_v)
-        return u
+    # def _v_get_prev_sm(self, v):
+    #     u = next((w for w in self.indiv if self.n[(w,v)] != FALSE and v != w), None)
+    #     if u is None:
+    #         return None
+    #     # visited = [prev_v]
+    #     while self.sm[u] == FALSE:
+    #         u = next((w for w in self.indiv if self.n[(w,u)] != FALSE and u != w), None)
+    #         # LOG.debug('current v%d', prev_v)
+    #         if u is None:
+    #             return None
+    #         # visited.append(prev_v)
+    #     return u
 
     # Is the individual heap shared
     def _v_shared(self, v):
@@ -507,13 +507,12 @@ class Structure:
             return INVALID
 
         size = AbstractSize(collections.OrderedDict([('1', 0)]))
-
-        v = next((w for w in self.indiv if self.n[(v1,w)] != FALSE and v1 != w), None)
+        v = v1
         while v != v2:
+            v = next((w for w in self.indiv if self.n[(v,w)] != FALSE and v != w), None)
             if v is None:
                 return INVALID
             size.add(self.size[v])
-            v = next((w for w in self.indiv if self.n[(v,w)] != FALSE and v != w), None)
 
         return size
 
@@ -724,8 +723,6 @@ class Structure:
                     ),
                 )
                 len12 = self._var_get_length(var1, var2)
-                if str(var1) == 'y' and str(var2) == 'yy':
-                    LOG.debug('var1= %s, var2=%s, len=%s', var1, var2, len12)
                 clauses.append(
                     shortcuts.Implies(
                         shortcuts.And(
@@ -747,6 +744,14 @@ class Structure:
                 for var3 in self.var:
                     for var4 in self.var:
                         len34 = self._var_get_length(var3, var4)
+
+
+                        if str(var1) == 'y' and str(var2) == 'yy' and str(var3) == 'z' and str(var4) == 'zz':
+                            LOG.debug('var1= %s, var2=%s, len=%s', var1, var2, len12.terms)
+                            LOG.debug('var3= %s, var4=%s, len=%s', var3, var4, len34.terms)
+                            LOG.debug('are equal??? %s', len12 == len34)
+
+
                         clauses.append(
                             shortcuts.Implies(
                                 shortcuts.And(
