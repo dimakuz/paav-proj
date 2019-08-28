@@ -7,7 +7,7 @@ import collections
 
 from pysmt import shortcuts
 
-from analyzeshape import lang as lang_shape
+from analyzeshape import lang as lang_shape, absize, three_valued_logic
 from analyzeframework import abstract
 from analyzeframework import lang
 from analyzeshape import structure
@@ -15,17 +15,9 @@ from analyzeshape import structure
 
 LOG = logging.getLogger(__name__)
 
-ODD_atom = 1
-EVEN_atom = 0
-
-ODD = frozenset((ODD_atom,))
-EVEN = frozenset((EVEN_atom,))
-TOP = ODD.union(EVEN)
-BOTTOM = frozenset()
-
-TRUE = structure.ThreeValuedBool.TRUE
-FALSE = structure.ThreeValuedBool.FALSE
-MAYBE = structure.ThreeValuedBool.MAYBE
+TRUE = structure.three_valued_logic.ThreeValuedBool.TRUE
+FALSE = structure.three_valued_logic.ThreeValuedBool.FALSE
+MAYBE = structure.three_valued_logic.ThreeValuedBool.MAYBE
 
 
 
@@ -117,30 +109,24 @@ class ShapeState(abstract.AbstractState):
                     # LOG.debug('found canonical map? %s', str(canonical_map is not None))
                     if canonical_map:
 
-                        # if 'TEMP_' in arbitrary_term:
-                        #     break
-
                         summary_nodes = [v for v in canonical_map if next_st.sm[v] == MAYBE]
                         if summary_nodes:
                             add = False
                             next_st_copy = next_st.copy()
-                            # CHANGE NEXT_ST
-                            # v is in next_st
                             for v in summary_nodes:
                                 # Counterpart in st
                                 u = canonical_map[v]
 
-                                # if st.size[u] != next_st_copy.size[v]:
+                                # Adding arbitraray term only once
                                 if not next_st_copy.size[v].has_term(arbitrary_term) and st.size[u] != next_st_copy.size[v]:
 
                                     # LOG.debug('old structure:\n %s', st)
                                     # LOG.debug('new structure:\n %s', next_st)
 
-                                    LOG.debug('old v size: %s', str(next_st_copy.size[v]))
+                                    # LOG.debug('old v size: %s', str(next_st_copy.size[v]))
+                                    # LOG.debug('st size is %s', st.size[u])
 
-                                    LOG.debug('st size is %s', st.size[u])
-
-                                    new_size = structure.AbstractSize(st.size[u].terms)
+                                    new_size = structure.absize.AbstractSize(st.size[u].terms)
 
                                     new_size.substract(next_st_copy.size[v])
                                     # LOG.debug('after subsctract st - old %s', new_size)
@@ -148,13 +134,10 @@ class ShapeState(abstract.AbstractState):
 
                                     next_st_copy.size[v].add(new_size)
                         
-                                    LOG.debug('new v size: %s', str(next_st_copy.size[v]))
+                                    # LOG.debug('new v size: %s', str(next_st_copy.size[v]))
                                     add = True
 
                             if add and next_st_copy not in structures:
-                                # LOG.debug('and we are doing it!')
-                                # if next_st in structures:
-                                # structures.remove(next_st)
                                 structures.append(next_st_copy)
                         break
 
@@ -164,11 +147,9 @@ class ShapeState(abstract.AbstractState):
                     structures.append(st)
 
         LOG.debug('end join num of structures %d', len(structures))
-        # for st in structures:
-            # LOG.debug('end is arb in array? %s', arbitrary_term in st.arbitrary_terms)
         state = ShapeState(structures)
-        if arbitrary_term is not None and 'TEMP' in arbitrary_term:
-            LOG.debug('state in the end %s', state)
+        # if arbitrary_term is not None and 'TEMP' in arbitrary_term:
+            # LOG.debug('state in the end %s', state)
         return state
         # return ShapeState(structures)
 
@@ -250,7 +231,7 @@ def var_new_assignment(state, statement):
         st.cycle[v] = FALSE
         st.shared[v] = FALSE
         st.sm[v] = FALSE
-        st.size[v] = structure.AbstractSize(collections.OrderedDict([('1', 1)]))
+        st.size[v] = structure.absize.AbstractSize(collections.OrderedDict([('1', 1)]))
 
         st.indiv.append(v)
 

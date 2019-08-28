@@ -3,176 +3,36 @@ import dataclasses
 import typing
 import logging
 import types
-import copy
 import itertools
 import collections
 
 from pysmt import shortcuts
-from analyzeshape import lang as lang_shape
+from analyzeshape import lang as lang_shape, absize, three_valued_logic
 from analyzeframework import lang
-from enum import IntEnum
 
 LOG = logging.getLogger(__name__)
 
 
-class AbstractSize():
+INVALID = absize.AbstractSize(collections.OrderedDict([('1', -1)]))
+SIZE_ONE = absize.AbstractSize(collections.OrderedDict([('1', 1)]))
+SIZE_ZERO = absize.AbstractSize(collections.OrderedDict([('1', 0)]))
 
-    terms: collections.OrderedDict()
-
-    def add(self, other):
-        for variable in self.terms:
-            if variable in other.terms:
-                self.terms[variable] += other.terms[variable]
-        for variable in other.terms:
-            if variable not in self.terms:
-                self.terms[variable] = +other.terms[variable]
-
-        # self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0 or variable == '1'}
-        for variable, factor in list(self.terms.items()):
-            if factor == 0 and variable != '1':
-                self.terms.pop(variable)
-
-        return self
-
-    def substract(self, other):
-        for variable in self.terms:
-            if variable in other.terms:
-                self.terms[variable] -= other.terms[variable]
-        for variable in other.terms:
-            if variable not in self.terms:
-                self.terms[variable] = -other.terms[variable]
-
-        # self.terms = {variable: factor for variable, factor in self.terms.items() if factor != 0 or variable == '1'}
-        for variable, factor in list(self.terms.items()):
-            if factor == 0 and variable != '1':
-                self.terms.pop(variable)
-
-        return self
-
-    def multiply(self, variable):
-        self.terms[variable] = self.terms['1']
-        self.terms['1'] = 0
-        return self
-
-    def has_term(self, term):
-        return term in self.terms.keys()
-
-    def is_negative(self):
-        return any((var, fac) for (var, fac) in self.terms.items() if 'PERM' in var and fac < 0)
-
-    def even(self):
-        return all(factor % 2 == 0 for variable, factor in self.terms.items())
-
-    def variables_eq(self, other):
-        return set(self.terms.keys()) == set(other.terms.keys())
-
-    def get_last_term(self):
-        return next(reversed(self.terms))
-
-    def extract_variable(self, variable):
-        factor = self.terms[variable]
-        size = AbstractSize(self.terms)
-        size.terms.pop(variable)
-        for var, fac in size.terms.items():
-            if fac % factor == 0:
-                size.terms[var] /= -factor
-            else:
-                return INVALID
-        return size
-
-    def substitute(self, variable, size):
-        if variable in self.terms.keys():
-            factor = self.terms[variable]
-            self.terms.pop(variable)
-            temp_size = AbstractSize(size.terms)
-            for var, fac in temp_size.terms.items():
-                temp_size.terms[var] *= factor
-            self.add(temp_size)
-
-    def __eq__(self, other):
-        return self.terms == other.terms
-
-    def __str__(self):
-
-        def pretty_print(factor, variable):
-            prefix = ''
-            if factor < 0:
-                prefix = '- '
-            else:
-                prefix = '+ '
-            if variable == '1':
-                return prefix + str(factor)
-            else:
-                if abs(factor) == 1:
-                    return prefix + variable
-                else:
-                    return f'{prefix}{abs(factor)}*{variable}'
-
-        return ' '.join(pretty_print(factor, variable) for variable, factor in self.terms.items())
-
-    def __init__(self, newterms):
-        self.terms = copy.deepcopy(newterms)
-
-INVALID = AbstractSize(collections.OrderedDict([('1', -1)]))
-SIZE_ONE = AbstractSize(collections.OrderedDict([('1', 1)]))
-SIZE_ZERO = AbstractSize(collections.OrderedDict([('1', 0)]))
-
-
-class ThreeValuedBool(IntEnum):
-    TRUE = 2
-    MAYBE = 1
-    FALSE = 0
-
-    def _not(self):
-
-        if self == TRUE:
-            return FALSE
-        elif self == FALSE:
-            return TRUE
-        else:
-            return MAYBE
-
-    def _and(self, other):
-        if self == FALSE or other == FALSE:
-            return FALSE
-        elif self == MAYBE or other == MAYBE:
-            return MAYBE
-        else:
-            return TRUE
-
-    def _or(self, other):
-        if self == TRUE or other == TRUE:
-            return TRUE
-        elif self == MAYBE or other == MAYBE:
-            return MAYBE
-        else:
-            return FALSE
-
-    def __str__(self):
-        if self == TRUE:
-            return 'TRUE'
-        elif self == MAYBE:
-            return 'MAYBE'
-        else:
-            return 'FALSE'
-
-
-TRUE = ThreeValuedBool.TRUE
-FALSE = ThreeValuedBool.FALSE
-MAYBE = ThreeValuedBool.MAYBE
+TRUE = three_valued_logic.ThreeValuedBool.TRUE
+FALSE = three_valued_logic.ThreeValuedBool.FALSE
+MAYBE = three_valued_logic.ThreeValuedBool.MAYBE
 
 
 @dataclasses.dataclass
 class Structure:
     indiv: typing.List[int]
-    var: typing.Mapping[lang.Symbol, typing.Mapping[int, ThreeValuedBool]]
-    reach: typing.Mapping[lang.Symbol, typing.Mapping[int, ThreeValuedBool]]
-    cycle: typing.Mapping[int, ThreeValuedBool]
-    shared: typing.Mapping[int, ThreeValuedBool]
-    sm: typing.Mapping[int, ThreeValuedBool]
-    n: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
-    n_plus: typing.Mapping[typing.Tuple[int, int], ThreeValuedBool]
-    size: typing.Mapping[int, AbstractSize]
+    var: typing.Mapping[lang.Symbol, typing.Mapping[int, three_valued_logic.ThreeValuedBool]]
+    reach: typing.Mapping[lang.Symbol, typing.Mapping[int, three_valued_logic.ThreeValuedBool]]
+    cycle: typing.Mapping[int, three_valued_logic.ThreeValuedBool]
+    shared: typing.Mapping[int, three_valued_logic.ThreeValuedBool]
+    sm: typing.Mapping[int, three_valued_logic.ThreeValuedBool]
+    n: typing.Mapping[typing.Tuple[int, int], three_valued_logic.ThreeValuedBool]
+    n_plus: typing.Mapping[typing.Tuple[int, int], three_valued_logic.ThreeValuedBool]
+    size: typing.Mapping[int, absize.AbstractSize]
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
@@ -252,7 +112,7 @@ class Structure:
             st.n[(v1,v2)] = FALSE
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
             st.sm[v1] = FALSE
-            st.size[v1] = AbstractSize(collections.OrderedDict([('1', 1)]))
+            st.size[v1] = absize.AbstractSize(collections.OrderedDict([('1', 1)]))
 
         def get_reach_lh(var):
             def reach_lh(st,v):
@@ -401,6 +261,16 @@ class Structure:
         self.indiv.append(v)
         return v
 
+    def _v_concretisize(self, v):
+        self.sm[v] = FALSE
+        self.n[(v,v)] = FALSE
+        for u in self.indiv:
+            if self.sm[u] == FALSE:
+                if self.n[(u,v)] == MAYBE:
+                    self.n[(u,v)] = TRUE
+                if self.n[(v,u)] == MAYBE:
+                    self.n[(v,u)] = TRUE
+
     # Summarize v into u
     def _v_embed(self, u, v):
         for w in self.indiv:
@@ -433,18 +303,6 @@ class Structure:
         else:
             return self.sm[v1]._not()
 
-    # def _v_get_prev_sm(self, v):
-    #     u = next((w for w in self.indiv if self.n[(w,v)] != FALSE and v != w), None)
-    #     if u is None:
-    #         return None
-    #     # visited = [prev_v]
-    #     while self.sm[u] == FALSE:
-    #         u = next((w for w in self.indiv if self.n[(w,u)] != FALSE and u != w), None)
-    #         # LOG.debug('current v%d', prev_v)
-    #         if u is None:
-    #             return None
-    #         # visited.append(prev_v)
-    #     return u
 
     # Is the individual heap shared
     def _v_shared(self, v):
@@ -506,7 +364,7 @@ class Structure:
         if v1 is None or v2 is None:
             return INVALID
 
-        size = AbstractSize(collections.OrderedDict([('1', 0)]))
+        size = absize.AbstractSize(collections.OrderedDict([('1', 0)]))
         v = v1
         while v != v2:
             v = next((w for w in self.indiv if self.n[(v,w)] != FALSE and v != w), None)
@@ -587,7 +445,7 @@ class Structure:
     def coerce_size(self, old_size):
 
         for v in self.indiv:
-            # LOG.debug('comparing sizes %s and %s for v%d', self.size[v], old_size[v], v)
+
             if self.sm[v] == FALSE and old_size[v] != SIZE_ONE:
 
                 # LOG.debug('node v%d is not equal: new size is %s, old size is %s', v, self.size[v], old_size[v])
@@ -598,17 +456,8 @@ class Structure:
                 # LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
 
                 if u is None:
-                    # u = self._v_get_prev_sm(v)
 
-                    # # LOG.debug('is there a prev summary node that fixes? %s', u if u is not None else 'No!')
-                    # if u is None:
-                    #     # No previous summary node that can take the size
-                    #     return False
-                    # else:
-
-                        
                     # LOG.debug('have to fix v%d that have size %s and v%d that have size %s', v, old_size[v], u, self.size[u])
-                    # old_size[v].substract(self.size[v])
                     old_size[v].substract(SIZE_ONE) # Diff to add to prev node
                     
                     # LOG.debug('old size is: %s, last factor %s',old_size[v],isinstance(old_size[v].get_last_term(), str))
@@ -638,11 +487,6 @@ class Structure:
                             LOG.debug('a size was found to be negative!!!! %s', self.size[w])
                             # assert False
                             return False
-
-                    # else:
-                    #     self.size[u].add(old_size[v])
-
-                    # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
                 else:
                     self.size[u].substract(SIZE_ONE)
                     # Concretisizing next node too and later join will handle the structure merge 
@@ -656,23 +500,10 @@ class Structure:
                         # LOG.debug('found v%d that fits into the description (v%d and v%d)', w, u, v)
                         self.n[(v,w)] = FALSE
 
-                    # LOG.debug('fixing and setting v%d to have size %s', u, self.size[u])
-
                 # TODO: check if this fix is good enough!!
                 break
 
         return True
-
-    def _v_concretisize(self, v):
-        self.sm[v] = FALSE
-        self.n[(v,v)] = FALSE
-        for u in self.indiv:
-            if self.sm[u] == FALSE:
-                if self.n[(u,v)] == MAYBE:
-                    self.n[(u,v)] = TRUE
-                if self.n[(v,u)] == MAYBE:
-                    self.n[(v,u)] = TRUE
-
 
 
     def formula(self):
@@ -744,14 +575,6 @@ class Structure:
                 for var3 in self.var:
                     for var4 in self.var:
                         len34 = self._var_get_length(var3, var4)
-
-
-                        if str(var1) == 'y' and str(var2) == 'yy' and str(var3) == 'z' and str(var4) == 'zz':
-                            LOG.debug('var1= %s, var2=%s, len=%s', var1, var2, len12.terms)
-                            LOG.debug('var3= %s, var4=%s, len=%s', var3, var4, len34.terms)
-                            LOG.debug('are equal??? %s', len12 == len34)
-
-
                         clauses.append(
                             shortcuts.Implies(
                                 shortcuts.And(
