@@ -1,140 +1,107 @@
 \section*{Abstract Transformers}
 
-FIXME below
-
-
 We'll now define the transformers we used. All nodes are initialized with the $\alpha_\bot$ state, defined as:
 \begin{align*}
-	&\alpha_\bot=(M_\bot, S_\bot, A_\bot) \\
-	\forall s \in Symbols&:
-	M_\bot[s] =\emptyset  \quad
-	S_\bot[s] =\emptyset \quad
-	A_\bot[s] =\emptyset
+	&\alpha_\bot=(C_\bot, D_\bot) \\
+	\forall s,s_1,s_2 \in Symbols&:
+	C_\bot[s] =\emptyset \quad
+	D_\bot[s_1,s_2] =\emptyset
 \end{align*}
 For any statement we'll denote the tagged mappings as mappings after the transformation:
 \begin{equation*}
-	\atrans{stmt}((M, S, A)) = (M^\prime,S^\prime,A^\prime)
+	\atrans{stmt}((C,D)) = (C^\prime,D^\prime)
 \end{equation*}
 For \texttt{skip} statement, the state is not modified:
 \begin{equation*}
-	M^\prime = M, \quad S^\prime = S, \quad A^\prime = A
+	C^\prime = C, \quad D^\prime = D
 \end{equation*}
-For \texttt{i := ?} statement, all information regarding $i$ is removed. Both concrete parity info of the variable, and it's parity with regart to other variables:
+For \texttt{i := ?} statement, all information regarding $i$ is removed. Both concrete value (if known), and it's difference to other variables:
 \begin{align*}
-M^\prime[x] = & \left.
+C^\prime[x] = & \left.
 	\begin{cases}
-		M[x], & x\ne i \\
+		C[x], & x\ne i \\
 		\top, & x = i
 	\end{cases}
 \right\}\\
-S^\prime[x] = & \left.
+D^\prime[s_1, s_2] = & \left.
 	\begin{cases}
-		S[x] \setminus \{i\}, & x\ne i \\
-		\emptyset, & x = i
+		D[s_1,s_2], & s_1 \ne i \wedge s_2 \ne i \\
+		\top, & \text{otherwise}
 	\end{cases}
-\right\}\\
-A^\prime[x] = & \left.
-\begin{cases}
-	A[x] \setminus \{i\}, & x\ne i \\
-	\emptyset, & x = i
-\end{cases}
 \right\}
 \end{align*}
-For \texttt{i := K} statement, concrete parity of $i$ is stored, and it's relation to other variables is removed:
+For \texttt{i := K} statement, concrete value of $i$ is stored, and it's relation to other variables is removed:
 \begin{align*}
-M^\prime[x] = & \left.
+C^\prime[x] = & \left.
 	\begin{cases}
-		M[x], & x\ne i \\
-		\{E\}, & x = i \wedge K \text{ is even} \\
-		\{O\}, & x = i \wedge K \text{ is odd}
+		C[x], & x\ne i \\
+		K, & x = i 
 	\end{cases}
 \right\}\\
-S^\prime[x] = & \left.
+D^\prime[s_1, s_2] = & \left.
 	\begin{cases}
-		S[x] \setminus \{i\}, & x\ne i \\
-		\emptyset, & x = i
+		D[s_1,s_2], & s_1 \ne i \wedge s_2 \ne i \\
+		\top, & \text{otherwise}
 	\end{cases}
-\right\}\\
-A^\prime[x] = & \left.
-\begin{cases}
-	A[x] \setminus \{i\}, & x\ne i \\
-	\emptyset, & x = i
-\end{cases}
 \right\}
 \end{align*}
 For \texttt{i := i} the state is not transformed.
 
-For \texttt{i := j} statement, parity info is copied over from $j$ to $i$, and a relation that $i$ is of same parity as $j$ is added to the state:
+For \texttt{i := j} statement, value info is copied over from $j$ to $i$, differences between $i$ and other variables is erased, and difference between $i$ and $j$ is set to 0.
 \begin{align*}
-M^\prime[x] = & \left.
+C^\prime[x] = & \left.
 	\begin{cases}
-		M[x], & x\ne i \\
-		M[j], & x = i
+		C[x], & x\ne i \\
+		C[j], & x = i
 	\end{cases}
 \right\}\\
-S^\prime[x] = & \left.
+D^\prime[s_1,s_2] = & \left.
 	\begin{cases}
-		S[x] \setminus \{i\}, & x\ne i \\
-		\{j\}, & x = i
+		0, & \{s_1,s_2\} = \{i,j\} \\
+		\top, & i \in \{s_1, s_2\} \\
+		D[s_1,s_2], & otherwise
 	\end{cases}
 \right\}\\
-A^\prime[x] = & \left.
-\begin{cases}
-	A[x] \setminus \{i\}, & x\ne i \\
-	\emptyset, & x = i
-\end{cases}
-\right\}
 \end{align*}
-For \texttt{i := i + 1} and \texttt{i := i - 1} statements, concrete parity of $i$ is flipped if known, plus, $i$'s relations to other variables is reversed:
+For \texttt{i := i + 1}, constant value of $i$ is increased by 1 if known, and $i$'s differences from other variables is adjusted by 1 as well:
 \begin{align*}
-M^\prime[x] = & \left.
+C^\prime[x] = & \left.
 	\begin{cases}
-		M[x], & x\ne i \\
-		\{E, O\} \setminus M[i], & x = i \wedge M[i] \in \{E, O\} \\
-		M[i], & \text{otherwise}
+		C[x] + 1, & x = i \wedge C[i] \ne \top \\
+		C[x], & \text{otherwise}
 	\end{cases}
 \right\}\\
-S^\prime[x] = & \left.
+D^\prime[s_1,s_2] = & \left.
 	\begin{cases}
-		S[x], & x\ne i \wedge i \notin A[x]\\
-		S[x] \cup \{i\}, & x\ne i \wedge i \in A[x]\\
-		A[x], & x = i
-	\end{cases}
-\right\}\\
-A^\prime[x] = & \left.
-	\begin{cases}
-		A[x], & x\ne i \wedge i \notin S[x]\\
-		A[x] \cup \{i\}, & x\ne i \wedge i \in S[x]\\
-		S[i], & x = i
+		D[s_1,s_2] + 1, & s_1 = i \wedge D[s_1,s_2] \in \mathbb{Z}\\
+		D[s_1,s_2] - 1, & s_2 = i \wedge D[s_1,s_2] \in \mathbb{Z}\\
+		D[s_1,s_2], & \text{otherwise}
 	\end{cases}
 \right\}
 \end{align*}
-
 
 For \texttt{i := j + 1} and \texttt{i := j - 1} statements, state is transformed in a similar way to straight assignment, except the opposite parity is used.
 \begin{align*}
-M^\prime[x] = & \left.
+C^\prime[x] = & \left.
 	\begin{cases}
-		M[x], & x\ne i \\
-		\{E, O\} \setminus M[j], & x = i \wedge M[j] \in \{E, O\} \\
-		M[i], & \text{otherwise}
+		C[j] + 1, & x = i \wedge C[j] \in \mathbb{Z} \\
+		C[x], & \text{otherwise}
 	\end{cases}
 \right\}\\
-S^\prime[x] = & \left.
+D^\prime[s_1,s_2] = & \left.
 	\begin{cases}
-		S[x] \setminus \{i\}, & x\ne i \\
-		\emptyset, & x = i 
+		1, & s_1 = i \wedge s_2 = j\\
+		\top, & s_1 = i \wedge s_2 \ne j\\
+		D[s_1,s_2], & \text{otherwise}	
 	\end{cases}
 \right\}\\
-A^\prime[x] = & \left.
-\begin{cases}
-	A[x] \setminus \{i\}, & x\ne i \\
-	\{j\}, & x = i
-\end{cases}
-\right\}
 \end{align*}
+
+For \texttt{i := i - 1} and \texttt{i := j - 1} statements, abstract state is transformed into similar manner to increment case counterparts, but this time with inverted signs.
+
 For \texttt{assume TRUE} statements the state is not altered, for \texttt{assume FALSE} statements, state is transformed into bottom state ($\sqcup$ - neutral) so chaotic iteration will treat it as a dead end.
 
+\part*{FIXME complete below}
 For \texttt{assume i = j} statements, if $i$ and $j$ are known to be of opposite parities, statement is treated as \texttt{assume FALSE}, otherwise, state is transformed to create relation of similar parity between the variables, and both are set to most concrete parity known about either of them:
 \begin{align*}
 M^\prime[x] = & \left.

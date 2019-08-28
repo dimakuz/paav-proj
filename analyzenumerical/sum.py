@@ -155,7 +155,7 @@ class SumState(abstract.AbstractState):
                 ),
             )
 
-        clauses =  shortcuts.And(clauses)
+        clauses = shortcuts.And(clauses)
         return shortcuts.And(
             clauses,
             self.diff.formula(),
@@ -262,7 +262,11 @@ def assume(state, statement):
     elif isinstance(expr, lang.Truth):
         pass
     elif isinstance(expr, lang_num.EqualsVal):
-        state.const[expr.lval] = expr.rval
+        known_val = state.const[expr.lval]
+        if known_val in _SPECIAL:
+            state.const[expr.lval] = expr.rval
+        elif known_val != expr.rval:
+            state.reset()
     elif isinstance(expr, lang_num.EqualsVar):
         state.const[expr.lval] = state.const[expr.rval]
         state.diff[expr.lval, expr.rval] = 0

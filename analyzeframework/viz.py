@@ -5,6 +5,7 @@ import graphviz
 
 from analyzeframework import tinyurl
 from analyzeshape import structure
+from analyzeshape import three_valued_logic
 
 
 def _node_label(node):
@@ -46,9 +47,9 @@ def _stnode_name(i, j):
 
 
 def _stedge_style(val):
-    if val == structure.ThreeValuedBool.MAYBE:
+    if val == three_valued_logic.MAYBE:
         return 'dashed'
-    elif val == structure.ThreeValuedBool.TRUE:
+    elif val == three_valued_logic.TRUE:
         return 'solid'
 
 
@@ -75,7 +76,7 @@ def dump_shape(cfgnode):
                         style=style,
                     )
             for node in st.indiv:
-                if st.sm[node] == structure.ThreeValuedBool.FALSE:
+                if st.sm[node] == three_valued_logic.FALSE:
                     shape='circle'
                 else:
                     shape='doublecircle'
