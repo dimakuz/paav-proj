@@ -64,7 +64,7 @@ class AbstractSize():
             if fac % factor == 0:
                 size.terms[var] /= -factor
             else:
-                return INVALID
+                return AbstractSize(collections.OrderedDict([('1', -1)]))
         return size
 
     def substitute(self, variable, size):

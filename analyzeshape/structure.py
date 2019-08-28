@@ -473,7 +473,7 @@ class Structure:
 
                     if volatile_size == INVALID:
                         LOG.debug('a size is not an integer!! %s', old_size[v])
-                        assert False
+                        # assert False
                         return False
 
                     # Substitute

@@ -1,0 +1,15 @@
+x xx t
+L1 skip L8
+L8 t := new L9
+L9 t.n := NULL L10
+L10 t.n := x L11
+L11 x := t L6
+L6 assume(TRUE) L8
+L6 assume(TRUE) L30
+L30 xx := x L31
+L31 t := xx.n L32
+L32 xx := t.n L33
+L33 assume(xx = NULL) L40
+L33 assume(xx != NULL) L34
+L34 t := xx L31
+L40 assert (t = NULL) L41
