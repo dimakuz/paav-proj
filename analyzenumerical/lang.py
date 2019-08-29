@@ -124,9 +124,11 @@ class SumEquals(lang.Predicate):
         return shortcuts.Equals(
             shortcuts.Plus(
                 *(shortcuts.Symbol(v.name, shortcuts.INT) for v in lval),
+                shortcuts.Int(0),
             ),
             shortcuts.Plus(
                 *(shortcuts.Symbol(v.name, shortcuts.INT) for v in rval),
+                shortcuts.Int(0),
             ),
         )
 

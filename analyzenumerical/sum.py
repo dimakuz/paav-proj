@@ -104,6 +104,8 @@ class DiffMatrix:
     def __str__(self):
         factoids = []
         for key, value in self.val.items():
+            if value in _SPECIAL:
+                continue
             factoids.append(
                 f'{key[0].name} - {key[1].name} = {_const_name(value)}',
             )
@@ -146,7 +148,7 @@ class SumState(abstract.AbstractState):
 
         # Constant propogation
         for sym, val in self.const.items():
-            if val is _C.TOP:
+            if val in _SPECIAL:
                 continue
             clauses.append(
                 shortcuts.Equals(
@@ -171,12 +173,39 @@ class SumState(abstract.AbstractState):
         lines.append(str(self.diff))
         return '\n'.join(lines)
 
-    def post_transform(self):
+    def _deduce_delta(self):
         # Augment diff state with const propogation info
         for sym1, val1 in self.const.items():
             for sym2, val2 in self.const.items():
-                if val1 not in _SPECIAL and val2 not in _SPECIAL:
+                if (
+                    val1 not in _SPECIAL and val2 not in _SPECIAL
+                    and sym1 != sym2
+                ):
                     self.diff[sym1, sym2] = val1 - val2
+
+    def _deduce_const(self):
+        for (lval, rval), diff in self.diff.val.items():
+            if diff in _SPECIAL or lval > rval:
+                continue
+
+            if self.const[lval] not in _SPECIAL:
+                rval_deduced = self.const[lval] - diff
+                if self.const[rval] in _SPECIAL:
+                    self.const[rval] = rval_deduced
+                elif self.const[rval] != rval_deduced:
+                    raise RuntimeError()
+            if self.const[rval] not in _SPECIAL:
+                lval_deduced = self.const[rval] + diff
+                if self.const[lval] in _SPECIAL:
+                    self.const[lval] = lval_deduced
+                elif self.const[lval] != lval_deduced:
+                    raise RuntimeError()
+
+    def post_transform(self):
+        # Worst case is the diameter
+        for _ in self.const:
+            self._deduce_delta()
+            self._deduce_const()
 
 
 @SumState.transforms(lang_num.VarAssignment)
@@ -217,8 +246,11 @@ def inc_assignment(state, statement):
 
     if statement.lval == statement.rval:
         for sym in state.const:
+            if sym == statement.lval:
+                continue
             if state.diff[statement.lval, sym] not in _SPECIAL:
-                state.diff[statement.lval, sym] -= 1
+                state.diff[statement.lval, sym] += 1
+                print(statement.lval, sym, statement.lval > sym)
     else:
         for sym in state.const:
             if sym == statement.rval:
@@ -239,7 +271,7 @@ def dec_assignment(state, statement):
     if statement.lval == statement.rval:
         for sym in state.const:
             if state.diff[statement.lval, sym] not in _SPECIAL:
-                state.diff[statement.lval, sym] += 1
+                state.diff[statement.lval, sym] -= 1
     else:
         for sym in state.const:
             if sym == statement.rval:
