@@ -149,7 +149,7 @@ class ShapeState(abstract.AbstractState):
         LOG.debug('end join num of structures %d', len(structures))
         state = ShapeState(structures)
         # if arbitrary_term is not None and 'TEMP' in arbitrary_term:
-        #     LOG.debug('state in the end %s', state)
+            # LOG.debug('state in the end %s', state)
         return state
         # return ShapeState(structures)
 
@@ -231,7 +231,7 @@ def var_new_assignment(state, statement):
         st.cycle[v] = FALSE
         st.shared[v] = FALSE
         st.sm[v] = FALSE
-        st.size[v] = structure.absize.AbstractSize(collections.OrderedDict([('1', 1)]))
+        st.size[v] = structure.absize.AbstractSize(collections.OrderedDict([('1', 1.0)]))
 
         st.indiv.append(v)
 

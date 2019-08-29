@@ -12,4 +12,4 @@ L32 xx := t.n L33
 L33 assume(xx = NULL) L40
 L33 assume(xx != NULL) L34
 L34 t := xx L31
-L40 assert (t = NULL) L41
+L40 assert (EVEN x t) L41

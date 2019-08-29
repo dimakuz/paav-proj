@@ -13,9 +13,9 @@ from analyzeframework import lang
 LOG = logging.getLogger(__name__)
 
 
-INVALID = absize.AbstractSize(collections.OrderedDict([('1', -1)]))
-SIZE_ONE = absize.AbstractSize(collections.OrderedDict([('1', 1)]))
-SIZE_ZERO = absize.AbstractSize(collections.OrderedDict([('1', 0)]))
+INVALID = absize.AbstractSize(collections.OrderedDict([('1', -1.0)]))
+SIZE_ONE = absize.AbstractSize(collections.OrderedDict([('1', 1.0)]))
+SIZE_ZERO = absize.AbstractSize(collections.OrderedDict([('1', 0.0)]))
 
 TRUE = three_valued_logic.ThreeValuedBool.TRUE
 FALSE = three_valued_logic.ThreeValuedBool.FALSE
@@ -112,7 +112,7 @@ class Structure:
             st.n[(v1,v2)] = FALSE
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
             st.sm[v1] = FALSE
-            st.size[v1] = absize.AbstractSize(collections.OrderedDict([('1', 1)]))
+            st.size[v1] = absize.AbstractSize(collections.OrderedDict([('1', 1.0)]))
 
         def get_reach_lh(var):
             def reach_lh(st,v):
@@ -364,7 +364,7 @@ class Structure:
         if v1 is None or v2 is None:
             return INVALID
 
-        size = absize.AbstractSize(collections.OrderedDict([('1', 0)]))
+        size = absize.AbstractSize(collections.OrderedDict([('1', 0.0)]))
         v = v1
         while v != v2:
             v = next((w for w in self.indiv if self.n[(v,w)] != FALSE and v != w), None)
@@ -464,17 +464,17 @@ class Structure:
                     volatile_variable = old_size[v].get_last_term()
 
                     if 'TEMP' not in volatile_variable:
-                        LOG.debug('a size is not symbolic!! %s', old_size[v])
+                        # LOG.debug('a size is not symbolic!! %s', old_size[v])
                         # assert False
                         return False
 
 
                     volatile_size = old_size[v].extract_variable(volatile_variable)
 
-                    if volatile_size == INVALID:
-                        LOG.debug('a size is not an integer!! %s', old_size[v])
+                    # if volatile_size == INVALID:
+                        # LOG.debug('a size is not an integer!! %s', old_size[v])
                         # assert False
-                        return False
+                        # return False
 
                     # Substitute
                     for w in self.indiv:
@@ -484,7 +484,9 @@ class Structure:
                         elif self.size[w] == SIZE_ZERO:
                             self._v_remove(w)
                         elif self.size[w].is_negative():
-                            LOG.debug('a size was found to be negative!!!! %s', self.size[w])
+                            # LOG.debug(self)
+                            # LOG.debug('calculated volatile size %s from %s', volatile_size, old_size[v])
+                            # LOG.debug('a size was found to be negative!!!! %s', self.size[w])
                             # assert False
                             return False
                 else:
