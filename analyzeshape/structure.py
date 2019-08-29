@@ -7,19 +7,47 @@ import itertools
 import collections
 
 from pysmt import shortcuts
-from analyzeshape import lang as lang_shape, absize, three_valued_logic
+from analyzeshape import lang as lang_shape, three_valued_logic
 from analyzeframework import lang
+from sympy import *
 
 LOG = logging.getLogger(__name__)
 
 
-INVALID = absize.AbstractSize(collections.OrderedDict([('1', -1.0)]))
-SIZE_ONE = absize.AbstractSize(collections.OrderedDict([('1', 1.0)]))
-SIZE_ZERO = absize.AbstractSize(collections.OrderedDict([('1', 0.0)]))
+INVALID = Integer(-1)
+SIZE_ONE = Integer(1)
+SIZE_ZERO = Integer(0)
 
 TRUE = three_valued_logic.ThreeValuedBool.TRUE
 FALSE = three_valued_logic.ThreeValuedBool.FALSE
 MAYBE = three_valued_logic.ThreeValuedBool.MAYBE
+
+
+def is_negative(size):
+    perm_symbols = [sym for sym in size.free_symbols if 'p-' in str(sym)]
+    temp_symbols = [sym for sym in size.free_symbols if 't-' in str(sym)]
+
+    if perm_symbols:
+        for arg in size.args:
+            if arg.free_symbols.intersection(perm_symbols):
+                for sym in arg.free_symbols:
+                    expr = size.subs(sym, 1)
+                if expr < 0:
+                    return True
+
+    elif temp_symbols:
+        for arg in size.args:
+            if arg.free_symbols.intersection(temp_symbols):
+                for sym in arg.free_symbols:
+                    expr = size.subs(sym, 1)
+                if expr < 0:
+                    return True
+    else:
+        return size < 0
+
+def is_even(size):
+    factors = factor_list(size)
+    return any(factor for factor in factors if isinstance(factor, Integer) and factor % 2 == 0)
 
 
 @dataclasses.dataclass
@@ -32,7 +60,7 @@ class Structure:
     sm: typing.Mapping[int, three_valued_logic.ThreeValuedBool]
     n: typing.Mapping[typing.Tuple[int, int], three_valued_logic.ThreeValuedBool]
     n_plus: typing.Mapping[typing.Tuple[int, int], three_valued_logic.ThreeValuedBool]
-    size: typing.Mapping[int, absize.AbstractSize]
+    size: typing.Mapping[int, Expr]
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
@@ -72,12 +100,12 @@ class Structure:
         for v in self.indiv:
 
             u = next((w for w in other.indiv if self._v_canonical_eq(v, other, w) and self.sm[v] == other.sm[w] and \
-                self.size[v].variables_eq(other.size[w])), None)
+                self.size[v].free_symbols == other.size[w].free_symbols), None)
 
             if u is not None:
                 if ignore_arbitrary_sizes:
                     canonical_map[v] = u
-                elif self.size[v] == other.size[u]:
+                elif expand(self.size[v]) == expand(other.size[u]):
                     canonical_map[v] = u
                 else:
                     return None
@@ -112,7 +140,7 @@ class Structure:
             st.n[(v1,v2)] = FALSE
         def fix_sm_not(st,v1,v2): # v1=v2 if this function is called
             st.sm[v1] = FALSE
-            st.size[v1] = absize.AbstractSize(collections.OrderedDict([('1', 1.0)]))
+            st.size[v1] = Integer(1)
 
         def get_reach_lh(var):
             def reach_lh(st,v):
@@ -279,7 +307,7 @@ class Structure:
             if self.n[(u,w)] != self.n[(v,w)]:
                 self.n[(u,w)] = MAYBE
         self.sm[u] = MAYBE
-        self.size[u].add(self.size[v])
+        self.size[u] += self.size[v]
         self._v_remove(v)
 
     def _v_remove(self, v):
@@ -362,15 +390,15 @@ class Structure:
         v2 = self._var_get_indiv(var2)
 
         if v1 is None or v2 is None:
-            return INVALID
+            return Integer(-1)
 
-        size = absize.AbstractSize(collections.OrderedDict([('1', 0.0)]))
+        size = Integer(0)
         v = v1
         while v != v2:
             v = next((w for w in self.indiv if self.n[(v,w)] != FALSE and v != w), None)
             if v is None:
-                return INVALID
-            size.add(self.size[v])
+                return Integer(-1)
+            size += self.size[v]
 
         return size
 
@@ -458,18 +486,20 @@ class Structure:
                 if u is None:
 
                     # LOG.debug('have to fix v%d that have size %s and v%d that have size %s', v, old_size[v], u, self.size[u])
-                    old_size[v].substract(SIZE_ONE) # Diff to add to prev node
+                    old_size[v] -= 1 # Diff to add to prev node
                     
                     # LOG.debug('old size is: %s, last factor %s',old_size[v],isinstance(old_size[v].get_last_term(), str))
-                    volatile_variable = old_size[v].get_last_term()
+                    # volatile_variable = old_size[v].get_last_term()
+                    volatile_variable = next((sym for sym in old_size[v].free_symbols if 't-' in str(sym)), None)
 
-                    if 'TEMP' not in volatile_variable:
+                    if volatile_variable is None:
                         # LOG.debug('a size is not symbolic!! %s', old_size[v])
                         # assert False
                         return False
 
 
-                    volatile_size = old_size[v].extract_variable(volatile_variable)
+                    # volatile_size = old_size[v].extract_variable(volatile_variable)
+                    (volatile_size,) = solveset(old_size[v], volatile_variable) 
 
                     # if volatile_size == INVALID:
                         # LOG.debug('a size is not an integer!! %s', old_size[v])
@@ -478,21 +508,22 @@ class Structure:
 
                     # Substitute
                     for w in self.indiv:
-                        self.size[w].substitute(volatile_variable, volatile_size)
-                        if self.size[w] == SIZE_ONE:
-                            self._v_concretisize(w)
-                        elif self.size[w] == SIZE_ZERO:
-                            self._v_remove(w)
-                        elif self.size[w].is_negative():
-                            # LOG.debug(self)
-                            # LOG.debug('calculated volatile size %s from %s', volatile_size, old_size[v])
-                            # LOG.debug('a size was found to be negative!!!! %s', self.size[w])
-                            # assert False
-                            return False
+                        if isinstance(self.size[w], Expr):
+                            self.size[w] = self.size[w].subs(volatile_variable, volatile_size)
+                            if self.size[w] == 1:
+                                self._v_concretisize(w)
+                            elif self.size[w] == 0:
+                                self._v_remove(w)
+                            elif is_negative(self.size[w]):
+                                # LOG.debug(self)
+                                # LOG.debug('calculated volatile size %s from %s', volatile_size, old_size[v])
+                                # LOG.debug('a size was found to be negative!!!! %s', self.size[w])
+                                # assert False
+                                return False
                 else:
-                    self.size[u].substract(SIZE_ONE)
+                    self.size[u] -= 1
                     # Concretisizing next node too and later join will handle the structure merge 
-                    if (self.size[u] == SIZE_ONE):
+                    if self.size[u] == 1:
                         self._v_concretisize(u)
 
                     # Possible shared node that shouldn't have been
@@ -559,8 +590,8 @@ class Structure:
                 clauses.append(
                     shortcuts.Implies(
                         shortcuts.And(
-                            shortcuts.Bool(len12 != INVALID),
-                            shortcuts.Bool(len12.even())
+                            shortcuts.Bool(len12 != -1),
+                            shortcuts.Bool(is_even(len12))
                         ),
                         lang_shape.Even(var1, var2).formula()
                     ),
@@ -568,8 +599,8 @@ class Structure:
                 clauses.append(
                     shortcuts.Implies(
                         shortcuts.And(
-                            shortcuts.Bool(len12 != INVALID),
-                            shortcuts.Bool(len12.even() == False)
+                            shortcuts.Bool(len12 != -1),
+                            shortcuts.Bool(not is_even(len12))
                         ),
                         lang_shape.Odd(var1, var2).formula()
                     ),
@@ -580,9 +611,9 @@ class Structure:
                         clauses.append(
                             shortcuts.Implies(
                                 shortcuts.And(
-                                    shortcuts.Bool(len12 != INVALID),
-                                    shortcuts.Bool(len34 != INVALID),
-                                    shortcuts.Bool(len12 == len34)
+                                    shortcuts.Bool(len12 != -1),
+                                    shortcuts.Bool(len34 != -1),
+                                    shortcuts.Bool(expand(len12) == expand(len34))
                                 ),
                                 lang_shape.Len(var1, var2, var3, var4).formula()
                             )

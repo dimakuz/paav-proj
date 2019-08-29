@@ -4,6 +4,7 @@ import typing
 from pysmt import shortcuts
 
 from analyzeframework import lang
+from sympy import Symbol
 
 
 @dataclasses.dataclass
@@ -15,9 +16,9 @@ class Edge:
     def arbitrary_term(self):
         if isinstance(self.statement, lang.Assume):
             if isinstance(self.statement.expr, lang.Truth):
-                return f'PERM_{self.predecessor.name}'
+                return Symbol(f'p-{self.predecessor.name}', positive=True)
             else:
-                return f'TEMP_{self.predecessor.name}'
+                return Symbol(f't-{self.predecessor.name}', positive=True)
         else:
             return None
 
