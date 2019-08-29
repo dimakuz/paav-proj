@@ -1,0 +1,6 @@
+a b c d
+L1 a := 1 L2
+L2 b := 1 L3
+L3 c := ? L4
+L4 d := ? L5
+L5 assert (SUM b c d = SUM d c a) L6

@@ -1,0 +1,8 @@
+a b c d
+L1 a := ? L2
+L2 b := a + 1 L3
+L3 c := b + 1 L4
+L4 d := 10 L5
+L5 assume (a = 8) L6
+L6 a := ? L7
+L7 assert (SUM c = SUM d) L8

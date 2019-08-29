@@ -31,7 +31,7 @@
 \newcommand{\example}[2]{
 \input{#1/examples/example#2.tex}
 \begin{figure}[h!]
-\centering
+%\centering
 \begin{subfigure}{.5\textwidth}
   \centering
   \includegraphics[scale=0.3]{#1/examples/example#2-cfg}
@@ -43,7 +43,7 @@
   \lstinputlisting{#1/examples/example#2.code}
   \caption{Code}
 \end{subfigure}
-\caption*{Example #2}
+\caption*{\texttt{pipenv run analyze --type #1 docs/#1/examples/example#2.code}}
 \end{figure}
 }
 

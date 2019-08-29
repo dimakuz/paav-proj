@@ -16,6 +16,10 @@ from analyzenumerical import sum
          (
          ),
         ),
+        ('examples/sum/example1', (('L5', 'L6', True),)),
+        ('examples/sum/example2', (('L5', 'L6', True),)),
+        ('examples/sum/example3', (('L11', 'L12', True),)),
+        ('examples/sum/example4', (('L7', 'L8', True),)),
     ),
 )
 def test_sum_analysis(input_path, asserts):

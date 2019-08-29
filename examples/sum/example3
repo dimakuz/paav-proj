@@ -1,0 +1,11 @@
+a b c d
+L1 a := ? L2
+L2 b := 0 L3
+L3 c := 1 L31
+L31 skip L4
+L4 assume (TRUE) L5
+L4 assume (a = 0) L10
+L5 b := b + 1 L6
+L6 c := c + 1 L4
+L10 d := 1 L11
+L11 assert (SUM b d = SUM c) L12
