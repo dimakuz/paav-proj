@@ -86,7 +86,7 @@ For \texttt{i := i + 1} and \texttt{i := i - 1} statements, concrete parity of $
 M^\prime[x] = & \left.
 	\begin{cases}
 		M[x], & x\ne i \\
-		\{E, O\} \setminus M[i], & x = i \wedge M[i] \in \{E, O\} \\
+		\{E, O\} \setminus M[i], & x = i \wedge M[i] \notin \{\bot, \top\} \\
 		M[i], & \text{otherwise}
 	\end{cases}
 \right\}\\
@@ -155,8 +155,8 @@ For \texttt{assume i = K} statements, state is checked for conflict against pari
 \begin{align*}
 M^\prime[x] = & \left.
 	\begin{cases}
-		{E}, & x = i \wedge K \equiv_{2} 0 \\
-		{O}, & x = i \wedge K \equiv_{2} 1 \\
+		\{E\}, & x = i \wedge K \equiv_{2} 0 \\
+		\{O\}, & x = i \wedge K \equiv_{2} 1 \\
 		M[x], & \text{ otherwise}
 	\end{cases}
 \right\}\\
