@@ -70,13 +70,14 @@ framexleftmargin=1pt}
 	All of the analysis tasks are implemented with Python 3 (3.7+) with the environment and dependencies managed by Pipenv\footnote{https://docs.pipenv.org} (see docs for elaborate usage examples).
 	
 	Our code relies on the following external software packages:
-	\begin{itemize}
+	\begin{enumerate}
 		\item SLY\footnote{https://github.com/dabeaz/sly} - a Python implementation of lex/yacc analogues lexers and parsers.
-		\item pySMT\footnote{https://github.com/pysmt/pysmt} - a front-end for solving formulas
-%		\item z3-solver\footnote{http://z3prover.github.io} - a backend for PySMT based on Z3
+		\item pySMT\footnote{https://github.com/pysmt/pysmt} - a front-end for SAT and SMT solvers
+		\item z3-solver\footnote{http://z3prover.github.io} - a back-end for PySMT based on Z3
 		\item graphviz\footnote{https://github.com/xflr6/graphviz} - a library for visualization of control flow graphs
-		\item pytest\footnote{https://docs.pytest.org} - as a test harness
-	\end{itemize}
+		\item sympy\footnote{https://www.sympy.org/} - a library implementing symbolic algebra, used in shape analysis node length computations
+		\item pytest\footnote{https://docs.pytest.org} - a test harness
+	\end{enumerate}
 The general method of operation for all of the analysis implementations is as following:
 \begin{itemize}
 	\item Parse the input file according to the language definition of the program (parity/sum/shape).
@@ -85,10 +86,10 @@ The general method of operation for all of the analysis implementations is as fo
 	\item Perform chaotic iteration until no more updates happen.
 	\item Iterate over assert statements and verify their validity against the abstract state of the graph node.
 \end{itemize}
-Finally, the results are displayed on the console as a DOT graph with a link for easy visualization.
+Finally, the results are either printed to the screen as DOT graphs or written to disk as PNG files.
 
 \section*{Installing and Running}
-Development of the analysis was done on Linux (Fedora/Ubuntu). To set up a Python environment, run \texttt{pipenv install} in the root directory of the project. This will initialize a new virtual environment and pull required packages. Additionally several system packages will be required, namely:
+Development of the analysis was done on Linux (any recent Fedora/Ubuntu). To set up a Python environment, run \texttt{pipenv install} in the root directory of the project. This will initialize a new virtual environment and pull required packages. Additionally several system packages are required for execution:
 \begin{itemize}
 	\item \texttt{graphviz}
 	\item \texttt{z3solver}
@@ -97,6 +98,16 @@ Development of the analysis was done on Linux (Fedora/Ubuntu). To set up a Pytho
 Invocation of analysis is done through \texttt{pipenv run analyze}:
 \lstinputlisting{analyze.usage}
 
+The project directory layout is as following:
+\begin{itemize}
+\item \texttt{analyzeframework/} - Code for basic components used in all analyses (e.g. chaotic iteration, control flow graphs, visualization).
+\item \texttt{analyzenumeric/} - Code specific for parity and summation analyses.
+\item \texttt{analyzeshape/} - Code specific for shape analysis.
+\item \texttt{examples/} - Code examples for all three kinds of included analysis.
+\item \texttt{docs/} - Code for building this file.
+\item \texttt{analyze.py} - Main entry-point of our program.
+\item \texttt{tests/} - Automatic tests for our analyses code.
+\end{itemize}
 \input{parity}
 \input{sum}
 \end{document}

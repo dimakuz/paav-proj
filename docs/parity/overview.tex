@@ -1,14 +1,9 @@
 \section*{Overview}
-In our analysis we implemented an abstract state that tracks parity properties of the variables. Our analysis tries to enable deduction in the following cases:
+In the first analysis we implemented, we built an abstract state that tracks parity properties of the variables. The abstract state aims to track the following aspects of execution:
 \begin{itemize}
-	\item When a constant was assigned to a specific variable (so we know the exact parity)
-	\item When a variable was assigned to another variable (so we know they are of same parity)
-	\item When a variable plus/minus one was assigned to another variable (so we know they are of opposite parity)
+	\item Storing parity of variables when they are assigned a specific value
+	\item Storing a relation of similar parity between a pair of variables when one is assigned to the other.
+	\item Storing a relation of opposite parity when one is assigned $\pm1$ of another variable.
 \end{itemize}
-The above gives us links between variables and themselves, and between variables and their values. To construct the big picture a model is constructed that imposes the above information as constraints.
-\subsection*{Example}
-Consider 3 variables $x,y,z$. Give following information: $x$ is even, $x,y$ are of same parity, $y,z$ are of opposite parity, we can construct the following model:
-\begin{equation*}
-	[x_{even} \wedge (x_{even} \rightarrow y_{even}) \wedge (y_{even} \rightarrow \neg z_{even})]
-\end{equation*}
-The above model can be used, in conjunction with \texttt{assert} conditions to check if there is an assignment satisfying the model yet violating the asserted condition.
+
+With this information stored in the state, we're able to verify \texttt{assert} predicates (details in next section).

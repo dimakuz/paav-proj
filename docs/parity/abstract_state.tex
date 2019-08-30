@@ -13,10 +13,7 @@ Our abstract state is defined as a 3-tuple of the from $(M,S,A)$. Where:
 	
 	For example, given $x, y$, if we know that $x$ is now equal to $y$, after the assignment we'll change the state so that we'll have $y \in S[x]$.
 	
-	Furthermore, when  deducing parity of $x$, given that $S[x] = {y,z}$, we can deduce that $x$ is even iff both $y$ and $z$ are even.
-	I.e. $[(y_{even} \wedge z_{even})\rightarrow x_{even}]\vee[(y_{odd} \wedge z_{odd})\rightarrow x_{odd}]$
-	
-	\item $A: Symbols \rightarrow 2^{Symbols}$ - a mapping of symbols to symbol set of potentially opposing parity (i.e. for two given symbols, one is odd and other is even). Similar deduction logic can be applied here.
+	\item $A: Symbols \rightarrow 2^{Symbols}$ - a mapping of symbols to symbol set of potentially opposing parity (i.e. for two given symbols, one is odd and other is even).
 
 \end{itemize}
 Our abstract domain is then all possible assignments to the 3-tuple.
@@ -29,3 +26,40 @@ The join operation is defined as following: given $\alpha_1=(M_1,S_1,A_1)$ and $
 &(S_1\sqcup S_2)[s] =S_1[s] \cup S_2[s] \\
 &(A_1\sqcup A_2)[s] =A_1[s] \cup A_2[s]
 \end{align*}
+
+When verifying \texttt{assert PRED} statements, our analysis computes satisfiability of the following formula: $state_\alpha\land\neg pred$. We'll detail how $state_\alpha$ is obtained from $\alpha = (M,S,A)$:
+\begin{align*}
+state_\alpha & = basis_\alpha \land modulo_\alpha \land relations_\alpha \\
+\\
+basis_\alpha &= \bigwedge\{s_{even}\leftrightarrow\neg s_{odd} \mid s \in Symbols\}
+\end{align*}
+In this model, atoms are of the form $sym_{even}$ and $sym_{odd}$, meaning that $sym$ is even or odd respectively. We know no variable can be both odd and even at the same time, and cannot also be neither of them. $basis_\alpha$ formula restricts those pairs of atoms so exactly one can be true.
+\begin{align*}
+modulo_\alpha &= moduloE_\alpha \land moduloO_\alpha \\
+moduloE_\alpha &= \bigwedge\{s_{even} \mid s \in Symbols \land M[s] = \{E\}\} \\
+moduloO_\alpha &= \bigwedge\{s_{odd} \mid s \in Symbols \land M[s] = \{O\}\}
+\end{align*}
+$modulo_\alpha$ further restricts assignments to the atoms, if we know for sure that a variable is odd or even (through $M$ mapping), then we'll add clause that requires the relevant atom to be true.
+\begin{align*}
+relations_\alpha &= \bigwedge \{relationsE_{sym} \land relationsO_{sym}  \mid sym \in Symbols\} \\
+relationsE_{sym} &= \left[
+	\left[
+		\bigwedge \{s_{even} \mid s \in S[sym]\}
+	\right] \land  \left[
+		\bigwedge \{s_{odd} \mid s \in A[sym]\}
+	\right]
+\right]
+\rightarrow sym_{even} \\
+relationsO_{sym} &= \left[
+	\left[
+		\bigwedge \{s_{odd} \mid s \in S[sym]\}
+	\right] \land  \left[
+		\bigwedge \{s_{even} \mid s \in A[sym]\}
+	\right]
+\right]
+\rightarrow sym_{odd} \\
+\end{align*}
+$relations_\alpha$ encodes the relations between variables. If concrete parity information is unknown for variable $x$, we can deduce that it is even, if all variables in $S[x]$ are even and all variables in $A[x]$ are odd (and the other way around for odd case).
+
+
+With the above formula, and the formula derived from the \texttt{assert} statement, we use the SAT solver to check if there is an assignment that satisfies the state yet violates the assertion predicate. If such assignment exists, we decide that assertion is invalid.
