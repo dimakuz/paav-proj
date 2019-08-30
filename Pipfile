@@ -12,7 +12,6 @@ snakeviz = "*"
 sly = "*"
 z3-solver = "*"
 pysmt = "*"
-requests = "*"
 sympy = "*"
 
 [requires]
