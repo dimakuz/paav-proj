@@ -168,18 +168,13 @@ class ShapeState(abstract.AbstractState):
 
     def __str__(self):
         return f'{len(self.structures)} structure(s)'
-        # if self.structures:
-        #    return f'num of structures: {len(self.structures)}\n{str(self.structures[0])}'
-        # else:
-        #    return f'num of structures: {len(self.structures)}'
+
 
     def full_str(self):
-        st_str = '\n\n'.join(str(st) for st in self.structures)
-        return f'[{st_str}]'
-        # if self.structures:
-        #    return f'num of structures: {len(self.structures)}\n{str(self.structures[0])}'
-        # else:
-        #    return f'num of structures: {len(self.structures)}'
+        res = []
+        for i, structure in enumerate(self.structures):
+            res.append(f'Structure {i}\n{structure}\n')
+        return '\n'.join(res)
 
     @classmethod
     def initial(cls, symbols):

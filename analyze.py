@@ -98,6 +98,12 @@ def main():
                     f'{opts.output_dir}/{node.name}.png',
                     title=f'Node {node.name} structures',
                 )
+                with open(f'{opts.output_dir}/{node.name}.txt', 'w') as f:
+                    f.write(node.state.full_str())
+                print(
+                    f'Node {node.name} state: '
+                    f'file://{opts.output_dir}/{node.name}.txt'
+                )
             else:
                 print(f'Node {node.name}')
                 print(node_src)
