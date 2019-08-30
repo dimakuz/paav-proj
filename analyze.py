@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import sys
 
 from pysmt import shortcuts
@@ -23,12 +24,33 @@ def parse_args():
         required=True,
         help='Type of analysis to perform',
     )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Show debug logs',
+    )
+    parser.add_argument(
+        '--no-debug',
+        dest='debug',
+        action='store_false',
+        help='Show debug logs',
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=os.path.abspath,
+        required=False,
+    )
+    parser.set_defaults(debug=True, url=True)  # FIXME reverse later
     return parser.parse_args()
 
 
 def main():
     opts = parse_args()
-    logging.basicConfig(level=logging.DEBUG)
+    if opts.debug:
+        loglevel = logging.DEBUG
+    else:
+        loglevel = logging.WARNING
+    logging.basicConfig(level=loglevel)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
@@ -56,10 +78,30 @@ def main():
 
     chaotic.chaotic_iteration(control)
 
-    viz.dump_cfg(control)
+    cfg_src = viz.create_cfg_dot(control)
+    if opts.output_dir is not None:
+        viz.output_png(
+            cfg_src,
+            f'{opts.output_dir}/cfg.png',
+            title='Control flow graph',
+        )
+    else:
+        print('Control flow graph:')
+        print(cfg_src)
+
     if opts.type == 'shape':
         for node in control.nodes.values():
-            viz.dump_shape(node)
+            node_src = viz.create_shape_dot(node)
+            if opts.output_dir is not None:
+                viz.output_png(
+                    node_src,
+                    f'{opts.output_dir}/{node.name}.png',
+                    title=f'Node {node.name} structures',
+                )
+            else:
+                print(f'Node {node.name}')
+                print(node_src)
+                print('==========================================')
 
 
 if __name__ == '__main__':

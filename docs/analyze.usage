@@ -1,4 +1,7 @@
-usage: analyze.py [-h] --type {parity,sum,shape} path
+usage: analyze.py [-h] --type {parity,sum,shape} [--no-url NO_URL]
+                  [--shape-structures {full,dot,url,none}] [--debug]
+                  [--no-debug]
+                  path
 
 positional arguments:
   path                  Path to source
@@ -7,3 +10,9 @@ optional arguments:
   -h, --help            show this help message and exit
   --type {parity,sum,shape}
                         Type of analysis to perform
+  --no-url NO_URL       Do not generate URLs for web preview
+  --shape-structures {full,dot,url,none}
+                        How much info to provide about node structures in
+                        shape analysis
+  --debug               Show debug logs
+  --no-debug            Show debug logs

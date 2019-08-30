@@ -1,9 +1,9 @@
+import os
 import subprocess
 import urllib
 
 import graphviz
 
-from analyzeframework import tinyurl
 from analyzeshape import structure
 from analyzeshape import three_valued_logic
 
@@ -18,9 +18,8 @@ def _edge_color(edge):
     else:
         return 'red'
 
-_URL_BASE = 'https://dreampuf.github.io/GraphvizOnline/#'
 
-def dump_cfg(cfg):
+def create_cfg_dot(cfg):
     dot = graphviz.Digraph()
     for node in cfg.nodes.values():
         dot.node(node.name, label=_node_label(node))
@@ -33,13 +32,7 @@ def dump_cfg(cfg):
             )
 
     dot.node(cfg.head.name, shape='doublecircle')
-
-    print(dot.source)
-    print(
-        tinyurl.shorten(
-            f'{_URL_BASE}{urllib.parse.quote(dot.source, safe="")}',
-        ),
-    )
+    return dot.source
 
 
 def _stnode_name(i, j):
@@ -53,9 +46,11 @@ def _stedge_style(val):
         return 'solid'
 
 
-def dump_shape(cfgnode):
+def create_shape_dot(cfgnode):
     state = cfgnode.state
     dot = graphviz.Digraph()
+    dot.attr(label=f'Node {cfgnode.name}')
+    dot.attr(labelloc='top')
     for i, st in enumerate(state.structures):
         with dot.subgraph(name=f'cluster_{i}') as c:
             c.attr(color='black')
@@ -95,9 +90,13 @@ def dump_shape(cfgnode):
                     label='n',
                     style=style,
                 )
-    print(
-        cfgnode.name,
-        tinyurl.shorten(
-            f'{_URL_BASE}{urllib.parse.quote(dot.source, safe="")}',
-        ),
+    return dot.source
+
+def output_png(src, path, title):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    subprocess.run(
+        ('dot', '-Tpng', '-o', path),
+        input=src,
+        encoding='utf8',
     )
+    print(f'{title}: file://{path}')
