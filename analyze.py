@@ -33,12 +33,13 @@ def parse_args():
         '--no-debug',
         dest='debug',
         action='store_false',
-        help='Show debug logs',
+        help='Do not show debug logs',
     )
     parser.add_argument(
         '--output-dir',
         type=os.path.abspath,
         required=False,
+        help='If specified, analysis products will be placed in this directory',
     )
     parser.set_defaults(debug=True, url=True)  # FIXME reverse later
     return parser.parse_args()
