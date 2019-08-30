@@ -13,6 +13,7 @@ sly = "*"
 z3-solver = "*"
 pysmt = "*"
 requests = "*"
+sympy = "*"
 
 [requires]
 python_version = "3.7"
