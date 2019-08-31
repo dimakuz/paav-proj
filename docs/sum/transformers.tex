@@ -101,41 +101,36 @@ For \texttt{i := i - 1} and \texttt{i := j - 1} statements, abstract state is tr
 
 For \texttt{assume TRUE} statements the state is not altered, for \texttt{assume FALSE} statements, state is transformed into bottom state ($\sqcup$ - neutral) so chaotic iteration will treat it as a dead end.
 
-\part*{FIXME complete below}
-For \texttt{assume i = j} statements, if $i$ and $j$ are known to be of opposite parities, statement is treated as \texttt{assume FALSE}, otherwise, state is transformed to create relation of similar parity between the variables, and both are set to most concrete parity known about either of them:
+For \texttt{assume i = j} statements, if $i$ and $j$ are known to be of different value (either through constant propagation or their deltas), statement is treated as \texttt{assume FALSE}, otherwise, state is transformed to copy over the more concrete constant value from one to the other, and their delta is adjusted to be 0:
 \begin{align*}
-M^\prime[x] = & \left.
+C^\prime[x] = & \left.
 	\begin{cases}
-		M[i]\cap M[j], & x \in \{i,j\} \\
-		M[x], & \text{ otherwise}
+		C[i]\sqcap C[j], & x \in \{i,j\} \\
+		C[x], & \text{ otherwise}
 	\end{cases}
 \right\}\\
-S^\prime[x] = & \left.
+D^\prime[s_1,s_2] = & \left.
 \begin{cases}
-	S[x] \cup \{j\}, & x = i \\
-	S[x] \cup \{i\}, & x = j \\
-	S[x], & \text{ otherwise}
+	0, & \{s_1, s_2\} = \{i,j\}\\
+	D[s_1,s_2], & \text{ otherwise}
 \end{cases}
-\right\}\\
-A^\prime[x] = & A
+\right\}
 \end{align*}
 
-For \texttt{assume i != j} and \texttt{assume i != K} statements state is not transformed.
+For \texttt{assume i != j} and \texttt{assume i != K} statements state is checked for conflicts, i.e. if variable $i$ is of value $K$ or equal ot $j$, then state is transformed to $\alpha_\bot$ and statement is treated as \texttt{assume FALSE}.
 
-For \texttt{assume i = K} statements, state is checked for conflict against parity of $i$. If there's a conflict, statement is treated as  \texttt{assume FALSE}, otherwise parity information is augmented with constant's parity:
+For \texttt{assume i = K} statements, state is checked for conflict with the already known value of $i$. If there's a conflict, statement is treated as \texttt{assume FALSE}, constant value is stored in the state:
 \begin{align*}
-M^\prime[x] = & \left.
+C^\prime[x] = & \left.
 	\begin{cases}
-		{E}, & x = i \wedge K \equiv_{2} 0 \\
-		{O}, & x = i \wedge K \equiv_{2} 1 \\
-		M[x], & \text{ otherwise}
+		K, & x = i \\
+		C[x], & \text{ otherwise}
 	\end{cases}
 \right\}\\
-S^\prime[x] = & S \qquad
-A^\prime[x] =  A
+D^\prime = & D
 \end{align*}
 
 
 Finally, for \texttt{assert PRED} statements, transformer is similar to \texttt{skip}, state is not transformed.
 
-In addition to the aforementioned transformations, after each such transformation and join operation, the abstract state is checked for conflicts and if those appear, they are eliminated. Specifically, if a symbol appears to be of same parity and opposite parity in regards to another variable at the same time, the relation between this pair of variables is removed from the state.
+In addition to the aforementioned transformations, after each such transformation and join operation, the abstract state is augmented by deducing new deltas and constants. New deltas are added to the state from all the pairs of varibles with known constant value, and new constant values are learned from already known constant values and deltas between variables.
