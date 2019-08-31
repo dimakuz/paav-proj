@@ -1,0 +1,11 @@
+a b c d
+L0 c := 20 L1
+L1 assume (a = 4) L10
+L1 assume (a = 6) L20
+
+L10 b := 16 L11
+L11 assert (SUM a b = SUM c) L30
+L20 b := 14 L21
+L21 assert (SUM a b = SUM c) L30
+
+L30 assert (SUM a b = SUM c) L31
