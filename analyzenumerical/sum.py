@@ -250,7 +250,6 @@ def inc_assignment(state, statement):
                 continue
             if state.diff[statement.lval, sym] not in _SPECIAL:
                 state.diff[statement.lval, sym] += 1
-                print(statement.lval, sym, statement.lval > sym)
     else:
         for sym in state.const:
             if sym == statement.rval:
