@@ -15,6 +15,14 @@ from tests import harness
         ('examples/sum/example2', (('L5', 'L6', True),)),
         ('examples/sum/example3', (('L11', 'L12', True),)),
         ('examples/sum/example4', (('L7', 'L8', True),)),
+        (
+            'examples/sum/example5',
+            (
+                ('L11', 'L30', True),
+                ('L21', 'L30', True),
+                ('L30', 'L31', False),
+            ),
+        ),
     ),
 )
 def test_sum_analysis(input_path, asserts):
