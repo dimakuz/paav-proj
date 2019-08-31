@@ -1,13 +1,13 @@
 \newcommand{\trans}[1]{[\![\texttt{#1}]\!]}
 \newcommand{\atrans}[1]{\trans{#1}^\sharp}
 \lstset{basicstyle=\small}
-\newcommand{\example}[2]{
+\newcommand{\example}[3]{
 \input{#1/examples/example#2.tex}
 \begin{figure}[h!]
-%\centering
+\centering
 \begin{subfigure}{.5\textwidth}
   \centering
-  \includegraphics[scale=0.3]{#1/examples/example#2-cfg}
+  \includegraphics[height=#3\textheight]{./#1/examples/example#2-output/cfg.png}
   \caption{Control flow graph}
 \end{subfigure}%
 \begin{subfigure}{.5\textwidth}
