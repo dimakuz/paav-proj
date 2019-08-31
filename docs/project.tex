@@ -1,91 +1,51 @@
 \documentclass[12pt,a4paper]{article}
 \usepackage{fullpage}
-\usepackage[top=2cm, bottom=4.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage[top=2cm, bottom=2cm, left=2.5cm, right=2.5cm]{geometry}
 \usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
 \usepackage{enumerate}
-\usepackage{fancyhdr}
 \usepackage{xcolor}
-\usepackage{mathpartir}
 \usepackage{listings}
-\usepackage{hyperref}
-\usepackage{mathabx}
-\usepackage{tabularx}
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
-\hypersetup{%
-	colorlinks=false,
-	linkbordercolor=white
-}
-
-\setlength{\parindent}{0.0in}
-\setlength{\parskip}{0.05in}
-
-\newcommand\course{Program Analysis and Verification}
-\newcommand\namea{Ilya Shervin 308640218}
-\newcommand\nameb{Dmitry Kuznetsov 322081183}
-
-\newcommand{\trans}[1]{[\![\texttt{#1}]\!]}
-\newcommand{\atrans}[1]{\trans{#1}^\sharp}
-\lstset{basicstyle=\small}
-\newcommand{\example}[2]{
-\input{#1/examples/example#2.tex}
-\begin{figure}[h!]
-%\centering
-\begin{subfigure}{.5\textwidth}
-  \centering
-  \includegraphics[scale=0.3]{#1/examples/example#2-cfg}
-  \caption{Control flow graph}
-\end{subfigure}%
-\begin{subfigure}{.5\textwidth}
-  \centering
-  \lstset{basicstyle=\small}
-  \lstinputlisting{#1/examples/example#2.code}
-  \caption{Code}
-\end{subfigure}
-\caption*{\texttt{pipenv run analyze --type #1 docs/#1/examples/example#2.code}}
-\end{figure}
-}
 
 \lstset{
 frame = single, 
 breaklines=true,
 framexleftmargin=1pt}
 
+\title{Program Analysis and Verification:\\Final Project}
+\author{Ilya Shervin\\ 308640218 
+        \and
+        Dmitry Kuznetsov\\ 322081183}
 
-\pagestyle{fancyplain}
-\headheight 35pt  
-\lhead{\namea\\\nameb}
-\chead{\textbf{\Large Final Project}}
-\rhead{\course \\ \today}
-\lfoot{}
-\cfoot{}
-\rfoot{\small\thepage}
-\headsep 1.5em
+
+\input{defs}
 
 \begin{document}
+\maketitle
 	\section*{Intro}
 	This document accompanies the code of the final project in Program Analysis and Verification class. Following is a brief rundown of code structure and components.
 	
 	All of the analysis tasks are implemented with Python 3 (3.7+) with the environment and dependencies managed by Pipenv\footnote{https://docs.pipenv.org} (see docs for elaborate usage examples).
 	
 	Our code relies on the following external software packages:
-	\begin{enumerate}
+	\begin{itemize}
 		\item SLY\footnote{https://github.com/dabeaz/sly} - a Python implementation of lex/yacc analogues lexers and parsers.
 		\item pySMT\footnote{https://github.com/pysmt/pysmt} - a front-end for SAT and SMT solvers
 		\item z3-solver\footnote{http://z3prover.github.io} - a back-end for PySMT based on Z3
 		\item graphviz\footnote{https://github.com/xflr6/graphviz} - a library for visualization of control flow graphs
 		\item sympy\footnote{https://www.sympy.org/} - a library implementing symbolic algebra, used in shape analysis node length computations
 		\item pytest\footnote{https://docs.pytest.org} - a test harness
-	\end{enumerate}
+	\end{itemize}
 The general method of operation for all of the analysis implementations is as following:
-\begin{itemize}
+\begin{enumerate}
 	\item Parse the input file according to the language definition of the program (parity/sum/shape).
 	\item Construct the control flow graph of the program.
 	\item Initialize all the nodes in control flow graph to the initial abstract state (depending on the abstract domain of specific analysis).
 	\item Perform chaotic iteration until no more updates happen.
 	\item Iterate over assert statements and verify their validity against the abstract state of the graph node.
-\end{itemize}
+\end{enumerate}
 Finally, the results are either printed to the screen as DOT graphs or written to disk as PNG files.
 
 \section*{Installing and Running}

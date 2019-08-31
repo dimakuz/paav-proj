@@ -61,5 +61,19 @@ relationsO_{sym} &= \left[
 \end{align*}
 $relations_\alpha$ encodes the relations between variables. If concrete parity information is unknown for variable $x$, we can deduce that it is even, if all variables in $S[x]$ are even and all variables in $A[x]$ are odd (and the other way around for odd case).
 
-
 With the above formula, and the formula derived from the \texttt{assert} statement, we use the SAT solver to check if there is an assignment that satisfies the state yet violates the assertion predicate. If such assignment exists, we decide that assertion is invalid.
+
+\subsection*{Example}
+Given variables $x,y,z$ and the following state:
+\begin{align*}
+&M[x] = \{O\} \quad M[y] = \top \quad M[z] = \top \\
+&S[x] = \emptyset \quad S[y] = \{x\} \quad S[z] = \emptyset \\
+&A[x] = \emptyset \quad A[y] = \emptyset \quad A[z] = \{y\}
+\end{align*}
+
+The state formula would be:
+\begin{align*}
+state =& \overbrace{\parfBasis{x}\land\parfBasis{y}\land\parfBasis{z}}^{basis} \land \overbrace{x_{odd}}^{modulo}\land \\
+&\overbrace{(x_{even}\rightarrow y_{odd}) \land (x_{odd} \rightarrow y_{odd}) \land 
+            (y_{odd} \rightarrow z_{even}) \land (y_{even} \rightarrow z_{odd})}^{relations}
+\end{align*}

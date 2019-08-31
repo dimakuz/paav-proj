@@ -1,16 +1,7 @@
 \section*{Overview}
-In our implementation of summation analysis we implemented an abstract state that tracks 2 aspects of the program:
+In our implementation of summation analysis we tried to capture the following aspects of execution:
 \begin{itemize}
-\item Known constant values of variables.
-\item Known differences between pairs of variables.
+	\item Storing known constant values of variables.
+	\item Storing differences between pairs of variables.
 \end{itemize}
-To deduce whether a given assert can be violated, we used an SMT solver that processed a conjunction of equations based on the information gathered by our abstract state.
-
-\subsection*{Example}
-Consider a program with 2 variables $x$ and $y$. In an abstract state that knows that $x$ is equal to 0 and that $y$ is equal to $x+1$, we can create the following model:
-
-\begin{equation*}
-	(x = 2) \wedge (y = x + 1)
-\end{equation*}
-
-Then, when checking an assert, we use this model, along with predicate defined by the assert, to find an assignment to variables that holds the model yet violates the predicate.
+We used an SMT solver to check whether information provided by our abstract state conflicts with assertion predicates or not.
