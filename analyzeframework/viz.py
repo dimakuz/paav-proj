@@ -31,7 +31,12 @@ def create_cfg_dot(cfg):
                 fontcolor=_edge_color(edge),
             )
 
-    dot.node(cfg.head.name, shape='doublecircle')
+    dot.node(
+        cfg.head.name,
+        label=f'Start node:\n{_node_label(cfg.head)}',
+        fillcolor='green',
+        style='filled'
+    )
     return dot.source
 
 
