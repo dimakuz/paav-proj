@@ -89,7 +89,7 @@ class ShapeState(abstract.AbstractState):
 
 
         structures = [st for st in self.structures]
-        LOG.debug('begin join num of structures self %d num of structures other %d', len(self.structures), len(other.structures))
+        # LOG.debug('begin join num of structures self %d num of structures other %d', len(self.structures), len(other.structures))
 
         other.embed()
 
@@ -119,8 +119,24 @@ class ShapeState(abstract.AbstractState):
                                 # Counterpart in st
                                 u = canonical_map[v]
 
+                                if 't-L311' in str(arbitrary_term) and 'p-L6' in str(st.size[u]):
+                                    LOG.debug('u=v%d, st.size[u] = %s', u, expand(st.size[u]))
+                                    LOG.debug('v=v%d, next_st_copy.size[v] = %s', v, expand(next_st_copy.size[v]))
+                                    # LOG.debug('st = \n %s', st)
+                                    # LOG.debug('nest_st_copy = \n %s', next_st_copy)
+
+                                if 'p-L6' in str(st.size[u]):
+                                    for sym in st.size[u].free_symbols:
+                                        if st.size[u].coeff(sym) == 3:
+                                            # LOG.debug(next_st_copy)
+                                            # LOG.debug(st)
+                                            LOG.debug(st.size[u])
+
+                                            # if len(next_st_copy.arbitrary_terms_stack) > 1:
+                                            #     assert False
+
                                 # Adding arbitraray term only once
-                                if arbitrary_term not in next_st_copy.size[v].free_symbols and expand(st.size[u]) != expand(next_st_copy.size[v]):
+                                if arbitrary_term not in next_st_copy.arbitrary_terms_stack and expand(st.size[u]) != expand(next_st_copy.size[v]):
 
                                     # LOG.debug('old structure:\n %s', st)
                                     # LOG.debug('new structure:\n %s', next_st)
@@ -135,12 +151,20 @@ class ShapeState(abstract.AbstractState):
                                     # new_size *= arbitrary_term
 
                                     # next_st_copy.size[v] += new_size
+
+                                    if (st.size[u] - next_st_copy.size[v]).free_symbols:
+                                        LOG.debug(st.size[u] - next_st_copy.size[v])
+                                        # assert False
+
                                     next_st_copy.size[v] += arbitrary_term * (st.size[u] - next_st_copy.size[v])
                         
                                     # LOG.debug('new v size: %s', str(next_st_copy.size[v]))
                                     add = True
 
                             if add and next_st_copy not in structures:
+                                LOG.debug('stack before %s', next_st_copy.arbitrary_terms_stack)
+                                next_st_copy.arbitrary_terms_stack.append(arbitrary_term)
+                                LOG.debug('stack after %s', next_st_copy.arbitrary_terms_stack)
                                 structures.append(next_st_copy)
                         break
 
@@ -149,10 +173,10 @@ class ShapeState(abstract.AbstractState):
                     # LOG.debug('did not find canonical map, adding to structures')
                     structures.append(st)
 
-        LOG.debug('end join num of structures %d', len(structures))
+        # LOG.debug('end join num of structures %d', len(structures))
         state = ShapeState(structures)
-        # if arbitrary_term is not None and 't-' in str(arbitrary_term):
-        #    LOG.debug('state in the end %s', state)
+        # if arbitrary_term is not None and 't-L312' in str(arbitrary_term):
+           # LOG.debug('state in the end %s', state)
         return state
         # return ShapeState(structures)
 
@@ -167,7 +191,13 @@ class ShapeState(abstract.AbstractState):
                         st._v_embed(u, v)
 
     def __str__(self):
-        return f'{len(self.structures)} structure(s)'
+        # return f'{len(self.structures)} structure(s)'
+        res = []
+        for structure in self.structures:
+            if len(structure.arbitrary_terms_stack) > 1 and 'p-L6' in (str(sym) for sym in structure.arbitrary_terms_stack) and \
+                'p-L7' in (str(sym) for sym in structure.arbitrary_terms_stack):
+                res.append(f'\n{structure}\n')
+        return '\n'.join(res)
 
 
     def full_str(self):

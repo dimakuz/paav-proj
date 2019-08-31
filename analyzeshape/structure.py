@@ -24,24 +24,31 @@ MAYBE = three_valued_logic.ThreeValuedBool.MAYBE
 
 
 def is_negative(size):
-    perm_symbols = [sym for sym in size.free_symbols if 'p-' in str(sym)]
-    temp_symbols = [sym for sym in size.free_symbols if 't-' in str(sym)]
+    perm_symbols = {sym for sym in size.free_symbols if 'p-' in str(sym)}
+    temp_symbols = {sym for sym in size.free_symbols if 't-' in str(sym)}
 
     if perm_symbols:
         for arg in size.args:
-            if arg.free_symbols.intersection(perm_symbols):
+            if perm_symbols.intersection(arg.free_symbols):
+                expr = arg
                 for sym in arg.free_symbols:
-                    expr = size.subs(sym, 1)
+                    expr = arg.subs(sym, 1)
                 if expr < 0:
                     return True
 
+        return False
+
     elif temp_symbols:
         for arg in size.args:
-            if arg.free_symbols.intersection(temp_symbols):
+            if temp_symbols.intersection(arg.free_symbols):
+                expr = arg
                 for sym in arg.free_symbols:
-                    expr = size.subs(sym, 1)
+                    expr = arg.subs(sym, 1)
                 if expr < 0:
                     return True
+
+        return False
+
     else:
         return size < 0
 
@@ -61,6 +68,7 @@ class Structure:
     n: typing.Mapping[typing.Tuple[int, int], three_valued_logic.ThreeValuedBool]
     n_plus: typing.Mapping[typing.Tuple[int, int], three_valued_logic.ThreeValuedBool]
     size: typing.Mapping[int, Expr]
+    arbitrary_terms_stack: typing.List[Symbol]
 
     constr: typing.Set[typing.Tuple[int, callable, callable, callable]]
 
@@ -75,6 +83,7 @@ class Structure:
         newst.sm = copy.deepcopy(self.sm)
         newst.n = copy.deepcopy(self.n)
         newst.size = copy.deepcopy(self.size)
+        newst.arbitrary_terms_stack = copy.deepcopy(self.arbitrary_terms_stack)
         return newst
 
 
@@ -234,23 +243,24 @@ class Structure:
 
 
     def __str__(self):
+
         lines = []
         for symbol in self.var:
             var = ', '.join(f'v{v} = {str(self.var[symbol][v])}' for v in self.indiv)
             lines.append(f'var_{symbol.name}: [{var}]')
 
-        for symbol in self.var:
-            reach = ', '.join(f'v{v} = {str(self.reach[symbol][v])}' for v in self.indiv)
-            lines.append(f'reach_{symbol.name}: [{reach}]')
+        # for symbol in self.var:
+        #     reach = ', '.join(f'v{v} = {str(self.reach[symbol][v])}' for v in self.indiv)
+        #     lines.append(f'reach_{symbol.name}: [{reach}]')
 
-        cycle = ', '.join(f'v{v} = {str(self.cycle[v])}' for v in self.indiv)
-        lines.append(f'cycle: [{cycle}]')
+        # cycle = ', '.join(f'v{v} = {str(self.cycle[v])}' for v in self.indiv)
+        # lines.append(f'cycle: [{cycle}]')
 
-        shared = ', '.join(f'v{v} = {str(self.shared[v])}' for v in self.indiv)
-        lines.append(f'shared: [{shared}]')
+        # shared = ', '.join(f'v{v} = {str(self.shared[v])}' for v in self.indiv)
+        # lines.append(f'shared: [{shared}]')
 
-        sm = ', '.join(f'v{v} = {str(self.sm[v])}' for v in self.indiv)
-        lines.append(f'sm: [{sm}]')
+        # sm = ', '.join(f'v{v} = {str(self.sm[v])}' for v in self.indiv)
+        # lines.append(f'sm: [{sm}]')
 
         size = ', '.join(f'v{v} = {str(self.size[v])}' for v in self.indiv)
         lines.append(f'size: [{size}]')
@@ -433,6 +443,7 @@ class Structure:
             n=dict(),
             n_plus=dict(),
             size=dict(),
+            arbitrary_terms_stack=[],
             constr=cls.init_constr(symbols)
         )
 
@@ -472,6 +483,10 @@ class Structure:
 
     def coerce_size(self, old_size):
 
+        if 'p-L6' in self.arbitrary_terms_stack and 'p-L7' in self.arbitrary_terms_stack:
+            LOG.debug('in coerce size.....\n')
+            LOG.debug(self)
+
         for v in self.indiv:
 
             if self.sm[v] == FALSE and old_size[v] != SIZE_ONE:
@@ -490,12 +505,24 @@ class Structure:
                     
                     # LOG.debug('old size is: %s, last factor %s',old_size[v],isinstance(old_size[v].get_last_term(), str))
                     # volatile_variable = old_size[v].get_last_term()
-                    volatile_variable = next((sym for sym in old_size[v].free_symbols if 't-' in str(sym)), None)
+                    volatile_variable = self.arbitrary_terms_stack[-1] if self.arbitrary_terms_stack else None
+                    # volatile_variable = next((sym for sym in old_size[v].free_symbols if 't-' in str(sym)), None)
 
-                    if volatile_variable is None:
+
+                    if 't-' not in str(volatile_variable) or volatile_variable not in old_size[v].free_symbols:
                         # LOG.debug('a size is not symbolic!! %s', old_size[v])
-                        # assert False
+
+                        # if 't-' in str(volatile_variable) and old_size[v].free_symbols:
+                        #     LOG.debug(volatile_variable)
+                        #     LOG.debug(old_size[v])
+                        #     assert False
                         return False
+
+                    # for sym in old_size[v].free_symbols:
+                    #     if 't-L310' in str(sym) and 't-L312' in str(volatile_variable):
+                    #         assert False
+                    #     if 't-L312' in str(sym) and 't-L311' in str(volatile_variable):
+                    #         assert False
 
 
                     # volatile_size = old_size[v].extract_variable(volatile_variable)
@@ -509,17 +536,28 @@ class Structure:
                     # Substitute
                     for w in self.indiv:
                         if isinstance(self.size[w], Expr):
-                            self.size[w] = self.size[w].subs(volatile_variable, volatile_size)
-                            if self.size[w] == 1:
-                                self._v_concretisize(w)
-                            elif self.size[w] == 0:
-                                self._v_remove(w)
-                            elif is_negative(self.size[w]):
-                                # LOG.debug(self)
-                                # LOG.debug('calculated volatile size %s from %s', volatile_size, old_size[v])
-                                # LOG.debug('a size was found to be negative!!!! %s', self.size[w])
-                                # assert False
-                                return False
+
+                          
+                            if 'p-L6' in (str(sym) for sym in self.size[w].free_symbols) and 'p-L6' in (str(sym) for sym in volatile_size.free_symbols):
+                                LOG.debug(self.size[w])
+                                LOG.debug(volatile_size)
+                                LOG.debug(self)
+
+                            if volatile_variable in self.size[w].free_symbols:
+                                self.size[w] = self.size[w].subs(volatile_variable, volatile_size)
+                                if self.size[w] == 1:
+                                    self._v_concretisize(w)
+                                elif self.size[w] == 0:
+                                    self._v_remove(w)
+                                elif is_negative(self.size[w]):
+                                    LOG.debug(self)
+                                    # LOG.debug('calculated volatile size %s from %s', volatile_size, old_size[v])
+                                    LOG.debug('a size was found to be negative!!!! %s', self.size[w])
+                                    assert False
+                                    # return False
+
+                    self.arbitrary_terms_stack.pop()
+
                 else:
                     self.size[u] -= 1
                     # Concretisizing next node too and later join will handle the structure merge 
