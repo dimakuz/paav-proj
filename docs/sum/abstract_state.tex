@@ -1,13 +1,15 @@
 \section*{Abstract Domain}
-Our abstract state is defined as a 2-tuple of the from $(C,D)$. Where:
+Our abstract state is defined as a 2-tuple of the from $(S,D)$. Where:
 \begin{itemize}
-	\item $C: Symbols \rightarrow \mathbb{Z}\cup \{\bot, \top\}$ - a mapping that tracks constant values of variables.
+	\item $S: 2^{Symbols} \rightarrow \mathbb{Z}\cup \{\bot, \top\}$ - a mapping that tracks constant values of sets of variables.
 	\item $D: (Symbols \times Symbols )\rightarrow \mathbb{Z}\cup \{\bot, \top\}$ - a matrix that tracks difference between values of variables.
 	
 	For example, if $x$ is known to be greater than $y$ by 2, then $D[x,y] = 2$ and $D[y,x] = -2$.
 
 \end{itemize}
 Our abstract domain is then all possible assignments to the 2-tuple.
+
+In order to control the complexity of analysis, implementation limits $S$ element. While algorithm assumes any element of $2^{Symbols}$, code only initializes $\bigcup_{1\le i < k} {Symbols}^i$, i.e. sets of up to $k$ elements.
 
 We'll define $\sqcup$ and $\sqcap$ between elements of $\mathbb{Z}\cup \{\bot, \top\}$ as we have defined them for the lattice we seen in class, for example, $\sqcup$ is defined as:
 \begin{itemize}
@@ -19,13 +21,13 @@ We'll define $\sqcup$ and $\sqcap$ between elements of $\mathbb{Z}\cup \{\bot, \
 \end{itemize}
 We'll also define the above $\sqcup$ commutative, meaning that $a\sqcup b \equiv b \sqcup a$.
 
-The join operation is defined as following: given $\alpha_1=(C_1, D_1)$ and $\alpha_2=(C_2,D_2)$ abstract states:
+The join operation is defined as following: given $\alpha_1=(S_1, D_1)$ and $\alpha_2=(S_2,D_2)$ abstract states:
 \begin{align*}
-&\alpha_1\sqcup\alpha_2=(C_1\sqcup C_2, D_1 \sqcup D_2) \\
+&\alpha_1\sqcup\alpha_2=(S_1\sqcup S_2, D_1 \sqcup D_2) \\
 \forall s \in Symbols&:  \\
-&(C_1\sqcup C_2)[s] = \left.
+&(S_1\sqcup S_2)[s] = \left.
 	\begin{cases}
-		C_1[s]\sqcup C_2[s], & s \in Symbols
+		S_1[s]\sqcup S_2[s], & s \in Symbols
 	\end{cases}
 \right\} \\
 &(D_1\sqcup D_2)[s_1, s_2] = \left.
@@ -35,12 +37,12 @@ The join operation is defined as following: given $\alpha_1=(C_1, D_1)$ and $\al
 \right\}
 \end{align*}
 
-When verifying \texttt{assert PRED} statements, our analysis computes satisfiability of the following formula: $state_\alpha\land\neg pred$. We'll detail how $state_\alpha$ is obtained from $\alpha = (C,D)$:
+When verifying \texttt{assert PRED} statements, our analysis computes satisfiability of the following formula: $state_\alpha\land\neg pred$. We'll detail how $state_\alpha$ is obtained from $\alpha = (S,D)$:
 \begin{align*}
-state_\alpha & = const_\alpha \land diff_\alpha \\
-const_\alpha &= \bigwedge\{s = C[s] \mid s \in Symbols \wedge C[s] \in \mathbb{Z}\}
+state_\alpha & = sums_\alpha \land diff_\alpha \\
+sums_\alpha &= \bigwedge\{s_1+\ldots+s_n = v \mid S[\{s_1,\ldots,s_n\}] = v \wedge v \in \mathbb{Z}\}
 \end{align*}
-In this model, atoms are variables of the program. $const_\alpha$ is the set of clauses that bind variable to concrete integer values.
+In this model, atoms are variables of the program. $sums_\alpha$ is the set of clauses that restricts variables to hold the sums known in state.
 \begin{equation*}
 diff_\alpha = \bigwedge\{ x - y = D[x,y] \mid x,y\in Symbols \wedge D[x,y] \in \mathbb{Z}\}
 \end{equation*}
@@ -51,11 +53,12 @@ With the above formula, and the formula derived from the \texttt{assert} stateme
 \subsection*{Example}
 Given variables $x,y,z$ and the following state:
 \begin{align*}
-&C[x] = \top \quad C[y] = 11 \quad C[z] = \top \\
-&D[x,y] = 2 \quad D[x,z] = -10 \quad D[y,z] = \top
+&S[\{x\}] = \top \quad S[\{y\}] = 15 \quad S[\{z\}] = \top \\
+&S[\{x,z\}] = 30\quad S[\{x,y\}] = \top \quad S[\{y,z\}] = \top\\
+&D[x,y] = -5 \quad D[x,z] = -10 \quad D[y,z] = \top
 \end{align*}
 
 The state formula would be:
 \begin{equation*}
-state_\alpha = \overbrace{(y=11)}^{const_\alpha}\land\overbrace{(x-y=2)\land(x-z=-10)}^{diff_\alpha}
+state_\alpha = \overbrace{(y=15)\wedge(x+z=30)}^{sums_\alpha}\land\overbrace{(x-y=-5)\land(x-z=-10)}^{diff_\alpha}
 \end{equation*}
