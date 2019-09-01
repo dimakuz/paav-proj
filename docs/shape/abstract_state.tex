@@ -6,8 +6,9 @@ Our abstract state is defined as a set of possible heap structures. Each structu
 	\item $s\in U^S\to Expr$ - a size function that maps an individual to a symbolic algebraic expression.
 
 \end{itemize}
-Our abstract domain is all the possible sets of heap structures.
+New possible structures are added during a $focus$ operation or in a loop head join operation. Structures are removed during a $coerce$ operation. These operations are described in the next sections. Thus, our abstract domain is all the possible sets of heap structures.
 
+\subsection*{Three Valued Logic}
 The logical operators are naturally extended to support 3-valued logic in a manner described in class and in the paper:
 \begin{itemize}
 	\item $1 \lor 1/2 = 1$
@@ -19,41 +20,53 @@ The logical operators are naturally extended to support 3-valued logic in a mann
 	\item $\neg 1/2 = 1/2$
 \end{itemize}
 
+\subsection*{The Set of Predicates}
 The set of $k$-ary predicates that we keep for each structure is as follows:
 \begin{itemize}
-	\item Unary predicate $x\in U^S\to \{0,1,1/2\}$ for each variable $x$ in the program, meaning the variable points to the individual.
-	\item Unary predicate $r_x\in U^S\to \{0,1,1/2\}$ for each variable $x$ in the program, meaning the individual is reached from the variable.
-	\item Unary predicate $c\in U^S\to \{0,1,1/2\}$, meaning that the individual is on a directed cycle.
-	\item Unary predicate $is\in U^S\to \{0,1,1/2\}$, meaning that the individual is pointed to by two or more nodes.
-	\item Unary predicate $sm\in U^S\to \{0,1,1/2\}$, meaning that the individual is a summary (abstract) node.
-	\item Binary predicate $n\in U^S\times U^S\to \{0,1,1/2\}$ meaning that there is an edge pointing from one individual to another.
+	\item Unary predicate $x\in U^S\to \{0,1,1/2\}$ for each variable $x\in Symbols$ in the program, meaning variable $x$ points to individual.
+	\item Unary predicate $r_x\in U^S\to \{0,1,1/2\}$ for each variable $x\in Symbols$ in the program, meaning individual is reached from variable $x$.
+	\item Unary predicate $c\in U^S\to \{0,1,1/2\}$, meaning individual is on a directed cycle.
+	\item Unary predicate $is\in U^S\to \{0,1,1/2\}$, meaning individual is pointed to by two or more nodes.
+	\item Unary predicate $sm\in U^S\to \{0,1,1/2\}$, meaning individual is a summary (abstract) node.
+	\item Binary predicate $n\in U^S\times U^S\to \{0,1,1/2\}$ meaning there is an edge pointing from one individual to another.
 \end{itemize}
 
-We define $Expr$ as the set of  
+\subsection*{Arbitrary sizes}
+Let us define $A$ as the set of arbitrary sizes discovered along the execution of the program. An arbitrary size $a\in\mathbb{N}^+$ is an algebraic variable we attach to the size of an abstract node.
 
-In non \texttt{assume} statements join operation is simply the set union of the possible structures. In \texttt{assume} statements (which are loop heads admittedly), we perform set union but may add an extra structure that introduces an arbitrary size $a_S$ that participates in size expressions. Join operation is described in more detail in the next section. 
+We divide arbitrary sizes into two types: temporal and permanent. A permanent size $p_i$ has a scope that can span the whole program, while a temporal size $t_i$ lives inside the loop where it was first introduced into the analysis. We use this distinction later in the coerce stage.
 
-When verifying \texttt{assert PRED} statements, our analysis computes satisfiability of the following formula: $state_\alpha\land\neg pred$. We'll detail how $state_\alpha$ is obtained from $\alpha = (C,D)$:
+We define $Expr$ as the set of algebraic expressions with variables from $A$. Such algebraic expression outputs an integer value that represents the size of a node.
+
+For example let $A={p_1,t_1}$, $s(v)=e_1\in Expr$ and $s(u)=e_2\in Expr$ where $e_1=p_1-3$ and $e_2=p_1+t_1-2$. This means that the sizes of $v$ and $u$ are bound to $p_1$ and the size of $u$ is also bound to $t_1$. We cannot say much about the exact sizes of the nodes but we know that $u$ is bigger than $v$ by $s(u)-s(v)=(p_1+t_1-2)-(p_1-3)=t_1+1$.
+
+We define two functions on expressions: $even\in Expr\to\{0,1\}$ and $len\in U^S\times U^S\to Expr$. $even$ tries to deduce parity by checking if there is an even factor in the expression. $len$ sums expressions by walking on the path from one node to the other.
+
+\subsection*{Join Operation}
+In non \texttt{assume} statements join operation is simply the set union of the possible structures. In \texttt{assume} statements (which are loop heads admittedly), we perform set union but may add an extra structure that introduces an arbitrary size. Join operation is described in more detail in the next section. 
+
+\subsection*{Verifying Assert Statements}
+When verifying \texttt{assert PRED} statements, our analysis computes satisfiability of the following formula: $state_\alpha\land\neg pred$. $state_\alpha$ is obtained from the set of possible structures at a given state. The formula for each structure $s_\alpha$ is a disjunction of formulas with the form $f\to g$, where $f$ encodes a property of the structure and $g$ encodes the corresponding predicate to assert.
 \begin{align*}
-state_\alpha & = const_\alpha \land diff_\alpha \\
-const_\alpha &= \bigwedge\{s = C[s] \mid s \in Symbols \wedge C[s] \in \mathbb{Z}\}
+state_\alpha &= \bigvee_{s \in S} s_\alpha \\
+s_\alpha &= \bigwedge_{x\in Symbols}(\exists v.x(v)=1\to NotNull_x) \\
+\wedge& \bigwedge_{x\in Symbols}(\neg(\exists v.x(v)=1)\to Null_x) \\
+\wedge& \bigwedge_{x,y\in Symbols}((\exists v.x(v)=1\land y(v)=1)\to Equals_{xy}) \\
+\wedge& \bigwedge_{x,y\in Symbols}(\neg(\exists v.x(v)=1\land y(v)=1)\to NotEquals_{xy}) \\
+\wedge& \bigwedge_{x,y\in Symbols}((\exists v,u.x(v)=1\land y(u)=1\land n(v,u)=1)\to EqualsNext_{xy}) \\
+\wedge& \bigwedge_{x,y\in Symbols}(\neg(\exists v,u.x(v)=1\land y(u)=1\land n(v,u)=1)\to NotEqualsNext_{xy}) \\
+\wedge& \bigwedge_{x,y\in Symbols}((\exists v.y(v)=1\land r_x(v)=1)\to Reach_{xy}) \\
+\wedge& \bigwedge_{x,y\in Symbols}((\exists v,u.x(v)=1\land y(u)=1\land r_x(u)\land even(len(v,u))\to Even_{xy}) \\	
+\wedge& \bigwedge_{x,y\in Symbols}((\exists v,u.x(v)=1\land y(u)=1\land r_x(u)\land\neg even(len(v,u))\to Odd_{xy}) \\
+\wedge& \bigwedge_{x,y,z,w\in Symbols}((\exists v,u.x(v)=1\land y(u)=1\land r_x(u)\land\exists t,s.z(t)=1\land w(s)=1\land r_z(s))\to LenEquals_{xyzw}) \\	
 \end{align*}
-In this model, atoms are variables of the program. $const_\alpha$ is the set of clauses that bind variable to concrete integer values.
-\begin{equation*}
-diff_\alpha = \bigwedge\{ x - y = D[x,y] \mid x,y\in Symbols \wedge D[x,y] \in \mathbb{Z}\}
-\end{equation*}
-$diff\alpha$ expresses the known differences between variables.
+In this model, atoms are derived from the counterpart \texttt{assert} statement. For example, the statement \texttt{x != y.n} is translated to $NotEqualsNext_{xy}$ and the statement \texttt{LEN x y = LEN z y} is translated to $LenEquals_{xyzy}$.\\
 
-With the above formula, and the formula derived from the \texttt{assert} statement, we use the SMT solver to check if there is an assignment that satisfies the state yet violates the assertion predicate. If such assignment exists, we deem that assertion as invalid.
-
-\subsection*{Example}
-Given variables $x,y,z$ and the following state:
-\begin{align*}
-&C[x] = \top \quad C[y] = 11 \quad C[z] = \top \\
-&D[x,y] = 2 \quad D[x,z] = -10 \quad D[y,z] = \top
-\end{align*}
-
-The state formula would be:
-\begin{equation*}
-state_\alpha = \overbrace{(y=11)}^{const_\alpha}\land\overbrace{(x-y=2)\land(x-z=-10)}^{diff_\alpha}
-\end{equation*}
+We use the SMT solver to check if there is an assignment that satisfies $state_\alpha\land\neg pred$. 
+\begin{theorem}
+	$\exists M$ s.t. $M\models state_\alpha\land\neg pred \iff \normalfont$\texttt{assert PRED} is invalid 
+\end{theorem}
+\begin{proof}	
+If such exists, it means there is a structure $s$ where all formulas in the disjunction $s_\alpha$ are satisfied, including $f\to pred$. But as $\neg pred$ is true, $f$ must be false, which means that the corresponding property does not hold in this structure and the assertion is invalid.\\ \\
+In the opposite direction, if no assignment exist, for all structures there is an unsatisfied formula. Considering that in each structure the atoms are independant of each other, any formula can become satisfied by setting the relevant atom to true, except the formula $f\to pred$. It means that in all structures $f\to pred$ is false as $\neg pred$ is true, which means that $f$ is true and the corresponding property holds.
+\end{proof}
