@@ -15,4 +15,4 @@ L31 t := yy.n L32
 L32 assume(t = NULL) L44
 L32 assume(t != NULL) L33
 L33 yy := t L31
-L44 assert (ODD y yy) L45
+L44 assert (EVEN y yy) L45

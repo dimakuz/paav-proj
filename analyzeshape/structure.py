@@ -14,10 +14,6 @@ from sympy import *
 LOG = logging.getLogger(__name__)
 
 
-INVALID = Integer(-1)
-SIZE_ONE = Integer(1)
-SIZE_ZERO = Integer(0)
-
 TRUE = three_valued_logic.ThreeValuedBool.TRUE
 FALSE = three_valued_logic.ThreeValuedBool.FALSE
 MAYBE = three_valued_logic.ThreeValuedBool.MAYBE
@@ -410,7 +406,7 @@ class Structure:
         if v1 is None or v2 is None:
             return Integer(-1)
 
-        size = Integer(0)
+        size = self.size[v1]
         v = v1
         while v != v2:
             v = next((w for w in self.indiv if self.n[(v,w)] != FALSE and v != w), None)
@@ -487,7 +483,7 @@ class Structure:
     def coerce_size(self, old_size):
 
         for v in self.indiv:
-            if self.sm[v] == FALSE and old_size[v] != SIZE_ONE:
+            if self.sm[v] == FALSE and old_size[v] != 1:
 
                 u = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v \
                     and self._v_after_focus_eq(u, self, v) and self.sm[u] == MAYBE), None)

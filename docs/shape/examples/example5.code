@@ -3,9 +3,15 @@ L1 skip L8
 L8 xx := new L9
 L9 xx.n := NULL L10
 L10 xx.n := x L11
-L11 x := xx L6
-L6 assume(TRUE) L8
-L6 assume(TRUE) L200
+L11 x := xx L12
+L12 xx := new L13
+L13 xx.n := NULL L14
+L14 xx.n := x L15
+L15 x := xx L16
+L16 xx := new L17
+L17 xx.n := NULL L18
+L18 xx.n := x L19
+L19 x := xx L200
 L200 yy := new L201
 L201 yy.n := NULL L202
 L202 yy.n := y L203
@@ -23,8 +29,9 @@ L309 q.n := z1 L310
 L310 z1 := q L311
 L311 assume(xx = NULL) L312
 L311 assume(xx != NULL) L306
-L312 assume(yy = NULL) L602
+L312 assume(yy = NULL) L601
 L312 assume(yy != NULL) L304
+L601 xx := x L602
 L602 z2 := new L603
 L603 zz2 := z2 L604
 L604 xx := xx.n L605
