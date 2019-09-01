@@ -497,7 +497,7 @@ class Structure:
                     old_size[v] -= 1 # Diff to add to prev node
                     volatile_variable = self.arbitrary_terms_stack[-1] if self.arbitrary_terms_stack else None
 
-                    if str(volatile_variable).startswith('T') or volatile_variable not in old_size[v].free_symbols:
+                    if not str(volatile_variable).startswith('T') or volatile_variable not in old_size[v].free_symbols:
                         return False
 
                     (volatile_size,) = solveset(old_size[v], volatile_variable) 
