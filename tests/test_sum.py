@@ -20,7 +20,7 @@ from tests import harness
             (
                 ('L11', 'L30', True),
                 ('L21', 'L30', True),
-                ('L30', 'L31', False),
+                ('L30', 'L31', True),
             ),
         ),
     ),

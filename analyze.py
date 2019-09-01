@@ -41,6 +41,13 @@ def parse_args():
         required=False,
         help='If specified, analysis products will be placed in this directory',
     )
+    parser.add_argument(
+       '--sum-max-combination-size',
+       type=int,
+       required=False,
+       default=None,
+       help='Sum analysis: maximal combination size of variables to track',
+    )
     parser.set_defaults(debug=True, url=True)  # FIXME reverse later
     return parser.parse_args()
 
@@ -60,6 +67,8 @@ def main():
         lex = num_parser.Lexer()
         par = num_parser.Parser()
     elif opts.type == 'sum':
+        if opts.sum_max_combination_size is not None:
+            sum.MAX_COMBINATION_SIZE = opts.sum_max_combination_size
         state = sum.SumState
         lex = num_parser.Lexer()
         par = num_parser.Parser()
