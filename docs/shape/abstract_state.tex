@@ -43,7 +43,7 @@ For example let $A={p_1,t_1}$, $s(v)=e_1\in Expr$ and $s(u)=e_2\in Expr$ where $
 We define two functions on expressions: $even\in Expr\to\{0,1\}$ and $len\in U^S\times U^S\to Expr$. $even$ tries to deduce parity by checking if there is an even factor in the expression. $len$ sums expressions by walking on the path from one node to the other.
 
 \subsection*{Join Operation}
-In non \texttt{assume} statements join operation is simply the set union of the possible structures. In \texttt{assume} statements (which are loop heads admittedly), we perform set union but may add an extra structure that introduces an arbitrary size. Join operation is described in more detail in the next section. 
+In non \texttt{assume} statements join operation is simply the set union of the possible structures. In \texttt{assume} statements (which are "loop heads" admittedly), we perform set union but may add an extra structure that introduces an arbitrary size. Join operation is described in more detail in the next section. 
 
 \subsection*{Verifying Assert Statements}
 When verifying \texttt{assert PRED} statements, our analysis computes satisfiability of the following formula: $state_\alpha\land\neg pred$. $state_\alpha$ is obtained from the set of possible structures at a given state. The formula for each structure $s_\alpha$ is a disjunction of formulas with the form $f\to g$, where $f$ encodes a property of the structure and $g$ encodes the corresponding predicate to assert.
