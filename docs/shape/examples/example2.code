@@ -1,1 +1,18 @@
-../../../examples/parity/example2
+x y xx yy t
+L1 skip L12
+L12 t := new L13
+L13 t.n := NULL L14
+L14 t.n := y L15
+L15 y := t L16
+L16 t := new L17
+L17 t.n := NULL L18
+L18 t.n := y L19
+L19 y := t L6
+L6 assume(TRUE) L12
+L6 assume(TRUE) L30
+L30 yy := y L31
+L31 t := yy.n L32
+L32 assume(t = NULL) L44
+L32 assume(t != NULL) L33
+L33 yy := t L31
+L44 assert (ODD y yy) L45

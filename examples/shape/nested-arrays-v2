@@ -1,0 +1,15 @@
+x y xx yy
+L1 skip L8
+L8 xx := new L9
+L9 xx.n := NULL L10
+L10 xx.n := x L11
+L11 x := xx L6
+L6 assume(TRUE) L8
+L6 assume(TRUE) L200
+L200 yy := new L201
+L201 yy.n := NULL L202
+L202 yy.n := y L203
+L203 y := yy L7
+L7 assume(TRUE) L200
+L7 assume(TRUE) L302
+L302 assert(x != NULL)(y != NULL) L302
