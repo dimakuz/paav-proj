@@ -31,8 +31,8 @@ def is_negative(size):
         return size < 0
 
     for farg in factored.args:
-        perm_symbols = {sym for sym in farg.free_symbols if 'p-' in str(sym)}
-        temp_symbols = {sym for sym in size.free_symbols if 't-' in str(sym)}
+        perm_symbols = {sym for sym in farg.free_symbols if str(sym).startswith('P')}
+        temp_symbols = {sym for sym in size.free_symbols if str(sym).startswith('T')}
         if perm_symbols:
             for arg in farg.args:
                 if perm_symbols.intersection(arg.free_symbols):
@@ -497,7 +497,7 @@ class Structure:
                     old_size[v] -= 1 # Diff to add to prev node
                     volatile_variable = self.arbitrary_terms_stack[-1] if self.arbitrary_terms_stack else None
 
-                    if 't-' not in str(volatile_variable) or volatile_variable not in old_size[v].free_symbols:
+                    if str(volatile_variable).startswith('T') or volatile_variable not in old_size[v].free_symbols:
                         return False
 
                     (volatile_size,) = solveset(old_size[v], volatile_variable) 

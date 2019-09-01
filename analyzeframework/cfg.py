@@ -16,9 +16,9 @@ class Edge:
     def arbitrary_term(self):
         if isinstance(self.statement, lang.Assume):
             if isinstance(self.statement.expr, lang.Truth):
-                return Symbol(f'p-{self.predecessor.name}', positive=True)
+                return Symbol(f'P{self.predecessor.name}', positive=True)
             else:
-                return Symbol(f't-{self.predecessor.name}', positive=True)
+                return Symbol(f'T{self.predecessor.name}', positive=True)
         else:
             return None
 

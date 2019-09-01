@@ -82,7 +82,7 @@ def create_shape_dot(cfgnode):
                     shape='doublecircle'
                 c.node(
                     _stnode_name(i, node),
-                    label=str(node),
+                    label=f'{node} ({st.size[node]})',
                     shape=shape,
                 )
             for (f, t), val in st.n.items():
