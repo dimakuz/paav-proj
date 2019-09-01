@@ -2,25 +2,25 @@
 
 We'll now define the transformers we used. All nodes are initialized with the $\alpha_\bot$ state, defined as:
 \begin{align*}
-	&\alpha_\bot=(C_\bot, D_\bot) \\
-	\forall s,s_1,s_2 \in Symbols&:
-	C_\bot[s] =\emptyset \quad
+	&\alpha_\bot=(S_\bot, D_\bot) \\
+	\forall s_1,s_2 \in Symbols&, s^\prime \in 2^{Symbols}:
+	S_\bot[s^\prime] =\emptyset \quad
 	D_\bot[s_1,s_2] =\emptyset
 \end{align*}
 For any statement we'll denote the tagged mappings as mappings after the transformation:
 \begin{equation*}
-	\atrans{stmt}((C,D)) = (C^\prime,D^\prime)
+	\atrans{stmt}((S,D)) = (S^\prime,D^\prime)
 \end{equation*}
 For \texttt{skip} statement, the state is not modified:
 \begin{equation*}
-	C^\prime = C, \quad D^\prime = D
+	S^\prime = S, \quad D^\prime = D
 \end{equation*}
-For \texttt{i := ?} statement, all information regarding $i$ is removed. Both concrete value (if known), and it's difference to other variables:
+For \texttt{i := ?} statement, all information regarding $i$ is removed. Both sums that include $i$ (with concrete values), and $i$'s difference to other variables:
 \begin{align*}
-C^\prime[x] = & \left.
+S^\prime[x] = & \left.
 	\begin{cases}
-		C[x], & x\ne i \\
-		\top, & x = i
+		S[x], & i \notin x \\
+		\top, & i \in x
 	\end{cases}
 \right\}\\
 D^\prime[s_1, s_2] = & \left.
@@ -30,74 +30,135 @@ D^\prime[s_1, s_2] = & \left.
 	\end{cases}
 \right\}
 \end{align*}
-For \texttt{i := K} statement, concrete value of $i$ is stored, and it's relation to other variables is removed:
+For \texttt{i := K} statement, the transformer is split into 2 cases:
+\begin{itemize}
+\item If $i$'s previous value is known, i.e. $d = (K - S[\{i\}]) \in \mathbb{Z}$, then $d$ is used to augment the $i$'s differences and sums:
 \begin{align*}
-C^\prime[x] = & \left.
+S^\prime[x] = & \left.
 	\begin{cases}
-		C[x], & x\ne i \\
-		K, & x = i 
+		S[x], & i \notin x \\
+		S[x] + d, & i \in x
 	\end{cases}
 \right\}\\
 D^\prime[s_1, s_2] = & \left.
 	\begin{cases}
-		D[s_1,s_2], & s_1 \ne i \wedge s_2 \ne i \\
-		\top, & \text{otherwise}
-	\end{cases}
-\right\}
-\end{align*}
-For \texttt{i := i} the state is not transformed.
-
-For \texttt{i := j} statement, value info is copied over from $j$ to $i$, differences between $i$ and other variables is erased, and difference between $i$ and $j$ is set to 0.
-\begin{align*}
-C^\prime[x] = & \left.
-	\begin{cases}
-		C[x], & x\ne i \\
-		C[j], & x = i
-	\end{cases}
-\right\}\\
-D^\prime[s_1,s_2] = & \left.
-	\begin{cases}
-		0, & \{s_1,s_2\} = \{i,j\} \\
-		\top, & i \in \{s_1, s_2\} \\
-		D[s_1,s_2], & otherwise
-	\end{cases}
-\right\}
-\end{align*}
-For \texttt{i := i + 1}, constant value of $i$ is increased by 1 if known, and $i$'s differences from other variables is adjusted by 1 as well:
-\begin{align*}
-C^\prime[x] = & \left.
-	\begin{cases}
-		C[x] + 1, & x = i \wedge C[i] \ne \top \\
-		C[x], & \text{otherwise}
-	\end{cases}
-\right\}\\
-D^\prime[s_1,s_2] = & \left.
-	\begin{cases}
-		D[s_1,s_2] + 1, & s_1 = i \wedge D[s_1,s_2] \in \mathbb{Z}\\
-		D[s_1,s_2] - 1, & s_2 = i \wedge D[s_1,s_2] \in \mathbb{Z}\\
+		0, & s_1 = s_2 = i \\
+		D[s_1,s_2] - d, & s_1 = i \\
 		D[s_1,s_2], & \text{otherwise}
 	\end{cases}
 \right\}
 \end{align*}
-
-For \texttt{i := j + 1} and \texttt{i := j - 1} statements, state is transformed in a similar way to straight assignment, except the opposite parity is used.
+\item Otherwise, I'd value is unknown, therefore its $d$ is unavailable as well. In this case, we remove values of known sums that include $i$ and reset it's deltas from other variables.
 \begin{align*}
-C^\prime[x] = & \left.
+S^\prime[x] = & \left.
 	\begin{cases}
-		C[j] + 1, & x = i \wedge C[j] \in \mathbb{Z} \\
-		C[x], & \text{otherwise}
+	    K, & i = \{i\} \\
+   		\top, & i \in x \wedge |x| > 1 \\
+		S[x], & i \notin x 
 	\end{cases}
 \right\}\\
-D^\prime[s_1,s_2] = & \left.
+D^\prime[s_1, s_2] = & \left.
 	\begin{cases}
-		1, & s_1 = i \wedge s_2 = j\\
-		\top, & s_1 = i \wedge s_2 \ne j\\
-		D[s_1,s_2], & \text{otherwise}	
+		0, & s_1 = s_2 = i \\
+		\top, & s_1 = i \\
+		D[s_1,s_2], & \text{otherwise}
 	\end{cases}
-\right\}\\
+\right\}
 \end{align*}
+\end{itemize}
 
-For \texttt{i := i - 1} and \texttt{i := j - 1} statements, abstract state is transformed into similar manner to increment case counterparts, but this time with inverted signs.
+For \texttt{i := i} the state is not transformed.
+
+For \texttt{i := j} statement, we again, break transformation into 2 cases:
+
+\begin{itemize}
+\item If $i$'s old  and $j$'s current values are known, then we can use $d = (S[\{j\}] - S[\{i\}])$ to augment known sums and deltas. The transformation is:
+\begin{align*}
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x], & i \notin x \\
+		S[x] + d, & i \in x
+	\end{cases}
+\right\}\\
+D^\prime[s_1, s_2] = & \left.
+	\begin{cases}
+		0, & s_1 = i \wedge s_2 = j \\
+		D[s_1,s_2] - d, & s_1 = i \\
+		D[s_1,s_2], & \text{otherwise}
+	\end{cases}
+\right\}
+\end{align*}
+\item Otherwise, delta is unknown and we have to reset sums and deltas of $i$ (other than with $j$):
+\begin{align*}
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x], & i \notin x \\
+		\top, & i \in x
+	\end{cases}
+\right\}\\
+D^\prime[s_1, s_2] = & \left.
+	\begin{cases}
+		0, & s_1 = i \wedge s_2 = j \\
+		\top, & s_1 = i \\
+		D[s_1,s_2], & \text{otherwise}
+	\end{cases}
+\right\}
+\end{align*}
+\end{itemize}
+
+For \texttt{i := i + 1}, sums involving $i$ are increased by 1 if known, and $i$'s differences from other variables are adjusted by 1 as well:
+\begin{align*}
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x], & i \notin x \\
+		S[x] + 1, & i \in x
+	\end{cases}
+\right\}\\
+D^\prime[s_1, s_2] = & \left.
+	\begin{cases}
+		D[s_1,s_2] - 1, & s_1 = i \\
+		D[s_1,s_2], & \text{otherwise}
+	\end{cases}
+\right\}
+\end{align*}
+The transformer for \texttt{i := i - 1} is similar with opposite 1 signs .
+
+For \texttt{i := j + 1} and \texttt{i := j - 1} statements we consider two cases, depending on knowledge of $S[\{j\}]$ and $S[\{i\}]$. The minus case is similar except for minor sign adjustments.
+\begin{itemize}
+\item If $d=S[\{j\}]-S[\{i\}]$ is a concrete value, then:
+\begin{align*}
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x], & i \notin x \\
+		S[x] + d + 1, & i \in x
+	\end{cases}
+\right\}\\
+D^\prime[s_1, s_2] = & \left.
+	\begin{cases}
+		1, & s_1 = i \wedge s_2 = j \\
+		D[s_1,s_2] - (d + 1), & s_1 = i \\
+		D[s_1,s_2], & \text{otherwise}
+	\end{cases}
+\right\}
+\end{align*}
+\item Otherwise, if $d$ is not a concrete value, we have to remove information involving $i$ form the state:
+\begin{align*}
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[x], & i \notin x \\
+		\top, & i \in x
+	\end{cases}
+\right\}\\
+D^\prime[s_1, s_2] = & \left.
+	\begin{cases}
+		1, & s_1 = i \wedge s_2 = j \\
+		\top, & s_1 = i \\
+		D[s_1,s_2], & \text{otherwise}
+	\end{cases}
+\right\}
+\end{align*}
+\end{itemize}
+
 
 For \texttt{assume TRUE} statements the state is not altered, for \texttt{assume FALSE} statements, state is transformed into bottom state ($\sqcup$ - neutral) so chaotic iteration will treat it as a dead end.
 
