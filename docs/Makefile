@@ -5,6 +5,7 @@ OUT_PDF=${NAME}.pdf
 CFGS=${PARITY_CFGS} ${SUM_CFGS} ${SHAPE_CFGS}
 PARITY_CFGS=$(patsubst %, ${CURDIR}/parity/examples/example%-output/cfg.png,1 2 3 4 5)
 SUM_CFGS=$(patsubst %, ${CURDIR}/sum/examples/example%-output/cfg.png,1 2 3 4 5)
+SUM_CFGS=$(patsubst %, ${CURDIR}/shape/examples/example%-output/cfg.png,1 2 3 4 5)
 
 all: ${OUT_PDF}
 
