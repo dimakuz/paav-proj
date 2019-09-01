@@ -24,33 +24,34 @@ MAYBE = three_valued_logic.ThreeValuedBool.MAYBE
 
 
 def is_negative(size):
-    perm_symbols = {sym for sym in size.free_symbols if 'p-' in str(sym)}
-    temp_symbols = {sym for sym in size.free_symbols if 't-' in str(sym)}
 
-    if perm_symbols:
-        for arg in size.args:
-            if perm_symbols.intersection(arg.free_symbols):
-                expr = arg
-                for sym in arg.free_symbols:
-                    expr = arg.subs(sym, 1)
-                if expr < 0:
-                    return True
+    factored = factor(size)
 
-        return False
-
-    elif temp_symbols:
-        for arg in size.args:
-            if temp_symbols.intersection(arg.free_symbols):
-                expr = arg
-                for sym in arg.free_symbols:
-                    expr = arg.subs(sym, 1)
-                if expr < 0:
-                    return True
-
-        return False
-
-    else:
+    if not factored.args:
         return size < 0
+
+    for farg in factored.args:
+        perm_symbols = {sym for sym in farg.free_symbols if 'p-' in str(sym)}
+        temp_symbols = {sym for sym in size.free_symbols if 't-' in str(sym)}
+        if perm_symbols:
+            for arg in farg.args:
+                if perm_symbols.intersection(arg.free_symbols):
+                    expr = arg
+                    for sym in arg.free_symbols:
+                        expr = arg.subs(sym, 1)
+                    if expr < 0:
+                        return True
+        elif temp_symbols:
+            for arg in farg.args:
+                if temp_symbols.intersection(arg.free_symbols):
+                    expr = arg
+                    for sym in arg.free_symbols:
+                        expr = arg.subs(sym, 1)
+                    if expr < 0:
+                        return True
+        else:
+            if farg < 0:
+                return True
 
 def is_even(size):
     factors = factor_list(size)
@@ -87,6 +88,14 @@ class Structure:
         return newst
 
 
+    def get_matching_structure(self, structures):
+        for st in structures:
+            canonical_map = st.get_canonical_map(self, True)
+            if canonical_map:
+                return st, canonical_map
+        return None, None
+
+
     # Equality should be agnostic to the label assigned to each individual, which means this is the graph isomporphism problem
     # This is the efficient version from the paper, that compares canonical representations of an individual
     def __eq__(self, other):
@@ -120,7 +129,6 @@ class Structure:
                     return None
             else:
                 return None
-            # canonical_map[v] = u
 
         for v in self.indiv:
             n_fit = all(self.n[(v,u)] == other.n[(canonical_map[v],canonical_map[u])] for u in self.indiv)
@@ -249,18 +257,18 @@ class Structure:
             var = ', '.join(f'v{v} = {str(self.var[symbol][v])}' for v in self.indiv)
             lines.append(f'var_{symbol.name}: [{var}]')
 
-        # for symbol in self.var:
-        #     reach = ', '.join(f'v{v} = {str(self.reach[symbol][v])}' for v in self.indiv)
-        #     lines.append(f'reach_{symbol.name}: [{reach}]')
+        for symbol in self.var:
+            reach = ', '.join(f'v{v} = {str(self.reach[symbol][v])}' for v in self.indiv)
+            lines.append(f'reach_{symbol.name}: [{reach}]')
 
-        # cycle = ', '.join(f'v{v} = {str(self.cycle[v])}' for v in self.indiv)
-        # lines.append(f'cycle: [{cycle}]')
+        cycle = ', '.join(f'v{v} = {str(self.cycle[v])}' for v in self.indiv)
+        lines.append(f'cycle: [{cycle}]')
 
-        # shared = ', '.join(f'v{v} = {str(self.shared[v])}' for v in self.indiv)
-        # lines.append(f'shared: [{shared}]')
+        shared = ', '.join(f'v{v} = {str(self.shared[v])}' for v in self.indiv)
+        lines.append(f'shared: [{shared}]')
 
-        # sm = ', '.join(f'v{v} = {str(self.sm[v])}' for v in self.indiv)
-        # lines.append(f'sm: [{sm}]')
+        sm = ', '.join(f'v{v} = {str(self.sm[v])}' for v in self.indiv)
+        lines.append(f'sm: [{sm}]')
 
         size = ', '.join(f'v{v} = {str(self.size[v])}' for v in self.indiv)
         lines.append(f'size: [{size}]')
@@ -452,7 +460,6 @@ class Structure:
         self.update_n_plus()
         old_size = copy.deepcopy(self.size)
 
-        # LOG.debug('begining coerce session')
         for constraint in self.constr:
             (name, par_num, lh, rh, fix) = constraint
             if par_num == 1:
@@ -460,10 +467,8 @@ class Structure:
                     if lh(self,v) == TRUE:
                         res = rh(self,v)
                         if res == FALSE:
-                            # LOG.debug('removing %s : (v)=v%s', name, v)
                             return False
                         elif res == MAYBE:
-                            # LOG.debug('fixing %s : (v)=v%s', name, v)
                             fix(self,v)
             elif par_num == 2:
                 for v1 in self.indiv:
@@ -471,10 +476,8 @@ class Structure:
                         if lh(self,v1,v2) == TRUE:
                             res = rh(self,v1,v2)
                             if res == FALSE:
-                                # LOG.debug('removing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                 return False
                             elif res == MAYBE:
-                                # LOG.debug('fixing %s : (v1)=v%s, (v2)=v%s', name, v1, v2)
                                 fix(self,v1,v2)
 
 
@@ -483,78 +486,31 @@ class Structure:
 
     def coerce_size(self, old_size):
 
-        if 'p-L6' in self.arbitrary_terms_stack and 'p-L7' in self.arbitrary_terms_stack:
-            LOG.debug('in coerce size.....\n')
-            LOG.debug(self)
-
         for v in self.indiv:
-
             if self.sm[v] == FALSE and old_size[v] != SIZE_ONE:
 
-                # LOG.debug('node v%d is not equal: new size is %s, old size is %s', v, self.size[v], old_size[v])
                 u = next((u for u in self.indiv if self.n[(v,u)] != FALSE and u != v \
                     and self._v_after_focus_eq(u, self, v) and self.sm[u] == MAYBE), None)
 
-
-                # LOG.debug('is there a next node that fixes? %s', u if u is not None else 'No!')
-
                 if u is None:
 
-                    # LOG.debug('have to fix v%d that have size %s and v%d that have size %s', v, old_size[v], u, self.size[u])
                     old_size[v] -= 1 # Diff to add to prev node
-                    
-                    # LOG.debug('old size is: %s, last factor %s',old_size[v],isinstance(old_size[v].get_last_term(), str))
-                    # volatile_variable = old_size[v].get_last_term()
                     volatile_variable = self.arbitrary_terms_stack[-1] if self.arbitrary_terms_stack else None
-                    # volatile_variable = next((sym for sym in old_size[v].free_symbols if 't-' in str(sym)), None)
-
 
                     if 't-' not in str(volatile_variable) or volatile_variable not in old_size[v].free_symbols:
-                        # LOG.debug('a size is not symbolic!! %s', old_size[v])
-
-                        # if 't-' in str(volatile_variable) and old_size[v].free_symbols:
-                        #     LOG.debug(volatile_variable)
-                        #     LOG.debug(old_size[v])
-                        #     assert False
                         return False
 
-                    # for sym in old_size[v].free_symbols:
-                    #     if 't-L310' in str(sym) and 't-L312' in str(volatile_variable):
-                    #         assert False
-                    #     if 't-L312' in str(sym) and 't-L311' in str(volatile_variable):
-                    #         assert False
-
-
-                    # volatile_size = old_size[v].extract_variable(volatile_variable)
                     (volatile_size,) = solveset(old_size[v], volatile_variable) 
 
-                    # if volatile_size == INVALID:
-                        # LOG.debug('a size is not an integer!! %s', old_size[v])
-                        # assert False
-                        # return False
-
-                    # Substitute
                     for w in self.indiv:
-                        if isinstance(self.size[w], Expr):
-
-                          
-                            if 'p-L6' in (str(sym) for sym in self.size[w].free_symbols) and 'p-L6' in (str(sym) for sym in volatile_size.free_symbols):
-                                LOG.debug(self.size[w])
-                                LOG.debug(volatile_size)
-                                LOG.debug(self)
-
-                            if volatile_variable in self.size[w].free_symbols:
-                                self.size[w] = self.size[w].subs(volatile_variable, volatile_size)
-                                if self.size[w] == 1:
-                                    self._v_concretisize(w)
-                                elif self.size[w] == 0:
-                                    self._v_remove(w)
-                                elif is_negative(self.size[w]):
-                                    LOG.debug(self)
-                                    # LOG.debug('calculated volatile size %s from %s', volatile_size, old_size[v])
-                                    LOG.debug('a size was found to be negative!!!! %s', self.size[w])
-                                    assert False
-                                    # return False
+                        if volatile_variable in self.size[w].free_symbols:
+                            self.size[w] = self.size[w].subs(volatile_variable, volatile_size)
+                            if self.size[w] == 1:
+                                self._v_concretisize(w)
+                            elif self.size[w] == 0:
+                                self._v_remove(w)
+                            elif is_negative(self.size[w]): # Illegal state
+                                return False
 
                     self.arbitrary_terms_stack.pop()
 
@@ -564,14 +520,10 @@ class Structure:
                     if self.size[u] == 1:
                         self._v_concretisize(u)
 
-                    # Possible shared node that shouldn't have been
-                    # Also, the length between the nodes is not preserved anyway
+                    # Possible shared node that shouldn't have been and the length between the nodes is not preserved anyway
                     w = next((w for w in self.indiv if self.n[(v,w)] != FALSE and self.n[(u,w)] != FALSE and w != v and w != u), None)
                     if w is not None:
-                        # LOG.debug('found v%d that fits into the description (v%d and v%d)', w, u, v)
                         self.n[(v,w)] = FALSE
-
-                # TODO: check if this fix is good enough!!
                 break
 
         return True

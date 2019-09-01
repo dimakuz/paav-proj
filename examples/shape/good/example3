@@ -1,0 +1,37 @@
+x y z xx yy zz t p q
+L1 skip L8
+L8 t := new L9
+L9 t.n := NULL L10
+L10 t.n := x L11
+L11 x := t L12
+L12 t := new L13
+L13 t.n := NULL L14
+L14 t.n := y L15
+L15 y := t L16
+L16 t := new L17
+L17 t.n := NULL L18
+L18 t.n := y L19
+L19 y := t L6
+L6 assume(TRUE) L8
+L6 assume(TRUE) L30
+L30 xx := x L31
+L31 yy := y L32
+L32 z := new L320
+L320 zz := z L322
+L322 t := xx.n L33
+L33 p := yy.n L34
+L34 q := new L35
+L35 q.n := NULL L36
+L36 q.n := z L37
+L37 z := q L38
+L38 assume(t = NULL) L43
+L38 assume(t != NULL) L39
+L39 xx := t L40
+L40 yy := p L322
+L43 assume (q = zz) L50
+L43 assume (q != zz) L44
+L44 q := q.n L43
+L50 q.n := NULL L51
+L51 q.n := p L52
+L52 z := z.n L53
+L53 assert (LEN y yy = LEN z q) L54

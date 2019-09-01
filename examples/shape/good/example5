@@ -1,0 +1,41 @@
+x y z1 z2 q zz1 zz2 xx yy
+L1 skip L8
+L8 xx := new L9
+L9 xx.n := NULL L10
+L10 xx.n := x L11
+L11 x := xx L6
+L6 assume(TRUE) L8
+L6 assume(TRUE) L200
+L200 yy := new L201
+L201 yy.n := NULL L202
+L202 yy.n := y L203
+L203 y := yy L7
+L7 assume(TRUE) L200
+L7 assume(TRUE) L302
+L302 z1 := new L303
+L303 zz1 := z1 L304
+L304 yy := yy.n L305
+L305 xx := x L306
+L306 xx := xx.n L307
+L307 q := new L308
+L308 q.n := NULL L309
+L309 q.n := z1 L310
+L310 z1 := q L311
+L311 assume(xx = NULL) L312
+L311 assume(xx != NULL) L306
+L312 assume(yy = NULL) L602
+L312 assume(yy != NULL) L304
+L602 z2 := new L603
+L603 zz2 := z2 L604
+L604 xx := xx.n L605
+L605 yy := y L606
+L606 yy := yy.n L607
+L607 q := new L608
+L608 q.n := NULL L609
+L609 q.n := z2 L610
+L610 z2 := q L611
+L611 assume(yy = NULL) L612
+L611 assume(yy != NULL) L606
+L612 assume(xx = NULL) L700
+L612 assume(xx != NULL) L604
+L700 assert(LEN z1 zz1 = LEN z2 zz2) L701

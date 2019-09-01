@@ -78,36 +78,36 @@ def main():
     control.head.state.initialize_head(par.vars)
 
     chaotic.chaotic_iteration(control)
-    # cfg_src = viz.create_cfg_dot(control)
-    # if opts.output_dir is not None:
-    #     viz.output_png(
-    #         cfg_src,
-    #         f'{opts.output_dir}/cfg.png',
-    #         title='Control flow graph',
-    #     )
-    # else:
-    #     print('Control flow graph:')
-    #     print(cfg_src)
+    cfg_src = viz.create_cfg_dot(control)
+    if opts.output_dir is not None:
+        viz.output_png(
+            cfg_src,
+            f'{opts.output_dir}/cfg.png',
+            title='Control flow graph',
+        )
+    else:
+        print('Control flow graph:')
+        print(cfg_src)
 
-    # if opts.type == 'shape':
-    #     for node in control.nodes.values():
-    #         node_src = viz.create_shape_dot(node)
-    #         if opts.output_dir is not None:
-    #             viz.output_png(
-    #                 node_src,
-    #                 f'{opts.output_dir}/{node.name}.png',
-    #                 title=f'Node {node.name} structures',
-    #             )
-    #             with open(f'{opts.output_dir}/{node.name}.txt', 'w') as f:
-    #                 f.write(node.state.full_str())
-    #             print(
-    #                 f'Node {node.name} state: '
-    #                 f'file://{opts.output_dir}/{node.name}.txt'
-    #             )
-    #         else:
-    #             print(f'Node {node.name}')
-    #             print(node_src)
-    #             print('==========================================')
+    if opts.type == 'shape':
+        for node in control.nodes.values():
+            node_src = viz.create_shape_dot(node)
+            if opts.output_dir is not None:
+                viz.output_png(
+                    node_src,
+                    f'{opts.output_dir}/{node.name}.png',
+                    title=f'Node {node.name} structures',
+                )
+                with open(f'{opts.output_dir}/{node.name}.txt', 'w') as f:
+                    f.write(node.state.full_str())
+                print(
+                    f'Node {node.name} state: '
+                    f'file://{opts.output_dir}/{node.name}.txt'
+                )
+            else:
+                print(f'Node {node.name}')
+                print(node_src)
+                print('==========================================')
 
 
 if __name__ == '__main__':

@@ -56,7 +56,6 @@ class ShapeState(abstract.AbstractState):
                     st2.var[var][v] = FALSE
                     workset.append(st2)
         self.structures = answerset
-        # LOG.debug('num of structures focus %d\n', len(self.structures))
 
     def focus_var_deref(self, var):
         workset = self.structures
@@ -82,103 +81,44 @@ class ShapeState(abstract.AbstractState):
                     st2.n[(v,w)] = FALSE
                     workset.append(st2)
         self.structures = answerset
-        # LOG.debug('num of structures focus ver deref %d\n', len(self.structures))
 
 
     def join(self, other, arbitrary_term):
 
-
         structures = [st for st in self.structures]
-        # LOG.debug('begin join num of structures self %d num of structures other %d', len(self.structures), len(other.structures))
-
         other.embed()
 
         # If we are at an assume node we have an arbitrary value, so we ignore the sizes of the summary nodes
         # while comparing, so that we can factor the size with the arbitrary value
         # Otherwise we compare normally, taking sizes into account
-
         if arbitrary_term is None:
             for st in other.structures:
                 if st not in self.structures:
                     structures.append(st)
         else:
             for st in other.structures:
-                canonical_map = None
-                for next_st in structures:
 
-                    canonical_map = next_st.get_canonical_map(st, True)
-
-                    # LOG.debug('found canonical map? %s', str(canonical_map is not None))
-                    if canonical_map:
-
-                        summary_nodes = [v for v in canonical_map if next_st.sm[v] == MAYBE]
-                        if summary_nodes:
-                            add = False
-                            next_st_copy = next_st.copy()
-                            for v in summary_nodes:
-                                # Counterpart in st
-                                u = canonical_map[v]
-
-                                if 't-L311' in str(arbitrary_term) and 'p-L6' in str(st.size[u]):
-                                    LOG.debug('u=v%d, st.size[u] = %s', u, expand(st.size[u]))
-                                    LOG.debug('v=v%d, next_st_copy.size[v] = %s', v, expand(next_st_copy.size[v]))
-                                    # LOG.debug('st = \n %s', st)
-                                    # LOG.debug('nest_st_copy = \n %s', next_st_copy)
-
-                                if 'p-L6' in str(st.size[u]):
-                                    for sym in st.size[u].free_symbols:
-                                        if st.size[u].coeff(sym) == 3:
-                                            # LOG.debug(next_st_copy)
-                                            # LOG.debug(st)
-                                            LOG.debug(st.size[u])
-
-                                            # if len(next_st_copy.arbitrary_terms_stack) > 1:
-                                            #     assert False
-
-                                # Adding arbitraray term only once
-                                if arbitrary_term not in next_st_copy.arbitrary_terms_stack and expand(st.size[u]) != expand(next_st_copy.size[v]):
-
-                                    # LOG.debug('old structure:\n %s', st)
-                                    # LOG.debug('new structure:\n %s', next_st)
-
-                                    # LOG.debug('old v size: %s', str(next_st_copy.size[v]))
-                                    # LOG.debug('st size is %s', st.size[u])
-
-                                    # new_size = arbitrary_term * (st.size[u] - next_st_copy.size[v])
-
-                                    # new_size -= next_st_copy.size[v]
-                                    # LOG.debug('after subsctract st - old %s', new_size)
-                                    # new_size *= arbitrary_term
-
-                                    # next_st_copy.size[v] += new_size
-
-                                    if (st.size[u] - next_st_copy.size[v]).free_symbols:
-                                        LOG.debug(st.size[u] - next_st_copy.size[v])
-                                        # assert False
-
-                                    next_st_copy.size[v] += arbitrary_term * (st.size[u] - next_st_copy.size[v])
-                        
-                                    # LOG.debug('new v size: %s', str(next_st_copy.size[v]))
-                                    add = True
-
-                            if add and next_st_copy not in structures:
-                                LOG.debug('stack before %s', next_st_copy.arbitrary_terms_stack)
-                                next_st_copy.arbitrary_terms_stack.append(arbitrary_term)
-                                LOG.debug('stack after %s', next_st_copy.arbitrary_terms_stack)
-                                structures.append(next_st_copy)
-                        break
+                next_st, canonical_map = st.get_matching_structure(structures)
 
                 # New structure, add to list of structures
                 if not canonical_map:
-                    # LOG.debug('did not find canonical map, adding to structures')
                     structures.append(st)
+                else:
+                    summary_nodes = [v for v in canonical_map if next_st.sm[v] == MAYBE]
+                    # Adding arbitraray term only once
+                    if summary_nodes and arbitrary_term not in next_st.arbitrary_terms_stack:
+                        add = False
+                        next_st_copy = next_st.copy()
+                        for v in summary_nodes:
+                            if expand(st.size[canonical_map[v]]) != expand(next_st_copy.size[v]):
+                                next_st_copy.size[v] += arbitrary_term * (st.size[canonical_map[v]] - next_st_copy.size[v])
+                                add = True
 
-        # LOG.debug('end join num of structures %d', len(structures))
-        state = ShapeState(structures)
-        # if arbitrary_term is not None and 't-L312' in str(arbitrary_term):
-           # LOG.debug('state in the end %s', state)
-        return state
-        # return ShapeState(structures)
+                        if add and next_st_copy not in structures:
+                            next_st_copy.arbitrary_terms_stack.append(arbitrary_term)
+                            structures.append(next_st_copy)
+
+        return ShapeState(structures)
 
 
     # Embed operation from paper where we look for summarizable nodes
@@ -191,13 +131,7 @@ class ShapeState(abstract.AbstractState):
                         st._v_embed(u, v)
 
     def __str__(self):
-        # return f'{len(self.structures)} structure(s)'
-        res = []
-        for structure in self.structures:
-            if len(structure.arbitrary_terms_stack) > 1 and 'p-L6' in (str(sym) for sym in structure.arbitrary_terms_stack) and \
-                'p-L7' in (str(sym) for sym in structure.arbitrary_terms_stack):
-                res.append(f'\n{structure}\n')
-        return '\n'.join(res)
+        return f'{len(self.structures)} structure(s)'
 
 
     def full_str(self):
@@ -225,7 +159,6 @@ class ShapeState(abstract.AbstractState):
             if st.coerce():
                 new_structures.append(st)
         self.structures = new_structures
-        # LOG.debug('num of structures coerce all %d\n', len(self.structures))
 
 
 @ShapeState.transforms(lang_shape.VarVarAssignment)
