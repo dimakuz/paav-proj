@@ -1,0 +1,13 @@
+First example of the parity analysis demonstrates the ability to deduce
+parity of variables based on constant assignment/assumption.  The code
+below demonstrates how parity of $x$ and $y$ is deduced from constants
+that appear in the code.
+
+The below control flow graph details the nodes of the program, inside
+them, the abstract state of the node. Format of the state is: 
+$var: M, S, A$, where $M$ is the modulo state of the variable
+(e.g. E for even), $S$ details all the variables $var$ is possibly in
+the same parity with, and $A$ details the same with opposite parity.
+
+Additionally, violating statements are displayed in red (relevant for
+asserts).
