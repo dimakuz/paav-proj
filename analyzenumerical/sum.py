@@ -226,8 +226,6 @@ class SumState(abstract.AbstractState):
         )
 
     def formula(self):
-        print(self.diff.formula())
-        print(self.sums.formula())
         return shortcuts.And(
             self.diff.formula(),
             self.sums.formula(),
