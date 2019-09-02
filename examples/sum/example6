@@ -1,0 +1,19 @@
+a b c
+L1 assume (TRUE) L10
+L1 assume (TRUE) L20
+
+L10 a := 1 L11
+L11 b := 2 L12
+L12 c := 7 L30
+
+L20 a := 2 L21
+L21 b := 4 L22
+L22 c := 4 L30
+
+L30 assume (a = 1) L40
+L30 assume (a = 2) L50
+
+L40 a := 9 L41
+L41 assert (SUM a = SUM b c) L60
+L50 a := 8 L51
+L51 assert (SUM a = SUM b c) L60

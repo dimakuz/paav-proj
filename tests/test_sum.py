@@ -23,6 +23,13 @@ from tests import harness
                 ('L30', 'L31', True),
             ),
         ),
+        (
+            'examples/sum/example6',
+            (
+                ('L41', 'L60', True),
+                ('L51', 'L60', True),
+            ),
+        ),
     ),
 )
 def test_sum_analysis(input_path, asserts):

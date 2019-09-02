@@ -162,7 +162,7 @@ D^\prime[s_1, s_2] = & \left.
 
 For \texttt{assume TRUE} statements the state is not altered, for \texttt{assume FALSE} statements, state is transformed into bottom state ($\sqcup$ - neutral) so chaotic iteration will treat it as a dead end.
 
-For \texttt{assume i = j} statements, if $i$ and $j$ are known to be of different value (either through constant propagation or their deltas), statement is treated as \texttt{assume FALSE}, otherwise, state is transformed to include that delta between $i$ and $j$ is 0:
+For \texttt{assume i = j} statements, if $i$ and $j$ are known to be of different value (either through constant propagation or their de ltas), statement is treated as \texttt{assume FALSE}, otherwise, state is transformed to include that delta between $i$ and $j$ is 0:
 \begin{align*}
 S^\prime = & S \\
 D^\prime[s_1, s_2] = & \left.
@@ -180,7 +180,6 @@ For \texttt{assume i = K} statements, state is checked for conflict with the alr
 S^\prime[x] = & \left.
 	\begin{cases}
 		K, & x = \{i\} \\
-		\top, & i \in x \\
 		S[x], & \text{otherwise}
 	\end{cases}
 \right\}\\
@@ -191,8 +190,66 @@ D^\prime= & D
 Finally, for \texttt{assert PRED} statements, transformer is similar to \texttt{skip}, state is not transformed.
 
 In addition to the aforementioned transformations, after each such transformation and join operation, the abstract state is augmented by deducing new deltas and sums.
+
 \begin{itemize}
-\item Deduction of deltas - TODO
-\item Deduction of singletons from deltas - TODO
-\item Deduction of new sums - TODO
+\item \textit{Deduction of deltas from singleton sums} - in transformers such as assignment of constant value to a variable, we learn new singleton sum value. When we do that, we immediately know its deltas from from all other singletons we know constant values of. We use this post-transform augmentation to discover new delta values:
+\begin{align*}
+S^\prime = & S \\
+D^\prime[s_1, s_2] = & \left.
+	\begin{cases}
+		S[s_1] - S[s_2], & D[s_1, s_2] \notin \mathbb{Z} \land S[\{s_1\}],S[\{s_2\}] \in \mathbb{Z} \\
+		D[s_1,s_2], & \text{otherwise}
+	\end{cases}
+\right\}
+\end{align*}
+\item \textit{Deduction of deltas from other known deltas} - for any 3 variables $a,b,c$ it holds that $(a-b) + (b-c) = a-c$. We can use that to deduce extra deltas from already known ones:
+\begin{align*}
+S^\prime = & S \\
+D^\prime[s_1, s_2] = & \left.
+	\begin{cases}
+		D[s_1,s_3] + D[s_3, s_2], & D[s_1, s_2] \notin \mathbb{Z} \land \exists s_3: D[s_1,s_3],D[s_3,s_2] \in \mathbb{Z} \\
+		D[s_1,s_2], & \text{otherwise}
+	\end{cases}
+\right\}
+\end{align*}
+
+\item \textit{Deduction of singletons from deltas} - given 2 variables, $a$ and $b$ with information that $a=K$ and $b-a=N$ we can deduce $b = K - N$. This post transformation tries to deduce the unknown variable values from known variable values and their deltas.
+\begin{align*}
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[\{j\}] + D[i,j], & x=\{i\}\land S[x] \notin \mathbb{Z} \land \exists j: D[i,j],S[\{j\}]\in \mathbb{Z} \\
+		S[x], & \text{otherwise}
+	\end{cases}
+\right\}\\
+D^\prime= & D
+\end{align*}
+
+\item \textit{Deduction of sum combinations} - when new sum information appears, we can use it to provide/deduce new sums. For instance ${a,b}$ and ${c,d}$ can be used to deduce sum on ${a,b,c,d}$.
+\begin{align*}
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[y] + S[z], & S[x] \notin \mathbb{Z} \land \exists y,z: S[y],S[z]\in \mathbb{Z}\land y\cup z = x \land y \cap z = \emptyset \\
+		S[x], & \text{otherwise}
+	\end{cases}
+\right\}\\
+D^\prime= & D
+\end{align*}
+\item \textit{Deduction of sub sums} - just like we can deduce value of $a$ from $b=N$ and $a-b=K$, we can deduce $a+b$ from $a+b+c+d+e=K$ and $c+d+e=N$. This transformation uses already known sums to deduce more sub sums.
+\begin{align*}
+S^\prime[x] = & \left.
+	\begin{cases}
+		S[z]- S[y], & S[x] \notin \mathbb{Z} \land \exists y,z: S[y],S[z]\in \mathbb{Z}\land x = z \setminus y \land y \cap x = \emptyset \\
+		S[x], & \text{otherwise}
+	\end{cases}
+\right\}\\
+D^\prime= & D
+\end{align*}
 \end{itemize}
+
+The above transformations are applied in a loop until a fixed point is reached. Process is monotone because:
+\begin{enumerate}
+\item Transformers modify values of $S,D$ mappings.
+\item $S,D$ mappings are finite and of constant size for the duration of analysis.
+\item Only values of $\top,\bot$ are transformed, the result is always an integer.
+\item Thus, each iteration, there's less and less values to operate on.
+\end{enumerate}
