@@ -1,0 +1,12 @@
+Structure 0
+var_h: [v0 = FALSE]
+var_t: [v0 = TRUE]
+var_tmp: [v0 = FALSE]
+reach_h: [v0 = FALSE]
+reach_t: [v0 = TRUE]
+reach_tmp: [v0 = FALSE]
+cycle: [v0 = FALSE]
+shared: [v0 = FALSE]
+sm: [v0 = FALSE]
+size: [v0 = 1]
+n: [v0,v0 = FALSE]
