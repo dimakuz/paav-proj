@@ -1,3 +1,12 @@
-This example demonstrates a weakness point of the analysis. Due to the nature of saving only a single possible value for each variable, and only a single possible delta for any pair of variables, our analysis loses a lot of information on merges.
+This example shows one of the weaknesses of the analysis. Our analysis
+uses a very simple lattice of values for sums and delta, this means that
+we either have a concrete value for a given sum, a $\top$ or a $\bot$.
+This means that when program branches, and there's a conflict between
+concrete values, value is assumed to be $\top$ and information is lost.
 
-In this example we have code that branches into 2 executions. In either of the branches, it holds that $a + b = c$ although values of the variables are different. Each of the branches is able to successfully assert the equation, yet, after the paths merge, needed information is lost and becomes unavailable.
+This example asserts that value of $a$ is either 2 or 3. It is indeed
+true because each of the branches assigns one of those values, and
+asserts hold on the branches.  Once the branches merge, value of $a$
+becomes $\top$ and the same assertion that held on both of the branches
+is no longer proveable.
+

@@ -30,6 +30,14 @@ from tests import harness
                 ('L51', 'L60', True),
             ),
         ),
+        (
+            'examples/sum/example8',
+            (
+                ('L11', 'L30', True),
+                ('L21', 'L30', True),
+                ('L30', 'L31', False),
+            ),
+        ),
     ),
 )
 def test_sum_analysis(input_path, asserts):

@@ -1,0 +1,14 @@
+a b c
+
+L0 b := 1 L01
+L01 c := 2 L1
+L1 assume (TRUE) L10
+L1 assume (TRUE) L20
+
+L10 a := 1 L11
+L11 assert (SUM a = SUM b) (SUM a = SUM c) L30
+
+L20 a := 2 L21
+L21 assert (SUM a = SUM b) (SUM a = SUM c) L30
+
+L30 assert (SUM a = SUM b) (SUM a = SUM c) L31

@@ -1,0 +1,8 @@
+This example shows the deduction of sums from other available sums. This
+program branches into two path, where on both, variables are set such
+that $a+b+c=10$, but no two variables are set to the same value. Upon
+merging, only the sum remains in the state.
+
+Next, program branches again, assuming the value of $a$ that was given
+in one of the branches. Analysis is able to decude the value of $b+c$
+based on information available in the state.
