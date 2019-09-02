@@ -1,5 +1,6 @@
 usage: analyze.py [-h] --type {parity,sum,shape} [--debug] [--no-debug]
                   [--output-dir OUTPUT_DIR]
+                  [--sum-max-combination-size SUM_MAX_COMBINATION_SIZE]
                   path
 
 positional arguments:
@@ -14,3 +15,6 @@ optional arguments:
   --output-dir OUTPUT_DIR
                         If specified, analysis products will be placed in this
                         directory
+  --sum-max-combination-size SUM_MAX_COMBINATION_SIZE
+                        Sum analysis: maximal combination size of variables to
+                        track
