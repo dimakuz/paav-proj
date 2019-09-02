@@ -1,5 +1,5 @@
 \section*{Overview}
-Our implementation of shape analysis is based on the paper by Sagiv, Reps and Wilhelm "Parametric Shape Analysis via 3-Valued Logic", with modifications to allow for symbolic length analysis between nodes in a linked list. We try to capture the original aspects of execution that are discussed in the paper, along with the addition of abstract length calculations between nodes in a list.
+Our implementation of shape analysis is based on the \href{https://www.cs.tau.ac.il/~msagiv/toplas02.pdf}{paper} by Sagiv, Reps and Wilhelm "Parametric Shape Analysis via 3-Valued Logic", with modifications to allow for symbolic length analysis between nodes in a linked list. We try to capture the original aspects of execution that are discussed in the paper, along with the addition of abstract length calculations between nodes in a list.
 \begin{itemize}
 	\item Storing instrumentation predicates for a node in the heap (concrete or abstract) as defined in the paper - such as reachability predicate. The predicates are evaluated in 3-valued logic.
 	\item Storing a symbolic size for an abstract node.

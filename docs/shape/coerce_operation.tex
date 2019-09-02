@@ -71,17 +71,21 @@ The algorithm to detect a negative expression is described below. First we check
 \subsection*{Example}
 For example, assume that during $coerce$ we have concretized $v$, whose previous size was $p_1-t_1+3$. We see that there is no next node in the list that is equal to $v$, so we reach the conclusion that end of the iteration has come and $t_1$ is going to be replaced with the solution to the equation $p_1-t_1+3=1$, which is $t_1=p_1+2$.
 
-Assume we have two nodes $u_1$ and $u_2$ that depend on $t_1$, such that $size(u_1)=t_1$ and $size(u_2)=2\cdot t_1+1$. $u_1$ is a summary node in the same linked list of $v$ that accumulated the nodes during the iteration over the loop. After the substitution, we will get that $size(u_1)=p_1+2$ and $size(u_2)=2\cdot p_1+5$. $w_1$ and $w_2$ are not affected by the substitution at all.
-
-\begin{tikzpicture}
-\node[state] (q1) {$w_1$};
-\node[state, accepting, right of=q1] (q2) {$u_1$};
-\node[state, right of=q2] (q3) {$v$};
-\node[state, below, yshift=-2cm] (q4) {$w_2$};
-\node[state, accepting, right of=q4] (q5) {$u_2$};
-\draw (q2) edge[loop above, dotted] node{$t_1$} (q2)
-(q5) edge[loop above, dotted] node{$2\cdot t_1+1$} (q5)
-(q1) edge[dotted] node{} (q2)
-(q2) edge[dotted] node{} (q3)
-(q4) edge[dotted] node{} (q5);
-\end{tikzpicture}
+Assume we have two nodes $u_1$ and $u_2$ that depend on $t_1$, such that $size(u_1)=t_1-1$ and $size(u_2)=2\cdot t_1+1$. $u_1$ is a summary node in the same linked list of $v$ that accumulated the nodes behind $v$ during the iteration. $u_2$ is a summary node that accumulated nodes at a double rate in each iteration (see diagram below). After the substitution, we get that $size(u_1)=p_1+1$ and $size(u_2)=2\cdot p_1+5$. $w_1$ and $w_2$ are not affected by the substitution at all.
+\begin{figure}[h]
+	\begin{tikzpicture}
+	\node[state] (q1) {$w_1$};
+	\node[state, accepting, right of=q1] (q2) {$u_1$};
+	\node[state, right of=q2] (q3) {$v$};
+	\node[state, below, yshift=-2cm] (q4) {$w_2$};
+	\node[state, accepting, right of=q4] (q5) {$u_2$};
+	\draw (q2) edge[loop above, dotted] node{$t_1-1$} (q2)
+	(q5) edge[loop above, dotted] node{$2\cdot t_1+1$} (q5)
+	(q1) edge[dotted] node{} (q2)
+	(q2) edge[dotted] node{} (q3)
+	(q4) edge[dotted] node{} (q5);
+	\end{tikzpicture}
+	\centering
+	\captionsetup{labelformat=empty}
+	\caption{Example Structure}
+\end{figure}
