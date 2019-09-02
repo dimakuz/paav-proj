@@ -2,17 +2,16 @@
 The join operation between two states $S_1$ and $S_2$ is naturally defined as the set union of the possible structures of each state $Structures_{S_1}$ and $Structures_{S_2}$ respectively.
 
 Another function of the join procedure is to perform an $embed$ operation on each structure before the union. $embed$ merges elements in $U^S$ that give identical results on every unary predicate. The resulting node from a merge of $u$ and $v$ is a summary node with the same unary predicates values. $n$ predicate is updated and may take a $1/2$ value if there were differences between $u$ and $v$. Summary node's size is updated as the sum of $size(u)$ and $size(v)$.
-\\ \\
-Equality between structures is decided by comparing the predicates in each structure in linear time, avoiding the computationaly heavy graph isomorphism problem. In our implementation, size expressions are compared the same way as a predicate, except in loop joins (\texttt{assume} statements).
 
-In loop joins, a compare function that ignores sizes is used instead. This way, two structures that are identical except maybe the sizes attached to their nodes can be used to add a new structure with an arbitrary size as described in Algorithm 0.
-\\ \\
+Equality between structures is decided by comparing the predicates in each structure in linear time, avoiding the computationaly heavy graph isomorphism problem. In our implementation, size expressions are compared along with the predicates.
+
+\subsection*{Loop Join Algorithm}
+In loop joins (\texttt{assume} statements), a compare function that ignores sizes is used instead. This way, two structures that are identical except maybe the sizes attached to their nodes can be used to add a new structure with an arbitrary size.
+
 The algorithm receives along with the two sets of structures, an arbitrary value $a$, and only in case of \texttt{assume} statement. This value is injected into the sizes of the nodes implying that they have an unknown size, alas bound to the number of iterations.
 
-For example, assume that a structure $S_1$ in the state of the \texttt{assume} statement contains two abstract summary nodes $u$ and $v$ with sizes $2$ and $3$ respectively. Now, an identical structure $S_2$ is spotted at the join, but with $size(u)=3$ and $size(v)=5$.
+In order to avoid adding this value again and again we verify beforehand that it doesn't already exist in the structure. In our implementation we do it with an arbitrary sizes stack.
 \\ \\
-We deduce that during the execution in the control flow graph, one node was added to $u$ and two were added to $v$, before it visited current statement again. Since it is a "loop head", we assume that in the next visit, again one node will be added to the equivalent of $u$ and two to the equivalent $v$. So we copy $S_1$, set $size(u)=2+a$ and $size(v)=3+2a$ and add it to the set. In order to avoid adding this arbitrary value again and again we verify beforehand that it doesn't already exist in the structure.
-
 \begin{algorithm}[H]
 	\SetAlgoLined
 	\KwData{$Structures_{S_1}$,$Structures_{S_2}$,$arbitrary\_size$}
@@ -23,17 +22,17 @@ We deduce that during the execution in the control flow graph, one node was adde
 		\KwRet{$Structures_{S_1}\cup Structures_{S_2}$}
 	}
 	Set $\leftarrow Structures_{S_1}$ \;
-	\For{$st_2 \in Structures_{S_2}$}{
-		$st_1 \leftarrow FindEqualStructureIgnoreSize(Structures_{S_1})$ \;
+	\For{$st_2\in Structures_{S_2}$}{
+		$st_1\leftarrow FindEqualStructureIgnoreSize(Structures_{S_1})$ \;
 		\eIf{$st_1$ is Null}{
 			$Set.append(st_1)$ \;
 		}{
-			$st_1^{'} \leftarrow copy(st_1)$ \;
+			$st_1^{'}\leftarrow copy(st_1)$ \;
 			\If{$arbitrary\_size\notin arbitrary\_sizes(st_1^{'})$}{
 				\For{$v\in st_1,u\in st_2 \ \text{such that} \ size_{st_1}(v)\neq size_{st_2}(u)$}{
 					$size_{st_1^{'}}(v)=arbitrary\_size\cdot(size_{st_2}(u)-size_{st_1}(v)) $ \;
 				}
-				$arbitrary\_sizes(st_1^{'}).add(arbitrary\_size)$ \;
+				$arbitrary\_sizes(st_1^{'}).push(arbitrary\_size)$ \;
 				$Set.append(st_1^{'})$ \;
 			}	
 		}
@@ -41,3 +40,8 @@ We deduce that during the execution in the control flow graph, one node was adde
 	\KwRet{$Set$}
 	\caption{Join Operation\label{IR}}
 \end{algorithm}
+
+\subsection*{Example}
+For example, assume that a structure $S_1$ in the state of the \texttt{assume} statement contains two abstract summary nodes $u$ and $v$ with sizes $2$ and $3$ respectively. Now, an identical structure $S_2$ is spotted at the join, but with $size(u)=3$ and $size(v)=5$.
+
+We deduce that during the execution in the control flow graph, one node was added to $u$ and two were added to $v$, before it visited current statement again. Since it is a "loop head", we assume that in the next visit, again one node will be added to the equivalent of $u$ and two to the equivalent $v$. So we copy $S_1$, set $size(u)=2+a$ and $size(v)=3+2a$ and add it to the set.

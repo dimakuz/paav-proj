@@ -10,6 +10,13 @@
 \usepackage{subcaption}
 \usepackage[ruled,vlined]{algorithm2e}
 \theoremstyle{definition}
+\usepackage{stmaryrd}
+\usepackage{tikz}
+\usetikzlibrary{automata, positioning, arrows}
+
+\tikzset{
+	->,initial text=$ $,node distance=2cm,every state/.style={thick, fill=gray!10},>=stealth
+}
 
 \lstset{
 frame = single, 

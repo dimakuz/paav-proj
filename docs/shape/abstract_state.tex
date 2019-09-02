@@ -37,7 +37,7 @@ Also, the analysis detects null referencing (by attempting to call \texttt{n} fi
 \subsection*{Arbitrary sizes}
 Let us define $A$ as the set of arbitrary sizes discovered along the execution of the program. An arbitrary size $a\in\mathbb{N}^+$ is an algebraic variable we attach to the size of an abstract node.
 
-We divide arbitrary sizes into two types: temporal and permanent. A permanent size $p_i$ has a scope that can span the whole program, while a temporal size $t_i$ lives inside the loop where it was first introduced into the analysis. We use this distinction later in the coerce stage.
+We divide arbitrary sizes into two types: temporal and permanent. A permanent size $p_i$ has a scope that can span the whole program, while a temporal size $t_i$ lives inside the loop where it was first introduced into the analysis. We use this distinction later in the coerce stage. Let us define $A_p$ and $A_t$ as the set of permanent arbitrary sizes and temporal arbitrary sizes respectively.
 
 We define $Expr$ as the set of algebraic expressions with variables from $A$. Such algebraic expression outputs an integer value that represents the size of a node.
 

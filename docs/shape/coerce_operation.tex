@@ -1,1 +1,87 @@
-\section*{Coerce Operation}
+\section*{Focus and Coerce Operations}
+There are two operations that control the number of possible structures in the set, and are described in detail in the paper: $focus$ and $coerce$. $focus$ operation adds possible structures before the update formulae to avoid having variables pointing at summary nodes and avoid moving along $n$ fields whose value in the abstract state is $1/2$. $coerce$ operation acts after the update formulae and tries to repair structures with the help of the predicates. If a repair is impossible, it removes the structure from the set. In our implementation of the analysis, $focus$ operation from paper was left untouched, whereas an important section was added at the end of $coerce$ operation.
+\subsection*{Coerce By Size}
+One of the repairs that original $coerce$ tries is to concretisize a summary node $v\in U^S$ once it detects that:
+\begin{itemize}
+	\item There is a variable $x\in Symbols$ such that $x(v)=1$.
+	\item There is another individual $u\in U^S$ such that $n(u,v)=1$.
+	\item There is another individual $u\in U^S$ such that $n(v,u)=1$ and $is(u)=0$.
+\end{itemize}
+After the concretization we have a "lost" number of nodes that equals to the previous size $size_{old}(v)$ minus one. Therefore, we need to reclaim this size elsewhere in the structure. 
+
+Our first attempt is to see if there is an equal node after $v$ in the list that can take the size. The rationale behind this is that we have duplicated $v$ earlier during $focus$ operation. This happens if the statement is of the form \texttt{x:=y.n}, it holds that $y(u)=1$ for some $u\in U^S$ and since $v$ is a summary node and it holds that $n(u,v)=1/2$. (see right row in figure 15 from paper).
+
+If such next node doesn't exist, it means the end of our linked list is reached (see middle row in figure 15 from paper). Now we attempt to extract the latest temporary arbitrary variable from the old size and get its value by solving the equation $size_{old}(v)=1$. The rationale behind this is that we have "fast-forwarded" to the end of the list and we no longer need the temporary variable. Once we have extracted the variable, we substitute it with the computed value. If, however, the variable is not part of $size_{old}(v)$, we declare that there is no way to redeem the "lost" size and repair the structure and hence we remove it from the set.
+\\ \\
+\begin{algorithm}[H]
+	\SetAlgoLined
+	\KwData{$v_c$, $size_{old}(v_c)$}
+	$u\leftarrow GetNextSummaryNode(v_c)$ \;
+	\eIf{$u$ is not Null}{
+		$size(u)\leftarrow size(u)-1$ \;
+		\KwRet{True}
+	}{
+		$a\leftarrow arbitrary\_sizes.peek()$ \;
+		\If{$a\notin A_t\lor t\notin variables(size_{old}(v_c))$}{
+			\KwRet{False}
+		}
+		$\llbracket a\rrbracket\leftarrow Solve("size_{old}(v_c)=1", a)$ \;
+		\For{$w\in U^S$}{
+			$size(w)=size(w)[\llbracket a\rrbracket / a]$ \;
+			\If{$ExpressionNegativityCheck(size(w))$}{
+				\KwRet{False}
+			}
+		}
+		$arbitrary\_sizes.pop(a)$ \;
+		\KwRet{True}
+	}
+	\caption{Coerce by Size Operation\label{IR}}
+\end{algorithm}
+
+\subsection*{Expression Negativity Check}
+Another issue that might occur here is that after the substitution, a size becomes negative. It may happen if the analysis wrongly assumes that we have reached the end of a longer list than the one we are in fact iterating. In this case the temporal variable is assigned a value larger than it should. If we detect such case, we immediately remove this structure.
+
+The algorithm to detect a negative expression is described below. First we check if there are permanent arbitrary variables in the expression, and if yes, we check their coefficients. Any negative coefficient is enough to invalidate the structure. For example, we consider $p_1-p_2$ negative, while $p_1-2\cdot t_1$ not. If there are no permanent variables, but only temporal, we check only for their coefficients. For example $-4\cdot t_1$ is negative. In the last case, the expression is a constant where the condition is obvious.
+\\ \\
+\begin{algorithm}[H]
+	\SetAlgoLined
+	\KwData{$expr\in Expr$}
+	\uIf{$A_p\cap variables(expr)\neq\emptyset$}{
+		\For{$var\in A_p\cap variables(expr)$}{
+			\If{$coefficient(var, expr) < 0$}{
+				\KwRet{True}
+			}
+		}
+		\KwRet{False}
+	}
+	\uElseIf{$A_t\cap variables(expr)\neq\emptyset$}{
+		\For{$var\in A_t\cap variables(expr)$}{
+			\If{$coefficient(var, expr) < 0$}{
+				\KwRet{True}
+			}
+		}
+		\KwRet{False}
+	}
+	\Else{
+		\KwRet{$expr<0$}
+	}
+	\caption{Expression Negativity Check\label{IR}}
+\end{algorithm}
+
+\subsection*{Example}
+For example, assume that during $coerce$ we have concretized $v$, whose previous size was $p_1-t_1+3$. We see that there is no next node in the list that is equal to $v$, so we reach the conclusion that end of the iteration has come and $t_1$ is going to be replaced with the solution to the equation $p_1-t_1+3=1$, which is $t_1=p_1+2$.
+
+Assume we have two nodes $u_1$ and $u_2$ that depend on $t_1$, such that $size(u_1)=t_1$ and $size(u_2)=2\cdot t_1+1$. $u_1$ is a summary node in the same linked list of $v$ that accumulated the nodes during the iteration over the loop. After the substitution, we will get that $size(u_1)=p_1+2$ and $size(u_2)=2\cdot p_1+5$. $w_1$ and $w_2$ are not affected by the substitution at all.
+
+\begin{tikzpicture}
+\node[state] (q1) {$w_1$};
+\node[state, accepting, right of=q1] (q2) {$u_1$};
+\node[state, right of=q2] (q3) {$v$};
+\node[state, below, yshift=-2cm] (q4) {$w_2$};
+\node[state, accepting, right of=q4] (q5) {$u_2$};
+\draw (q2) edge[loop above, dotted] node{$t_1$} (q2)
+(q5) edge[loop above, dotted] node{$2\cdot t_1+1$} (q5)
+(q1) edge[dotted] node{} (q2)
+(q2) edge[dotted] node{} (q3)
+(q4) edge[dotted] node{} (q5);
+\end{tikzpicture}
