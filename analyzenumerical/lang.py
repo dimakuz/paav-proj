@@ -118,16 +118,13 @@ class SumEquals(lang.Predicate):
         return f'SUM {lval} = SUM {rval}'
 
     def formula(self):
-        lval = set(self.lval)
-        rval = set(self.rval)
-        lval, rval = lval - rval, rval - lval
         return shortcuts.Equals(
             shortcuts.Plus(
-                *(shortcuts.Symbol(v.name, shortcuts.INT) for v in lval),
+                *(shortcuts.Symbol(v.name, shortcuts.INT) for v in self.lval),
                 shortcuts.Int(0),
             ),
             shortcuts.Plus(
-                *(shortcuts.Symbol(v.name, shortcuts.INT) for v in rval),
+                *(shortcuts.Symbol(v.name, shortcuts.INT) for v in self.rval),
                 shortcuts.Int(0),
             ),
         )

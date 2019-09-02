@@ -63,7 +63,7 @@ def _const_join(a, b):
 
 
 @dataclasses.dataclass
-class SumTracker(dict):
+class SumTracker:
     sums: typing.Mapping[typing.Set[lang.Symbol], int]
 
     @classmethod
@@ -82,7 +82,7 @@ class SumTracker(dict):
         return SumTracker(
             sums={
                 key: _const_join(self[key], other[key])
-                for key in self.sums
+                for key in self.sums.keys()
             }
         )
 
@@ -226,8 +226,6 @@ class SumState(abstract.AbstractState):
         )
 
     def formula(self):
-        print(self.diff.formula())
-        print(self.sums.formula())
         return shortcuts.And(
             self.diff.formula(),
             self.sums.formula(),
@@ -237,10 +235,14 @@ class SumState(abstract.AbstractState):
         return f'{self.sums}\n{self.diff}'
 
     def post_transform(self):
-        self._deduce_deltas()
-        self._deduce_vars()
-        self._deduce_sums()
-        self._deduce_deltas()
+        while True:
+            old = self.copy()
+            self._deduce_deltas()
+            self._deduce_vars()
+            self._deduce_sums()
+            self._deduce_sub_sums()
+            if self == old:
+                break
 
     def _deduce_deltas(self):
         for s1 in self.vars:
@@ -259,7 +261,7 @@ class SumState(abstract.AbstractState):
 
                 for s3 in self.vars:
                     if (
-                        self.diff[s1,s3] not in _SPECIAL
+                        self.diff[s1, s3] not in _SPECIAL
                         and
                         self.diff[s3, s2] not in _SPECIAL
                     ):
@@ -293,6 +295,27 @@ class SumState(abstract.AbstractState):
                     self.sums[key] = sum(self.sums[p] for p in part)
                     break
 
+    def _deduce_sub_sums(self):
+        for key, value in self.sums.items():
+            if value in _SPECIAL:
+                continue
+            for p1, p2 in more_itertools.set_partitions(key, 2):
+                v1 = self.sums[p1]
+                v2 = self.sums[p2]
+                # Skip partitions where both parts are either known or unknown
+                if (
+                    (v1 in _SPECIAL and v2 in _SPECIAL)
+                    or
+                    (v1 not in _SPECIAL and v2 not in _SPECIAL)
+                ):
+                    continue
+
+                if v1 in _SPECIAL:
+                    self.sums[p1] = value - v2
+                else:
+                    self.sums[p2] = value - v1
+
+
 def _delta(new, old):
     if new in _SPECIAL or old in _SPECIAL:
         return TOP
@@ -307,7 +330,7 @@ def _sym_assign_sym(state, lval, rval):
 
     if delta not in _SPECIAL:
         # Adjust sums that include lval by known delta
-        for key in state.sums:
+        for key in state.sums.keys():
             if lval in key:
                 state.sums[key] += delta
 
@@ -316,32 +339,13 @@ def _sym_assign_sym(state, lval, rval):
             state.diff[lval, sym] -= delta
     else:
         # Delta unknown, reset related sums
-        for key in state.sums:
+        for key in state.sums.keys():
             if lval in key:
                 state.sums[key] = TOP
 
         # Reset related deltas
         for sym in state.vars:
             state.diff[lval, sym] = TOP
-        # Set delta 0 to rval
-        state.diff[lval, rval] = 0
-
-
-def _sym_assume_sym(state, lval, rval):
-    old_val = state.sums[{lval}]
-    new_val = state.sums[{rval}]
-    delta = _delta(new_val, old_val)
-
-    if delta not in _SPECIAL:
-        # Adjust sums that include lval by known delta
-        for key in state.sums:
-            if lval in key:
-                state.sums[key] += delta
-
-        # Adjust deltas
-        for sym in state.vars:
-            state.diff[lval, sym] -= delta
-    else:
         # Set delta 0 to rval
         state.diff[lval, rval] = 0
 
@@ -360,7 +364,7 @@ def _sym_assign_val(state, lval, rval):
 
     if delta not in _SPECIAL:
         # Adjust sums that include lval by known delta
-        for key in state.sums:
+        for key in state.sums.keys():
             if lval in key:
                 state.sums[key] += delta
 
@@ -369,7 +373,7 @@ def _sym_assign_val(state, lval, rval):
             state.diff[lval, sym] -= delta
     else:
         # Delta unknown, reset related sums
-        for key in state.sums:
+        for key in state.sums.keys():
             if lval in key:
                 state.sums[key] = TOP
         state.sums[{lval}] = new_val
@@ -380,25 +384,7 @@ def _sym_assign_val(state, lval, rval):
 
 
 def _sym_assume_val(state, lval, rval):
-    old_val = state.sums[{lval}]
-    new_val = rval
-    delta = _delta(new_val, old_val)
-
-    if delta not in _SPECIAL:
-        # Adjust sums that include lval by known delta
-        for key in state.sums:
-            if lval in key:
-                state.sums[key] += delta
-
-        # Adjust deltas
-        for sym in state.vars:
-            state.diff[lval, sym] -= delta
-    else:
-        # Delta unknown, reset related sums
-        for key in state.sums:
-            if lval in key:
-                state.sums[key] = TOP
-        state.sums[{lval}] = new_val
+    state.sums[{lval}] = rval
 
 
 @SumState.transforms(lang_num.ValAssignment)
@@ -428,16 +414,16 @@ def inc_assignment(state, statement):
 
     if delta not in _SPECIAL:
         # Adjust sums that include lval by known delta
-        for key in state.sums:
+        for key in state.sums.keys():
             if statement.lval in key:
                 state.sums[key] += delta
 
         # Adjust known deltas
         for sym in state.vars:
-            state.diff[statement.lval, sym] -= delta
+            state.diff[statement.lval, sym] += delta
     else:
         # Delta unknown, reset related sums
-        for key in state.sums:
+        for key in state.sums.keys():
             if statement.lval in key:
                 state.sums[key] = TOP
         state.sums[{statement.lval}] = new_val
@@ -462,7 +448,7 @@ def dec_assignment(state, statement):
 
     if delta not in _SPECIAL:
         # Adjust sums that include lval by known delta
-        for key in state.sums:
+        for key in state.sums.keys():
             if statement.lval in key:
                 state.sums[key] += delta
 
@@ -471,7 +457,7 @@ def dec_assignment(state, statement):
             state.diff[statement.lval, sym] -= delta
     else:
         # Delta unknown, reset related sums
-        for key in state.sums:
+        for key in state.sums.keys():
             if statement.lval in key:
                 state.sums[key] = TOP
         state.sums[{statement.lval}] = new_val
@@ -502,14 +488,14 @@ def assume(state, statement):
         known_val = state.sums[{expr.lval}]
         if known_val not in _SPECIAL and known_val != expr.rval:
             state.reset()
-        else:
+        elif known_val in _SPECIAL:
             _sym_assume_val(state, expr.lval, expr.rval)
     elif isinstance(expr, lang_num.EqualsVar):
         known_delta = state.diff[expr.lval, expr.rval]
-        if known_delta not in _SPECIAL and known_val != 0:
+        if known_delta not in _SPECIAL and known_delta != 0:
             state.reset()
-        else:
-            _sym_assume_sym(state, expr.lval, expr.rval)
+        elif known_delta in _SPECIAL:
+            state.diff[expr.lval, expr.rval] = 0
     elif isinstance(expr, lang_num.NotEqualsVar):
         if (
             state.sums[{expr.lval}] == state.sums[{expr.rval}]
