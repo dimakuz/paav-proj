@@ -1,7 +1,6 @@
 h t tmp
 L3 t := new L4
-L4 h := t L5
-L5 tmp := NULL L6
+L4 h := t L6
 L6 tmp := new L7
 L7 tmp.n := NULL L8
 L8 tmp.n := h L9

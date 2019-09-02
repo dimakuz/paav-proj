@@ -1,12 +1,7 @@
-This example demonstrates that analysis is also able to track opposite
-parity relation between variables. Here, since $x$ is assigned $y + 1$,
-do don't know its parity but we know it is the opposite of y. We're able
-to assert that exactly one of $x,y$ has to be odd (assertion on
-$L4\rightarrow L5$ edge) and that is impossible for $x$ and $y$ to be of
-similar parity ($L5\rightarrow L6$ edge).
+This example demonstrates that analysis is able to track sizes of nodes in different linked lists during iteration. First we create two singly linked lists pointed to by \texttt{x} and \texttt{y}, where the list pointed to by \texttt{y} is double the size of the list pointed to by \texttt{x}.
 
-Additionally, we're able to assert that $y$ and $z$ are of similar parity
-by using knowledge available about relation of $x$ and $y$.
+Now we iterate over the \texttt{x} and \texttt{y} lists simultaneously until \texttt{x} list end is reached, creating a new list pointed to by \texttt{z} on the way.
 
-Disclaimer, in this example code branches without \texttt{assume} nodes,
-they are removed for brevity, and would have not affected the analysis.
+Then we iterate over \texttt{z} list to reach its end. We can assert at this point that \texttt{LEN y yy} is equals to \texttt{LEN z zz} (and also to \texttt{LEN x xx}). Note that \texttt{yy} is in the "middle" of \texttt{y} list, and until the end of this list we have exactly the same number of nodes as we have passed.
+
+In the structures list, we find a structure where we see that \texttt{LEN z zz} is $1+(PL6+1)+1=PL6+3$, same as \texttt{LEN y yy}. Note that length from \texttt{yy} to the end of the list is also $PL6+3$.

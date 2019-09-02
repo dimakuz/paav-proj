@@ -1,13 +1,4 @@
-First example of the parity analysis demonstrates the ability to deduce
-parity of variables based on constant assignment/assumption.  The code
-below demonstrates how parity of $x$ and $y$ is deduced from constants
-that appear in the code.
+First example of the shape analysis is taken from the presentation in class. First we create a singly linked list with an arbitrary length, and then we iterate over the list, asserting that \texttt{tmp} variable is not NULL during the iteration.
 
-The below control flow graph details the nodes of the program, inside
-them, the abstract state of the node. Format of the state is: 
-$var: M, S, A$, where $M$ is the modulo state of the variable
-(e.g. E for even), $S$ details all the variables $var$ is possibly in
-the same parity with, and $A$ details the same with opposite parity.
+Inside the nodes of the control flow graph we have the number of valid structures in the abstract state. The graphs of the structures themselves are attached separately.
 
-Additionally, violating statements are displayed in red (relevant for
-asserts).

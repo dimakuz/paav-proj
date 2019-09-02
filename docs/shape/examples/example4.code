@@ -1,7 +1,6 @@
 h t tmp
 L3 t := new L4
-L4 h := t L5
-L5 tmp := NULL L6
+L4 h := t L6
 L6 tmp := new L7
 L7 tmp.n := NULL L8
 L8 tmp.n := h L9
@@ -10,8 +9,9 @@ L10 assume(TRUE) L6
 L10 assume(TRUE) L11
 L11 t.n := h L12
 L12 assume(tmp != t) L13
-L12 assume(tmp = t) L16
+L12 assume(tmp = t) L17
 L13 tmp := h.n L14
 L14 assert(LS tmp h) L15
-L15 h := tmp L12
-L16 skip L17
+L15 assert(LS h tmp) L16
+L16 h := tmp L12
+L17 skip L18

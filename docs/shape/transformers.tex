@@ -1,3 +1,4 @@
 \section*{Abstract Transformers}
+The transformers used in the shape analysis are implemented exactly as described in the paper and in the class presentation (where they are refered as update formulae). There are update formulae for all the predicates $x$, $r_x$ (for every $x\in Symbols$), $n$, $c$ and $is$, for each statement.
 
-todo
+The only addition to the original algorithm is that in \texttt{x := new} statement, we set $size(v) = 1$ where $v$ is the new individual that \texttt{x} points to ($x(v)=1$).

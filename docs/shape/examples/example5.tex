@@ -1,6 +1,3 @@
-This example shows that analysis is able to deal with conflict after
-merging branches. In this example, $x$ is known to be odd. Then code
-branches to two paths, one setting $z$ to $x$ and other to $x+1$.
+This example shows again that it can deduce lengths between nodes in different linked lists created in different ways.
 
-Inside each branch $z$'s parity is known (and is opposite to the other),
-however, when branches merge, the conflict is removed.
+Here we create two lists, one of length 3 (pointed to by \texttt{x}) and one of an arbitrary length (pointed to by \texttt{y}). Now we create two lists (pointed to by \texttt{z1} and \texttt{z2}). \texttt{z1} list is created by first going over \texttt{y} list and in each iteration going over \texttt{x} list in a nested loop, adding a new node to \texttt{z1}. \texttt{z2} list is created by first going over \texttt{x} list and in each iteration going over \texttt{y} list, adding a new node to \texttt{z2}. Both lists are of length $3(PL7 + 2) + 1$ in the end. 

@@ -34,4 +34,5 @@ L44 q := q.n L43
 L50 q.n := NULL L51
 L51 q.n := p L52
 L52 z := z.n L53
-L53 assert (LEN y yy = LEN z q) L54
+L53 assert (LEN y yy = LEN z zz) L54
+L54 assert (LEN y yy = LEN x xx) L55

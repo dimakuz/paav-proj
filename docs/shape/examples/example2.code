@@ -1,4 +1,4 @@
-x y xx yy t
+y yy t
 L1 skip L12
 L12 t := new L13
 L13 t.n := NULL L14

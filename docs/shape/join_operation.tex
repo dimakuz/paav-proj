@@ -15,24 +15,25 @@ We deduce that during the execution in the control flow graph, one node was adde
 
 \begin{algorithm}[H]
 	\SetAlgoLined
-	\KwData{$Structures_{S_1}$,$Structures_{S_2}$,$a$}
+	\KwData{$Structures_{S_1}$,$Structures_{S_2}$,$arbitrary\_size$}
 	\For{$st_2 \in Structures_{S_2}$}{
 		$embed(st_2)$
 	}
-	\If{$a$ is Null}{
+	\If{$arbitrary\_size$ is Null}{
 		\KwRet{$Structures_{S_1}\cup Structures_{S_2}$}
 	}
 	Set $\leftarrow Structures_{S_1}$ \;
 	\For{$st_2 \in Structures_{S_2}$}{
-		$st_1 \leftarrow FindEqualIgnoreSize(Structures_{S_1})$ \;
+		$st_1 \leftarrow FindEqualStructureIgnoreSize(Structures_{S_1})$ \;
 		\eIf{$st_1$ is Null}{
 			$Set.append(st_1)$ \;
 		}{
 			$st_1^{'} \leftarrow copy(st_1)$ \;
-			\If{$a\notin arbitrary\_sizes(st_1^{'})$}{
+			\If{$arbitrary\_size\notin arbitrary\_sizes(st_1^{'})$}{
 				\For{$v\in st_1,u\in st_2 \ \text{such that} \ size_{st_1}(v)\neq size_{st_2}(u)$}{
-					$size_{st_1^{'}}(v)=a\cdot(size_{st_2}(u)-size_{st_1}(v)) $ \;
+					$size_{st_1^{'}}(v)=arbitrary\_size\cdot(size_{st_2}(u)-size_{st_1}(v)) $ \;
 				}
+				$arbitrary\_sizes(st_1^{'}).add(arbitrary\_size)$ \;
 				$Set.append(st_1^{'})$ \;
 			}	
 		}

@@ -30,6 +30,9 @@ The set of $k$-ary predicates that we keep for each structure is as follows:
 	\item Unary predicate $sm\in U^S\to \{0,1,1/2\}$, meaning individual is a summary (abstract) node.
 	\item Binary predicate $n\in U^S\times U^S\to \{0,1,1/2\}$ meaning there is an edge pointing from one individual to another.
 \end{itemize}
+We note that owing to the implentation from the paper, the analysis supports an unlimited number of heap shared nodes (where $is(v)\in\{1/2,1\}$).
+
+Also, the analysis detects null referencing (by attempting to call \texttt{n} field of a null variable) and cycles in the linked list. In the former case, the structure becomes invalid and removed from the set. (More on adding/removing structures in the focus/coerce section). 
 
 \subsection*{Arbitrary sizes}
 Let us define $A$ as the set of arbitrary sizes discovered along the execution of the program. An arbitrary size $a\in\mathbb{N}^+$ is an algebraic variable we attach to the size of an abstract node.
@@ -40,13 +43,13 @@ We define $Expr$ as the set of algebraic expressions with variables from $A$. Su
 
 For example let $A={p_1,t_1}$, $s(v)=e_1\in Expr$ and $s(u)=e_2\in Expr$ where $e_1=p_1-3$ and $e_2=p_1+t_1-2$. This means that the sizes of $v$ and $u$ are bound to $p_1$ and the size of $u$ is also bound to $t_1$. We cannot say much about the exact sizes of the nodes but we know that $u$ is bigger than $v$ by $s(u)-s(v)=(p_1+t_1-2)-(p_1-3)=t_1+1$.
 
-We define two functions on expressions: $even\in Expr\to\{0,1\}$ and $len\in U^S\times U^S\to Expr$. $even$ tries to deduce parity by checking if there is an even factor in the expression. $len$ sums expressions by walking on the path from one node to the other.
+We define two functions on expressions: $even\in Expr\to\{0,1\}$ and $len\in U^S\times U^S\to Expr$. $even$ tries to deduce parity by checking if there is an even factor in the expression. $len$ sums expressions by walking on the path from one node to the other (inclusive).
 
 \subsection*{Join Operation}
 In non \texttt{assume} statements join operation is simply the set union of the possible structures. In \texttt{assume} statements (which are "loop heads" admittedly), we perform set union but may add an extra structure that introduces an arbitrary size. Join operation is described in more detail in the next section. 
 
 \subsection*{Verifying Assert Statements}
-When verifying \texttt{assert PRED} statements, our analysis computes satisfiability of the following formula: $state_\alpha\land\neg pred$. $state_\alpha$ is obtained from the set of possible structures at a given state. The formula for each structure $s_\alpha$ is a disjunction of formulas with the form $f\to g$, where $f$ encodes a property of the structure and $g$ encodes the corresponding predicate to assert.
+When verifying \texttt{assert PRED} statements, our analysis computes satisfiability of the following formula: $state_\alpha\land\neg pred$. $state_\alpha$ is obtained from the set of possible structures at a given state. The formula for each structure $s_\alpha$ is a disjunction of formulae with the form $f\to g$, where $f$ encodes a property of the structure and $g$ encodes the corresponding predicate to assert.
 \begin{align*}
 state_\alpha &= \bigvee_{s \in S} s_\alpha \\
 s_\alpha &= \bigwedge_{x\in Symbols}(\exists v.x(v)=1\to NotNull_x) \\
@@ -67,6 +70,6 @@ We use the SMT solver to check if there is an assignment that satisfies $state_\
 	$\exists M$ s.t. $M\models state_\alpha\land\neg pred \iff \normalfont$\texttt{assert PRED} is invalid 
 \end{theorem}
 \begin{proof}	
-If such exists, it means there is a structure $s$ where all formulas in the disjunction $s_\alpha$ are satisfied, including $f\to pred$. But as $\neg pred$ is true, $f$ must be false, which means that the corresponding property does not hold in this structure and the assertion is invalid.\\ \\
+If such exists, it means there is a structure $s$ where all formulae in the disjunction $s_\alpha$ are satisfied, including $f\to pred$. But as $\neg pred$ is true, $f$ must be false, which means that the corresponding property does not hold in this structure and the assertion is invalid.\\ \\
 In the opposite direction, if no assignment exist, for all structures there is an unsatisfied formula. Considering that in each structure the atoms are independant of each other, any formula can become satisfied by setting the relevant atom to true, except the formula $f\to pred$. It means that in all structures $f\to pred$ is false as $\neg pred$ is true, which means that $f$ is true and the corresponding property holds.
 \end{proof}

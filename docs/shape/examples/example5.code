@@ -15,9 +15,9 @@ L19 x := xx L200
 L200 yy := new L201
 L201 yy.n := NULL L202
 L202 yy.n := y L203
-L203 y := yy L7
-L7 assume(TRUE) L200
-L7 assume(TRUE) L302
+L203 y := yy L6
+L6 assume(TRUE) L200
+L6 assume(TRUE) L302
 L302 z1 := new L303
 L303 zz1 := z1 L304
 L304 yy := yy.n L305
